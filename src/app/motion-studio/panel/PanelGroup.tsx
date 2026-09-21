@@ -88,7 +88,7 @@ export function PanelGroup({ storageKey, sections }: Props) {
   const drag = useReorderDrag(move);
 
   return (
-    <div ref={(el) => drag.attachContainer(el)} className="space-y-1">
+    <div ref={(el) => drag.attachContainer(el)} className="flex flex-col">
       {ordered.map((section, i) => {
         const open = !layout.collapsed.includes(section.id);
         const motion = rowMotion(i, drag.state);
@@ -96,21 +96,21 @@ export function PanelGroup({ storageKey, sections }: Props) {
           <section
             key={section.id}
             data-reorder-row
-            className={`rounded border-b border-background-cta-10 pb-2 ${motion.className}`}
+            className={`border-t border-hairline py-4 first:border-t-0 first:pt-0 ${motion.className}`}
             style={motion.style}
           >
             <div className="group flex items-center gap-1">
               <DragHandle label={`Drag to move ${section.title}`} index={i} {...drag.handleProps} />
               <button
                 type="button"
-                className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left"
+                className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
                 aria-expanded={open}
                 onClick={() => toggle(section.id)}
               >
                 <span aria-hidden="true" className={`inline-block text-[10px] text-background-cta-60 transition-transform ${open ? "rotate-90" : ""}`}>
                   ▶
                 </span>
-                <span className="eyebrow truncate text-background-cta-70">{section.title}</span>
+                <span className="atm-section-label truncate text-ink-secondary">{section.title}</span>
               </button>
               <MoveButtons
                 label={section.title}
@@ -120,7 +120,7 @@ export function PanelGroup({ storageKey, sections }: Props) {
                 onDown={() => move(i, i + 1)}
               />
             </div>
-            {open && <div className="space-y-2.5 pt-1 pl-1">{section.content}</div>}
+            {open && <div className="flex flex-col gap-4 pt-3">{section.content}</div>}
           </section>
         );
       })}

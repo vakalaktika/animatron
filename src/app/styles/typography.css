@@ -1,6 +1,6 @@
 /* Typography Styles
-   Editorial headings: Gelasio, then Georgia, serif.
-   Interface and body copy: Work Sans, then Arial, sans-serif.
+   Editorial headings: Fraunces (Atomic Age display), then Georgia, serif.
+   Body copy: Work Sans. Eyebrows: Jost (Atomic Age interface sans).
    Stepped at the 768px and 1024px breakpoints. */
 
 /* Compact product typography. Only the three largest editorial roles step up
@@ -61,7 +61,7 @@
 .type-entity-title,
 .type-section-title,
 .type-card-title {
-  font-family: var(--font-gelasio), Georgia, serif;
+  font-family: var(--font-fraunces), Georgia, serif;
   font-weight: 600;
 }
 
@@ -152,16 +152,17 @@
 }
 
 .type-eyebrow {
+  font-family: var(--font-jost), "Century Gothic", Futura, sans-serif;
   font-size: var(--type-eyebrow-size);
   line-height: var(--type-eyebrow-line-height);
   font-weight: var(--type-eyebrow-weight);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 /* Hero heading: editorial, not oversized. 36 / 48 / 60px. */
 .heading-hero {
-  font-family: var(--font-gelasio), Georgia, serif;
+  font-family: var(--font-fraunces), Georgia, serif;
   font-weight: 600;
   font-size: 2.25rem; /* 36px - Mobile */
   line-height: 1.1;
@@ -181,7 +182,7 @@
 }
 
 .heading-1 {
-  font-family: var(--font-gelasio), Georgia, serif;
+  font-family: var(--font-fraunces), Georgia, serif;
   font-weight: 600;
   font-size: 2.5rem; /* 40px - Mobile */
   line-height: 1.1;
@@ -201,7 +202,7 @@
 }
 
 .heading-2 {
-  font-family: var(--font-gelasio), Georgia, serif;
+  font-family: var(--font-fraunces), Georgia, serif;
   font-weight: 600;
   font-size: 2rem; /* 32px - Mobile */
   line-height: 1.15;
@@ -271,7 +272,7 @@
 
 /* Editorial card heading: serif, 24px at every width. */
 .heading-card {
-  font-family: var(--font-gelasio), Georgia, serif;
+  font-family: var(--font-fraunces), Georgia, serif;
   font-weight: 600;
   font-size: 1.5rem; /* 24px */
   line-height: 1.25;
@@ -298,7 +299,7 @@
    questions use this so they sit at the prompt/body size (16px) while keeping
    the serif voice. */
 .paragraph-serif {
-  font-family: var(--font-gelasio), Georgia, serif;
+  font-family: var(--font-fraunces), Georgia, serif;
   font-weight: 500;
   font-size: 1rem;
   line-height: 1.5;
@@ -315,11 +316,11 @@
 
 /* Section eyebrow: tiny, bold, uppercase, wide tracking. */
 .eyebrow {
-  font-family: var(--font-work-sans), Arial, sans-serif;
-  font-weight: 700;
+  font-family: var(--font-jost), "Century Gothic", Futura, sans-serif;
+  font-weight: 600;
   font-size: 0.75rem;
   line-height: 1rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 

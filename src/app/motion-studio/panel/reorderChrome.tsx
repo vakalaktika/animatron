@@ -32,7 +32,7 @@ export function MoveButtons({
   onDown: () => void;
 }) {
   const cls =
-    "h-5 w-5 rounded text-[10px] leading-none text-background-cta-50 hover:bg-background-cta-10 hover:text-background-cta disabled:opacity-30 disabled:hover:bg-transparent";
+    "h-5 w-5 rounded text-[10px] leading-none text-background-cta-50 hover:bg-surface-sunken hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent";
   return (
     <span className="flex shrink-0 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
       <button type="button" className={cls} aria-label={`Move ${label} up`} disabled={!canUp} onClick={onUp}>

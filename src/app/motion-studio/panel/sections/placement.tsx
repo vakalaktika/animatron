@@ -35,7 +35,7 @@ export function placementSection(
         {attached && (
           <ToggleField label="Follow parent rotation" value={clip.followRotation} onChange={(v) => set("followRotation", v)} />
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <NumField label={attached ? "Offset X" : "X"} value={clip.x} min={-2500} max={2500} step={1} onChange={(v) => set("x", v)} />
           <NumField label={attached ? "Offset Y" : "Y"} value={clip.y} min={-2500} max={2500} step={1} onChange={(v) => set("y", v)} />
         </div>

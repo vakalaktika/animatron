@@ -40,7 +40,7 @@ export function Slider({
     <div className="w-full">
       {(label != null || valueLabel != null) && (
         <div className="flex items-baseline justify-between gap-3 mb-2">
-          {label != null && <span className={sm ? "text-xs font-semibold" : "type-field-label"}>{label}</span>}
+          {label != null && <span className={sm ? "atm-label" : "type-field-label"}>{label}</span>}
           {valueLabel != null && (
             <span className={sm ? "text-xs text-background-cta" : "type-control text-background-cta"}>
               {valueLabel}
@@ -59,16 +59,16 @@ export function Slider({
         onChange={(e) => onChange(Number(e.target.value))}
         className={[
           sm ? "w-full h-1.5" : "w-full h-2",
-          "appearance-none rounded-full bg-background-cta-10 cursor-pointer",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-background-cta focus-visible:ring-offset-2",
+          "appearance-none rounded-full bg-surface-sunken cursor-pointer",
+          "focus:outline-none",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           "[&::-webkit-slider-thumb]:appearance-none",
           sm
             ? "[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4"
             : "[&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6",
-          "[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-background-cta [&::-webkit-slider-thumb]:shadow",
-          "[&::-moz-range-thumb]:border-0",
-          "[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-background-cta [&::-moz-range-thumb]:shadow",
+          "[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-border-strong",
+          "[&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-border-strong",
+          "[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary",
         ].join(" ")}
       />
     </div>

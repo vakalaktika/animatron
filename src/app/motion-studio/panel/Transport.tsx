@@ -33,10 +33,10 @@ const START_STEP = 0.05;
 const LABEL_WIDTH = 190;
 
 const TYPE_COLOR: Record<Clip["type"], string> = {
-  logo: "#EDAF00",
-  sprite: "#C74028",
-  text: "#59996A",
-  lottie: "#7A5D86",
+  logo: "var(--chart-3)",
+  sprite: "var(--chart-2)",
+  text: "var(--chart-1)",
+  lottie: "var(--chart-4)",
 };
 
 /** Percent span of a clip on a timeline of `duration` seconds, clamped to it. */
@@ -97,7 +97,7 @@ export function Transport({
   };
 
   return (
-    <div className="space-y-3 border-t border-background-cta-10 bg-white px-4 py-3">
+    <div className="space-y-3 border-t border-border-strong bg-surface-raised px-4 py-3">
       <div className="flex flex-wrap items-center gap-3">
         <Button size="sm" onClick={onToggle}>
           {playing ? "Pause" : "Play"}
@@ -151,7 +151,7 @@ export function Transport({
             <div
               key={clip.id}
               data-reorder-row
-              className={`group flex h-5 items-center rounded ${isSelected ? "bg-background-cta-10" : ""} ${motion.className}`}
+              className={`group flex h-5 items-center rounded ${isSelected ? "bg-primary-soft" : ""} ${motion.className}`}
               style={motion.style}
             >
               <div style={{ width: LABEL_WIDTH }} className="flex shrink-0 items-center gap-0.5 pr-2">
@@ -159,7 +159,7 @@ export function Transport({
                 <button
                   type="button"
                   onClick={() => onSelect(clip.id)}
-                  className="min-w-0 flex-1 truncate text-left text-[11px] leading-5 text-black/80"
+                  className="min-w-0 flex-1 truncate text-left text-[11px] leading-5 text-ink"
                   aria-label={`${clip.name}, ${clip.start.toFixed(2)}s to ${clipEnd(clip).toFixed(2)}s`}
                 >
                   {clip.name}
@@ -180,7 +180,7 @@ export function Transport({
                   aria-valuemin={0}
                   aria-valuenow={clip.start}
                   aria-valuetext={`${clip.start.toFixed(2)} seconds`}
-                  className={`t-drag-bar absolute top-0.5 h-4 cursor-ew-resize touch-none rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${draggingBar === clip.id ? "is-dragging" : ""}`}
+                  className={`t-drag-bar absolute top-0.5 h-4 cursor-ew-resize touch-none rounded-full ${draggingBar === clip.id ? "is-dragging" : ""}`}
                   style={{
                     left: `${left}%`,
                     width: `${width}%`,
@@ -205,7 +205,7 @@ export function Transport({
         })}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-1 bottom-0 w-px bg-black"
+          className="pointer-events-none absolute -top-1 bottom-0 w-0.5 bg-accent"
           style={{ left: `calc(${LABEL_WIDTH}px + (100% - ${LABEL_WIDTH}px) * ${pct / 100})` }}
         />
       </div>

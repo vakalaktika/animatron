@@ -69,7 +69,7 @@ export function containerSection(clip: TextClip, onChange: (c: TextClip) => void
           <>
             <TextField label="Fill" value={container.fill} onChange={(v) => box({ fill: v })} />
             <TextField label="Stroke" value={container.stroke} onChange={(v) => box({ stroke: v })} />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <NumField label="Padding X" value={container.padding.x} min={0} max={120} step={1} onChange={(v) => box({ padding: { ...container.padding, x: v } })} />
               <NumField label="Padding Y" value={container.padding.y} min={0} max={120} step={1} onChange={(v) => box({ padding: { ...container.padding, y: v } })} />
             </div>
@@ -97,7 +97,7 @@ export function containerSection(clip: TextClip, onChange: (c: TextClip) => void
                   ]}
                   onChange={(side) => setTail({ side })}
                 />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <NumField label="Tail position" value={tail.position} min={0} max={600} step={1} onChange={(v) => setTail({ position: v })} />
                   <NumField label="Tail length" value={tail.length} min={0} max={200} step={1} onChange={(v) => setTail({ length: v })} />
                 </div>

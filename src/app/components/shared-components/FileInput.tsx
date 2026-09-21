@@ -47,14 +47,12 @@ export function FileInput({
       <label
         htmlFor={inputId}
         aria-disabled={disabled}
-        className={`inline-block bg-background-cta text-on-background-cta transition-opacity ${
-          size === "sm"
-            ? "text-xs font-semibold leading-4 min-h-7 px-2.5 py-1 rounded-full"
-            : "paragraph px-6 py-2 rounded-md"
+        className={`atm-button-type inline-flex items-center rounded-md border border-transparent bg-primary text-on-primary leading-none transition-[background-color,box-shadow] duration-200 ${
+          size === "sm" ? "text-[11px] min-h-7 px-2.5 py-1" : "text-sm min-h-11 px-6 py-2"
         } ${
           disabled
-            ? "opacity-50 cursor-not-allowed"
-            : "hover:opacity-80 cursor-pointer"
+            ? "opacity-[0.42] cursor-not-allowed"
+            : "cursor-pointer hover:bg-primary-hover hover:shadow-pop"
         }`}
       >
         {children}

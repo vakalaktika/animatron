@@ -64,7 +64,7 @@ export function TailHandle({ doc, clip, time, zoom, onChange }: Props) {
         cx={cx}
         cy={cy}
         r={r}
-        fill="#C74028"
+        fill="#c33a26"
         stroke="#fff"
         strokeWidth={2 / zoom}
         style={{ cursor: "move", pointerEvents: "all" }}

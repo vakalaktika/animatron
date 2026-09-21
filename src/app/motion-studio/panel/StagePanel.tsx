@@ -51,7 +51,7 @@ export function StagePanel({
       <>
         <TextField label="Name" value={doc.name} onChange={(v) => onChangeDoc({ ...doc, name: v })} />
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold">Frame size</span>
+          <span className="mb-2 block atm-label">Frame size</span>
           <Select
             variant="compact"
             className="w-full"
@@ -69,7 +69,7 @@ export function StagePanel({
             <option value="custom">Custom</option>
           </Select>
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <NumField label="Width" value={doc.stage.width} min={200} max={4000} step={1} onChange={(v) => setStage("width", v)} />
           <NumField label="Height" value={doc.stage.height} min={200} max={4000} step={1} onChange={(v) => setStage("height", v)} />
         </div>
@@ -88,7 +88,7 @@ export function StagePanel({
             Import Lottie, clip, or image
           </FileInput>
         </div>
-        <p className="text-xs text-background-cta-60">
+        <p className="atm-help">
           Lottie and studio JSON files add a clip. Images and SVGs become sprites that can follow a path; an SVG with live text keeps it editable. A studio document replaces the composition.
         </p>
       </>
@@ -145,10 +145,10 @@ export function StagePanel({
             {recording ? "Stop recording" : "Record to WebM"}
           </Button>
         </div>
-        <p className="text-xs text-background-cta-60">
+        <p className="atm-help">
           Recording switches to the clean view, replays from the start, and captures this tab. Pick “This tab” in the browser prompt. For alpha, screen-record the clean view with a transparent stage in your capture tool instead.
         </p>
-        {notice && <p className="text-xs text-background-cta">{notice}</p>}
+        {notice && <p className="atm-help text-ink" role="status">{notice}</p>}
       </>
     ) },
   ];
