@@ -1,0 +1,663 @@
+@import "tailwindcss";
+@import "./colors.css";
+@import "./backgroundImages.css";
+@import "./typography.css";
+@import "./safariBrowserFixes.css";
+@import "./heroLoops.css";
+
+body {
+  background: var(--background);
+  color: var(--on-background);
+  font-family: var(--font-work-sans), Arial, sans-serif;
+}
+
+/* Semantic aliases over the generated scales in colors.css (which is a pure
+   Figma export artifact; see `npm run generate:colors`). They reference the
+   scale vars, so they follow the dark-mode redefinitions automatically. */
+:root {
+  --yellow-soft: var(--yellow-3);
+  --yellow-button: var(--yellow-5);
+  --yellow-progress: var(--yellow-11);
+  --green-soft: var(--green-3);
+  /* Chippy artwork colors. rainbow-red and rainbow-yellow are identical in
+     light and dark mode, so these stay stable. The wing gray has no
+     mode-stable token (light gray-9 differs), so it is a deliberate raw hex. */
+  --chippy-red: var(--rainbow-red);
+  --chippy-wing: #646f7f;
+  --chippy-beak: var(--rainbow-yellow);
+}
+
+@theme inline {
+  --color-yellow-soft: var(--yellow-soft);
+  --color-yellow-button: var(--yellow-button);
+  --color-yellow-progress: var(--yellow-progress);
+  --color-green-soft: var(--green-soft);
+  --color-chippy-red: var(--chippy-red);
+  --color-chippy-wing: var(--chippy-wing);
+  --color-chippy-beak: var(--chippy-beak);
+}
+
+/* Smooth scrolling for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Pointer cursor on every interactive button by default. Many one-off
+   <button> elements in the app don't reach for the shared Button component
+   (which already handles this via its base class) — applying it globally
+   keeps the hover affordance consistent without revisiting each site. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Content max-width: the composition is designed at a 1440px canvas. Past
+   that width the layout does not keep growing; .site-container caps and
+   centers the content column while colored bands stay full-bleed to the
+   screen edges. --fluid-w caps the viewport width the hero-loops art scales
+   against so it freezes at its 1440px proportions on wider screens. */
+:root {
+  --content-max: 1440px;
+  --fluid-w: min(100vw, var(--content-max));
+}
+
+.site-container {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+}
+
+/* Horizontal section padding: 16 / 28 / 40px stepped at the standard
+   breakpoints, matching the design spec. */
+.section-px {
+  padding-inline: 16px;
+}
+@media (min-width: 768px) {
+  .section-px {
+    padding-inline: 28px;
+  }
+}
+@media (min-width: 1024px) {
+  .section-px {
+    padding-inline: 40px;
+  }
+}
+.section-py {
+  padding-top: clamp(44px, 26.7px + 6.48 * var(--fluid-w) / 100, 176px);
+  padding-bottom: clamp(44px, 26.7px + 6.48 * var(--fluid-w) / 100, 176px);
+}
+/* Taller variant for full-bleed CTA bands (e.g. the newsletter sign-up). */
+.section-py-tall {
+  padding-top: clamp(56px, 28.3px + 9.14 * var(--fluid-w) / 100, 220px);
+  padding-bottom: clamp(56px, 28.3px + 9.14 * var(--fluid-w) / 100, 220px);
+}
+/* Hero composition: flexible content plus a fixed 340px Chippy column.
+   Collapses to a single column below 1024px. */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+@media (min-width: 1024px) {
+  .hero-grid {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+}
+
+/* Hero internal padding: 24 / 36 / 48px. */
+.hero-pad {
+  padding: 24px;
+}
+@media (min-width: 768px) {
+  .hero-pad {
+    padding: 36px;
+  }
+}
+@media (min-width: 1024px) {
+  .hero-pad {
+    padding: 48px;
+  }
+}
+
+/* Home two-card row: 1.1fr / 0.9fr with a 20px gap; stacks below 1024px. */
+.home-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 1024px) {
+  .home-cards {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+}
+
+/* Major section spacing between stacked blocks. */
+.section-stack {
+  display: grid;
+  gap: 28px;
+}
+
+/* Hide the scrollbar on horizontally scrollable strips (e.g. the settings
+   tab track on small screens) while keeping touch/wheel scrolling. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Select with a thick custom chevron, 16px from the right edge. */
+.select-thick-caret {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23262922' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 14px 14px;
+  padding-right: 42px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .select-thick-caret {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23e2eeff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+}
+
+/* Checkbox styled to match the form inputs: bordered box that fills with the
+   CTA color and shows an on-CTA checkmark when checked. The checkmark SVG is
+   swapped per color scheme so it always contrasts the fill. */
+.styled-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--background-cta);
+  border-radius: 0.375rem;
+  background-color: var(--background);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0.8rem;
+  cursor: pointer;
+}
+
+.styled-checkbox:checked {
+  background-color: var(--background-cta);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f7f5ee' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+}
+
+.styled-checkbox:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--background-cta-rgb), 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  .styled-checkbox:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23070c14' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  }
+}
+
+/* Chippy hero mascot — the upraised wing (the .chippy-wing <g> inside
+   ChippyBird) flaps at randomized idle intervals (~every 3s) and continuously
+   while the bird is hovered or keyboard-focused. The wing pivots about its root
+   where it tucks into the body; `transform-box: view-box` lets transform-origin
+   be expressed in the SVG's own viewBox units. All motion honors
+   prefers-reduced-motion (see the media query below). */
+.chippy-wing {
+  transform-box: view-box;
+  transform-origin: 820px 505px;
+}
+
+.chippy-bird--interactive .chippy-wing {
+  will-change: transform;
+}
+
+/* One wing-beat (~0.55s), biased toward the up-stroke (negative rotation presses
+   the wing onto the body — always gap-free); the small +5deg down-stroke is
+   covered by the body backfill in ChippyBird, so the body never tears open along
+   the seam. Drives both the idle bursts and the continuous hover flap. */
+@keyframes chippy-flap {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-13deg);
+  }
+  60% {
+    transform: rotate(5deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Idle: ChippyBird's scheduler toggles `.is-beating` at random intervals and
+     sets --chippy-beats to a random burst length (1–4 flaps), so the flapping
+     never looks metronomic. Kept inside this media query so reduced-motion users
+     stay still even though the class still toggles. */
+  .chippy-wing.is-beating {
+    animation-name: chippy-flap;
+    animation-duration: 0.55s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: var(--chippy-beats, 1);
+  }
+  /* Hovered/focused: flap continuously while the user is engaging (higher
+     specificity, so it overrides the idle burst above). Hover keys off the bird
+     itself so it works whether or not it's wrapped in a link; keyboard focus
+     keys off the home-hero link, but still requires an interactive bird so
+     `motionEnabled={false}` remains a full opt-out. */
+  .chippy-bird--interactive:hover .chippy-wing,
+  .chippy-link:focus-visible .chippy-bird--interactive .chippy-wing {
+    animation: chippy-flap 0.55s ease-in-out infinite;
+  }
+}
+
+/* Thank-you end cap (/thank-you-end-cap): Chippy beats hard while airborne,
+   then settles with two idle-strength flaps once perched. Same pivot as the
+   idle flap; the deeper up-stroke stays gap-free because it presses the wing
+   onto the body. */
+@keyframes chippy-flap-flight {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  45% {
+    transform: rotate(-34deg);
+  }
+  80% {
+    transform: rotate(5deg);
+  }
+}
+
+.end-cap-chippy {
+  width: 100%;
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .end-cap-chippy--flying .chippy-wing {
+    animation: chippy-flap-flight 0.3s ease-in-out infinite;
+  }
+  .end-cap-chippy--settling .chippy-wing {
+    animation: chippy-flap 0.55s ease-in-out 2;
+  }
+  /* Once perched, the wing folds back and down along the body. Negative
+     rotation presses the wing onto the body, so no seam opens; the slight
+     scale tucks the tip in toward the tail root. */
+  .end-cap-chippy--perched .chippy-wing {
+    transform: rotate(-70deg) scale(0.8);
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+/* Problem-statement "4 in 100" dot grid reveal.
+   The static render — 4 dark-red dots, 96 at opacity-20 — already equals the
+   final mockup, so SSR / no-JS / reduced-motion users see the finished state
+   with no motion. The animation is purely additive: HomeContent adds
+   `motion-ready` on mount (only when motion is allowed AND IntersectionObserver
+   exists) and `is-animating` once the grid scrolls into view. All keyframes are
+   referenced only inside the prefers-reduced-motion: no-preference gate below,
+   so reduced motion is handled by the media query alone — no JS branch. */
+@media (prefers-reduced-motion: no-preference) {
+  /* Armed but not yet scrolled into view: hold every dot hidden. Added on mount
+     (the grid is below the fold), so SSR / reduced-motion / no-JS users never
+     reach this state — they keep the static final mockup. No flash. */
+  .dot-grid.motion-ready .dot {
+    opacity: 0;
+  }
+
+  /* Scroll-trigger: apply the staggered fill fresh, so each dot's delay counts
+     from the moment the grid enters view. The 0.018s step is small relative to
+     the 0.4s ease-out fade, so ~20 dots are mid-fade at once — a smooth, quick
+     scatter (HomeContent randomizes --i, so the order is not row-by-row). */
+  .dot-grid.motion-ready.is-animating .dot {
+    animation: dot-in 0.4s ease-out both;
+    animation-delay: calc(var(--i) * 0.018s);
+  }
+
+  /* The 96 non-rejected dots layer a second animation — the drain. Its single
+     fixed delay (max stagger 99 * 0.018s ≈ 1.78s + 0.4s fill ≈ 2.2s) means
+     every dot has finished fading in before any draining starts, sequencing
+     "all in, THEN drain" without JS timers. Equal specificity to the .dot rule
+     above but later in source, so it wins for the dots carrying both classes. */
+  .dot-grid.motion-ready.is-animating .dot--fade {
+    /* dot-drain uses `forwards` (not `both`): with `both` its backwards fill
+       (from: opacity 1) would replace dot-in during the whole pre-drain wait,
+       hiding the staggered fade-in. `forwards` means it has no effect until it
+       actually runs at 2.2s, so dot-in's wave shows, then the drain holds 0.2. */
+    animation: dot-in 0.4s ease-out both, dot-drain 0.6s ease-out forwards;
+    animation-delay: calc(var(--i) * 0.018s), 2.2s;
+  }
+
+  /* The 4 rejected dots (.dot--flash) fade in with the rest, then — once the
+     drain has finished at 2.8s (2.2s drain start + 0.6s drain) — begin a soft
+     infinite pulse to pull the eye to the "4 in 100" that remain. The flash uses
+     no fill-mode, so like dot-drain it stays inert during the pre-flash wait and
+     dot-in's `both` fill holds the dot at full opacity until 2.8s; then the
+     running flash takes over the opacity. Later in source than the base .dot
+     rule and equal specificity, so it wins for the rejected dots. */
+  .dot-grid.motion-ready.is-animating .dot--flash {
+    animation: dot-in 0.4s ease-out both,
+      problem-dot-flash 1.1s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.018s), 2.8s;
+  }
+}
+
+/* Soft pulse (1 → 0.55 → 1) for the 4 remaining "4 in 100" dots. */
+@keyframes problem-dot-flash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* The field fills the section and clips overflow. `container-type: size` turns
+   it into the query container for the pieces' cqh distances; it's safe here
+   because the field is inset:0 (its size comes from the section, not its
+   children, so size containment can't collapse it). */
+.confetti-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  container-type: size;
+}
+
+/* Reduced-motion fallback: the original static, repeating confetti tile. Hidden
+   by default and swapped in for the animated field only when the user has asked
+   for reduced motion (see the prefers-reduced-motion: reduce block below). The
+   --confetti-bg url is theme-aware (backgroundImages.css). */
+.confetti-static {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--confetti-bg);
+  background-repeat: repeat;
+  display: none;
+}
+
+/* Each piece is anchored to the top and positioned horizontally by --left. The
+   static transform scatters pieces down the field via --start — it's what shows
+   if neither prefers-reduced-motion query matches (very old browsers); the fall
+   animation overrides it when motion is allowed, and the whole field is hidden
+   in favor of .confetti-static when motion is reduced. */
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  left: var(--left);
+  transform: translateY(calc(var(--start) * 1cqh));
+  will-change: transform;
+}
+.confetti-piece__sway,
+.confetti-piece__spin {
+  display: block;
+  will-change: transform;
+}
+/* Tumble about the shape's own center — the tight per-piece viewBox means the
+   svg box already hugs the shape, so 50%/50% is the shape's middle. The path
+   inherits `fill` from here (var() isn't reliable as an SVG presentation attr). */
+.confetti-piece__spin {
+  transform-origin: center;
+  fill: var(--confetti-piece-fill);
+}
+
+/* Organic falling confetti behind the "How to Join" section (FallingConfetti.tsx).
+   Each piece is one shape lifted out of the tiled confetti SVG, framed tight so
+   it tumbles about its own center. Three independent, nested animations compose
+   into an organic drift — no two pieces share phase, speed, or direction:
+     .confetti-piece        — the fall: translateY top→bottom, linear + infinite,
+                              staggered by a per-piece negative delay so the rain
+                              is continuous from first paint.
+     .confetti-piece__sway  — a gentle side-to-side flutter (ease-in-out,
+                              alternate), decoupled from the fall duration.
+     .confetti-piece__spin  — a slow tumble about the shape's center.
+   Distances use cqh — the field sets `container-type: size`, so 100cqh is the
+   section's height regardless of how tall the content makes it.
+   Everything is gated on prefers-reduced-motion: users who ask for reduced
+   motion get no motion at all — the animated field is hidden and the original
+   static, repeating confetti tile (.confetti-static) is shown instead. */
+@media (prefers-reduced-motion: no-preference) {
+  .confetti-piece {
+    animation: confetti-fall var(--fall-dur) linear var(--fall-delay) infinite;
+  }
+  .confetti-piece__sway {
+    animation: confetti-sway var(--sway-dur) ease-in-out var(--sway-delay)
+      infinite alternate;
+  }
+  .confetti-piece__spin {
+    animation: confetti-spin var(--spin-dur) linear infinite;
+  }
+}
+
+/* Reduced motion (ADA): no falling pieces at all — fall back to the static
+   repeating tile, matching the section's original look. */
+@media (prefers-reduced-motion: reduce) {
+  .confetti-field {
+    display: none;
+  }
+  .confetti-static {
+    display: block;
+  }
+}
+
+@keyframes confetti-fall {
+  from {
+    transform: translateY(-12cqh);
+  }
+  to {
+    transform: translateY(112cqh);
+  }
+}
+
+@keyframes confetti-sway {
+  from {
+    transform: translateX(calc(var(--sway) * -1));
+  }
+  to {
+    transform: translateX(var(--sway));
+  }
+}
+
+@keyframes confetti-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Fade a dot in as a full-opacity dark-red dot. */
+@keyframes dot-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Drain dark-red → light dusty-rose. 0.2 === Tailwind opacity-20, so with
+   fill-mode: forwards the dot holds exactly the static final state after one play. */
+@keyframes dot-drain {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.2;
+  }
+}
+
+/* Yellow accent for Gelasio-italic brand phrases sitting on a
+   --background-cta surface (the floating "less wrong" Flag-it
+   button, the Job Scout "Free by design" statement). That bg token
+   flips polarity per theme — dark ink in light mode, light
+   blue-cream in dark mode — so a single token name can't give us
+   readable contrast in both modes. We hard-code the yellow per mode
+   here so the highlight stays vivid and accessible no matter the
+   theme.
+     - Light mode: bright yellow on dark bg → ~9.6:1 (AA Normal + AAA).
+     - Dark mode: deep mustard on cream bg → ~4.0:1 (AA Large pass —
+       both call sites render large text: Gelasio italic at text-xl
+       and a 2rem+ blockquote). */
+.less-wrong-accent {
+  color: #ffbd00;
+}
+@media (prefers-color-scheme: dark) {
+  .less-wrong-accent {
+    color: #8d6100;
+  }
+}
+
+/* Active desktop nav underline: all 6 brand rainbow colors as a horizontal
+   gradient stripe at the bottom of the nav item. Uses ::after so the gradient
+   can sit in the same 2px slot as the transparent border-b-2 without any
+   cascade conflicts with Tailwind's background-color utilities. */
+.nav-rainbow-underline {
+  position: relative;
+}
+.nav-rainbow-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    var(--rainbow-red),
+    var(--rainbow-orange),
+    var(--rainbow-yellow),
+    var(--rainbow-green),
+    var(--rainbow-blue),
+    var(--rainbow-purple)
+  );
+  pointer-events: none;
+}
+
+body:has([data-network-onboarding]) [data-feedback-trigger] {
+  display: none;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Floating nav pill (TopNav). A rounded, translucent cream bar that sits 12px
+   from the top and caps at the shared content width. On mobile it expands in
+   place to a full-screen menu: the same element grows to fill the viewport and
+   turns opaque, animating height / corner-radius / background together. The
+   translucent fill is theme-aware via color-mix so content blurs through it in
+   both light and dark mode. */
+.nav-pill {
+  pointer-events: auto;
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  height: 64px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(var(--background-cta-rgb), 0.08);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--background) 85%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 30px -18px rgba(0, 0, 0, 0.25);
+  transition:
+    height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    border-radius 0.5s,
+    background 0.3s;
+}
+.nav-pill--open {
+  height: calc(100dvh - 24px);
+  border-radius: 24px;
+  background: var(--background);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-pill {
+    transition: none;
+  }
+}
+
+/* The expanded mobile menu body inside the pill. Hidden (and non-interactive)
+   when the pill is collapsed; fades + rises in when it opens. `inert` is set on
+   the panel while closed (in TopNav) so its links leave the tab order even
+   though they stay mounted for the transition. */
+.nav-menu-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.15s,
+    transform 0.2s;
+}
+.nav-pill--open .nav-menu-panel {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.35s 0.2s,
+    transform 0.45s 0.2s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-menu-panel {
+    transition: none;
+  }
+}
+
+/* Rainbow-gradient CTA pill ("Redeem code") — a 3px six-colour gradient frame
+   around a cream inner. Reused by the desktop nav, the mobile menu, and any
+   other left-to-right rainbow border. The inner tracks --background so it stays
+   readable in light and dark mode. */
+.rainbow-pill {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    var(--rainbow-red),
+    var(--rainbow-orange),
+    var(--rainbow-yellow),
+    var(--rainbow-green),
+    var(--rainbow-blue),
+    var(--rainbow-purple)
+  );
+  transition: opacity 0.2s;
+}
+.rainbow-pill:hover {
+  opacity: 0.85;
+}
+.rainbow-pill__inner {
+  display: block;
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--on-background);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 8px 16px;
+}
+/* Larger variant for the full-screen mobile menu CTA. */
+.rainbow-pill--lg {
+  border-radius: 16px;
+}
+.rainbow-pill--lg .rainbow-pill__inner {
+  border-radius: 13px;
+  font-size: 16px;
+  padding: 16px 28px;
+}

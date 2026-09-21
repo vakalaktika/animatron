@@ -1,0 +1,116 @@
+/* Animated hero "loops" — the two winding ribbons with team faces.
+   Layers (see HeroLoops.tsx):
+     1. .hero-loops__ink     — three parallel lane strokes along each strand
+                                centerline that "paint in" via stroke-dashoffset.
+                                Top strand draws first (top→bottom), bottom strand
+                                second (bottom→top).
+     2. .hero-loops__coat    — the resting repaint coat (last completed sweep),
+                                fully covering the cord in its color.
+     3. .hero-loops__repaint — an active sweep painting a new coat over the cord
+                                via stroke-dashoffset (front travels, color stays
+                                behind), at slow random intervals + on hover.
+     4. .hero-loops__face    — the 7 circular photos, popping in synced to the
+                                paint front reaching each one. */
+
+/* `position` is set via Tailwind utilities on the element (relative on mobile,
+   absolute on desktop) — not here — so the responsive `absolute` isn't
+   overridden by this (unlayered) rule sitting above Tailwind's utilities layer. */
+.hero-loops {
+  aspect-ratio: 1906 / 1413;
+}
+
+.hero-loops__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* --- Paint-in ------------------------------------------------------------- */
+.hero-loops__ink {
+  stroke-dashoffset: 1;
+  animation: hero-draw var(--draw-dur, 2.4s) ease-in-out var(--draw-start, 0s)
+    forwards;
+}
+
+@keyframes hero-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* --- Repaint coat (occasional + on hover, after paint-in) ----------------- */
+/* The resting coat is static and opaque — it just sits over the cord. */
+.hero-loops__coat {
+  stroke-dashoffset: 0;
+}
+
+/* An active sweep paints the new coat in along the path (front travels, color
+   stays behind) — same draw mechanic as the initial paint-in, but slower. Keyed
+   by the pass number in HeroLoops.tsx so each sweep replays from the start. */
+.hero-loops__repaint {
+  stroke-dashoffset: 1;
+  animation: hero-draw var(--paint-dur, 5s) ease-in-out 0s forwards;
+}
+
+/* The hover hit-target is invisible but must catch pointer events even though
+   the container is pointer-events:none. */
+.hero-loops__hit {
+  pointer-events: stroke;
+}
+
+/* --- Faces ---------------------------------------------------------------- */
+.hero-loops__face {
+  position: absolute;
+  transform-origin: center;
+  border-radius: 50%;
+  overflow: hidden;
+  opacity: 0;
+}
+
+/* Only animate once the synced delays have been measured (data-play="1"). */
+.hero-loops__face[data-play="1"] {
+  animation: hero-face-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.hero-loops__photo {
+  object-fit: cover; /* fill the circle edge-to-edge — no transparent corners */
+}
+
+@keyframes hero-face-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* --- Respect reduced motion ----------------------------------------------- */
+/* Show the final, fully-painted hero with no movement. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-loops__ink {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .hero-loops__repaint {
+    animation: none;
+    stroke-dashoffset: 1; /* don't paint the warm coat under reduced motion */
+  }
+  .hero-loops__face,
+  .hero-loops__face[data-play="1"] {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

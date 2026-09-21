@@ -1,0 +1,351 @@
+/* AUTO GENERATED FILE DO NOT EDIT MANUALLY */
+/* To update colors: Export token files from Figma and update files in public/FigmaTokens folder  */
+/* To run: npm run generate:colors */
+/* Script file: node scripts/generate-colors.js */
+/* Output file: colors.css */
+
+:root {
+  /* Light Mode Colors */
+  --background: #f7f5ee;
+  --background-2: #fbfaf5;
+  --on-background: #262922;
+  --background-cta: #262922;
+  --on-background-cta: #f7f5ee;
+
+  /* Red Scale */
+  --red-1: #f4f1f1;
+  --red-2: #f2edeb;
+  --red-3: #f0dfdb;
+  --red-4: #f4d0c8;
+  --red-5: #f0c1b7;
+  --red-6: #e9b1a5;
+  --red-7: #e09d8e;
+  --red-8: #d58373;
+  --red-9: #c74028;
+  --red-10: #b73018;
+  --red-11: #b83118;
+  --red-12: #592920;
+
+  /* Orange Scale */
+  --orange-1: #f3f1f0;
+  --orange-2: #f3ebe6;
+  --orange-3: #f4e0d4;
+  --orange-4: #f9cdb4;
+  --orange-5: #f8bf9e;
+  --orange-6: #eeb28f;
+  --orange-7: #dea17c;
+  --orange-8: #d18a5e;
+  --orange-9: #e57b30;
+  --orange-10: #d86f20;
+  --orange-11: #b14d00;
+  --orange-12: #52311d;
+
+  /* Yellow Scale */
+  --yellow-1: #f3f2ee;
+  --yellow-2: #f9eeda;
+  --yellow-3: #ffe4a3;
+  --yellow-4: #ffd975;
+  --yellow-5: #ffcc40;
+  --yellow-6: #f9bf3f;
+  --yellow-7: #e5af39;
+  --yellow-8: #d39600;
+  --yellow-9: #ffbd00;
+  --yellow-10: #fbb300;
+  --yellow-11: #8d6100;
+  --yellow-12: #493918;
+
+  /* Green Scale */
+  --green-1: #f1f3f1;
+  --green-2: #eaefeb;
+  --green-3: #dde9df;
+  --green-4: #cfe1d2;
+  --green-5: #bfd8c4;
+  --green-6: #abccb2;
+  --green-7: #90bb9a;
+  --green-8: #6ba479;
+  --green-9: #59996a;
+  --green-10: #4d8c5e;
+  --green-11: #2d6d41;
+  --green-12: #25392a;
+
+  /* Blue Scale */
+  --blue-1: #f0f2f4;
+  --blue-2: #e8edf1;
+  --blue-3: #dce7f0;
+  --blue-4: #cedfec;
+  --blue-5: #bed5e5;
+  --blue-6: #abc7dc;
+  --blue-7: #93b6cf;
+  --blue-8: #709fbf;
+  --blue-9: #457a9d;
+  --blue-10: #386d8f;
+  --blue-11: #2e6385;
+  --blue-12: #263e4e;
+
+  /* Purple Scale */
+  --purple-1: #f4f0f5;
+  --purple-2: #f2ebf5;
+  --purple-3: #ebdff0;
+  --purple-4: #e4d5eb;
+  --purple-5: #dfcbe8;
+  --purple-6: #d8c1e2;
+  --purple-7: #d0b4dc;
+  --purple-8: #c29cd2;
+  --purple-9: #7a5d86;
+  --purple-10: #6c4f78;
+  --purple-11: #674b72;
+  --purple-12: #2b1633;
+
+  /* Gray Scale */
+  --gray-1: #f0f1f4;
+  --gray-2: #eaeef3;
+  --gray-3: #dfe4ec;
+  --gray-4: #d5dce6;
+  --gray-5: #cbd4e1;
+  --gray-6: #c2ccdb;
+  --gray-7: #b4c1d4;
+  --gray-8: #9daec5;
+  --gray-9: #0d1520;
+  --gray-10: #252d3a;
+  --gray-11: #4a586b;
+  --gray-12: #18202c;
+
+  /* Rainbow Colors */
+  --rainbow-red: #c74028;
+  --rainbow-orange: #e57b30;
+  --rainbow-yellow: #f9c958;
+  --rainbow-green: #59996a;
+  --rainbow-blue: #457a9d;
+  --rainbow-purple: #7a5d86;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-2: var(--background-2);
+  --color-on-background: var(--on-background);
+  --color-background-cta: var(--background-cta);
+  --color-on-background-cta: var(--on-background-cta);
+
+  /* Red Scale */
+  --color-red-1: var(--red-1);
+  --color-red-2: var(--red-2);
+  --color-red-3: var(--red-3);
+  --color-red-4: var(--red-4);
+  --color-red-5: var(--red-5);
+  --color-red-6: var(--red-6);
+  --color-red-7: var(--red-7);
+  --color-red-8: var(--red-8);
+  --color-red-9: var(--red-9);
+  --color-red-10: var(--red-10);
+  --color-red-11: var(--red-11);
+  --color-red-12: var(--red-12);
+
+  /* Orange Scale */
+  --color-orange-1: var(--orange-1);
+  --color-orange-2: var(--orange-2);
+  --color-orange-3: var(--orange-3);
+  --color-orange-4: var(--orange-4);
+  --color-orange-5: var(--orange-5);
+  --color-orange-6: var(--orange-6);
+  --color-orange-7: var(--orange-7);
+  --color-orange-8: var(--orange-8);
+  --color-orange-9: var(--orange-9);
+  --color-orange-10: var(--orange-10);
+  --color-orange-11: var(--orange-11);
+  --color-orange-12: var(--orange-12);
+
+  /* Yellow Scale */
+  --color-yellow-1: var(--yellow-1);
+  --color-yellow-2: var(--yellow-2);
+  --color-yellow-3: var(--yellow-3);
+  --color-yellow-4: var(--yellow-4);
+  --color-yellow-5: var(--yellow-5);
+  --color-yellow-6: var(--yellow-6);
+  --color-yellow-7: var(--yellow-7);
+  --color-yellow-8: var(--yellow-8);
+  --color-yellow-9: var(--yellow-9);
+  --color-yellow-10: var(--yellow-10);
+  --color-yellow-11: var(--yellow-11);
+  --color-yellow-12: var(--yellow-12);
+
+  /* Green Scale */
+  --color-green-1: var(--green-1);
+  --color-green-2: var(--green-2);
+  --color-green-3: var(--green-3);
+  --color-green-4: var(--green-4);
+  --color-green-5: var(--green-5);
+  --color-green-6: var(--green-6);
+  --color-green-7: var(--green-7);
+  --color-green-8: var(--green-8);
+  --color-green-9: var(--green-9);
+  --color-green-10: var(--green-10);
+  --color-green-11: var(--green-11);
+  --color-green-12: var(--green-12);
+
+  /* Blue Scale */
+  --color-blue-1: var(--blue-1);
+  --color-blue-2: var(--blue-2);
+  --color-blue-3: var(--blue-3);
+  --color-blue-4: var(--blue-4);
+  --color-blue-5: var(--blue-5);
+  --color-blue-6: var(--blue-6);
+  --color-blue-7: var(--blue-7);
+  --color-blue-8: var(--blue-8);
+  --color-blue-9: var(--blue-9);
+  --color-blue-10: var(--blue-10);
+  --color-blue-11: var(--blue-11);
+  --color-blue-12: var(--blue-12);
+
+  /* Purple Scale */
+  --color-purple-1: var(--purple-1);
+  --color-purple-2: var(--purple-2);
+  --color-purple-3: var(--purple-3);
+  --color-purple-4: var(--purple-4);
+  --color-purple-5: var(--purple-5);
+  --color-purple-6: var(--purple-6);
+  --color-purple-7: var(--purple-7);
+  --color-purple-8: var(--purple-8);
+  --color-purple-9: var(--purple-9);
+  --color-purple-10: var(--purple-10);
+  --color-purple-11: var(--purple-11);
+  --color-purple-12: var(--purple-12);
+
+  /* Gray Scale */
+  --color-gray-1: var(--gray-1);
+  --color-gray-2: var(--gray-2);
+  --color-gray-3: var(--gray-3);
+  --color-gray-4: var(--gray-4);
+  --color-gray-5: var(--gray-5);
+  --color-gray-6: var(--gray-6);
+  --color-gray-7: var(--gray-7);
+  --color-gray-8: var(--gray-8);
+  --color-gray-9: var(--gray-9);
+  --color-gray-10: var(--gray-10);
+  --color-gray-11: var(--gray-11);
+  --color-gray-12: var(--gray-12);
+
+  /* Rainbow Colors */
+  --color-rainbow-red: var(--rainbow-red);
+  --color-rainbow-orange: var(--rainbow-orange);
+  --color-rainbow-yellow: var(--rainbow-yellow);
+  --color-rainbow-green: var(--rainbow-green);
+  --color-rainbow-blue: var(--rainbow-blue);
+  --color-rainbow-purple: var(--rainbow-purple);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark Mode Colors */
+    --background: #070c14;
+    --background-2: #0c1520;
+    --on-background: #e2eeff;
+    --background-cta: #e2eeff;
+    --on-background-cta: #070c14;
+
+    /* Red Scale */
+    --red-1: #1b1210;
+    --red-2: #221310;
+    --red-3: #3f0f07;
+    --red-4: #570400;
+    --red-5: #680a00;
+    --red-6: #7a1a09;
+    --red-7: #952b18;
+    --red-8: #c03921;
+    --red-9: #c74028;
+    --red-10: #b73018;
+    --red-11: #ff9179;
+    --red-12: #ffd0c5;
+
+    /* Orange Scale */
+    --orange-1: #181311;
+    --orange-2: #1f1712;
+    --orange-3: #321e13;
+    --orange-4: #452109;
+    --orange-5: #532b0f;
+    --orange-6: #62381e;
+    --orange-7: #78492c;
+    --orange-8: #9a5e38;
+    --orange-9: #e57b30;
+    --orange-10: #d86f20;
+    --orange-11: #ffa369;
+    --orange-12: #ffdfcd;
+
+    /* Yellow Scale */
+    --yellow-1: #17140f;
+    --yellow-2: #1d1912;
+    --yellow-3: #2c230f;
+    --yellow-4: #3a2b04;
+    --yellow-5: #463406;
+    --yellow-6: #534218;
+    --yellow-7: #665329;
+    --yellow-8: #826a35;
+    --yellow-9: #f9c958;
+    --yellow-10: #eebf4d;
+    --yellow-11: #fece5d;
+    --yellow-12: #fbe8bf;
+
+    /* Green Scale */
+    --green-1: #111612;
+    --green-2: #151b17;
+    --green-3: #1c2b1f;
+    --green-4: #213927;
+    --green-5: #294631;
+    --green-6: #34543c;
+    --green-7: #3f6449;
+    --green-8: #4c7857;
+    --green-9: #59996a;
+    --green-10: #4d8c5e;
+    --green-11: #89ca98;
+    --green-12: #c2eccb;
+
+    /* Blue Scale */
+    --blue-1: #070d11;
+    --blue-2: #11191f;
+    --blue-3: #152836;
+    --blue-4: #183548;
+    --blue-5: #214258;
+    --blue-6: #2c516a;
+    --blue-7: #386380;
+    --blue-8: #457a9d;
+    --blue-9: #457a9d;
+    --blue-10: #416c89;
+    --blue-11: #8bc2e8;
+    --blue-12: #cce9fe;
+
+    /* Purple Scale */
+    --purple-1: #171318;
+    --purple-2: #1d171f;
+    --purple-3: #2b1f2f;
+    --purple-4: #36253d;
+    --purple-5: #3f2c47;
+    --purple-6: #4a3753;
+    --purple-7: #5c4565;
+    --purple-8: #785b84;
+    --purple-9: #7a5d86;
+    --purple-10: #6c4f78;
+    --purple-11: #c9a9d6;
+    --purple-12: #efe2f5;
+
+    /* Gray Scale */
+    --gray-1: #070c14;
+    --gray-2: #121821;
+    --gray-3: #1a222f;
+    --gray-4: #202a38;
+    --gray-5: #28313f;
+    --gray-6: #303a49;
+    --gray-7: #3e4857;
+    --gray-8: #566171;
+    --gray-9: #646f7f;
+    --gray-10: #566171;
+    --gray-11: #a8b4c6;
+    --gray-12: #e9eff7;
+
+    /* Rainbow Colors */
+    --rainbow-red: #c74028;
+    --rainbow-orange: #e57b30;
+    --rainbow-yellow: #f9c958;
+    --rainbow-green: #59996a;
+    --rainbow-blue: #457a9d;
+    --rainbow-purple: #7a5d86;
+  }
+}

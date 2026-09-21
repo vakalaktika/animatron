@@ -1,0 +1,163 @@
+/* Safari-specific navigation fixes */
+@media (min-width: 1024px) {
+  .desktop-nav {
+    display: flex !important;
+  }
+  .mobile-hamburger {
+    display: none !important;
+  }
+  /* The expand-in-place mobile menu never applies on desktop, where the pill
+     stays collapsed and the links live inline in .desktop-nav. */
+  .nav-menu-panel {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .desktop-nav {
+    display: none !important;
+  }
+  .mobile-hamburger {
+    display: flex !important;
+  }
+}
+
+/* Safari-compatible flex utilities */
+.flex-col-to-row-md {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .flex-col-to-row-md {
+    flex-direction: row;
+  }
+}
+
+.flex-col-to-row-lg {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+  .flex-col-to-row-lg {
+    flex-direction: row;
+  }
+}
+
+/* Safari-compatible width utilities */
+.md-w-half {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .md-w-half {
+    width: 50%;
+  }
+}
+
+.lg-w-half {
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .lg-w-half {
+    width: 50%;
+  }
+}
+
+/* Safari-compatible background image utilities */
+.bg-warm-rainbow-lg {
+  background-image: none;
+}
+
+@media (min-width: 1024px) {
+  .bg-warm-rainbow-lg {
+    background-image: var(--warm-rainbow);
+    background-repeat: no-repeat;
+    background-position: top right;
+    background-position-y: -200px;
+    background-size: 700px;
+  }
+}
+
+.bg-warm-rainbow-mobile {
+  background-image: var(--warm-rainbow);
+  background-repeat: no-repeat;
+  background-position: top right;
+  background-position-y: -200px;
+}
+
+@media (min-width: 1024px) {
+  .bg-warm-rainbow-mobile {
+    background-image: none;
+  }
+}
+
+/* Safari-compatible opacity utilities for CSS custom properties */
+/* Tailwind's /opacity modifier doesn't work with CSS vars in Safari */
+/* Using rgba() with RGB component variables for better cross-browser support */
+
+:root {
+  /* RGB components for background-cta (light mode: #262922) */
+  --background-cta-rgb: 38, 41, 34;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* RGB components for background-cta (dark mode: #e2eeff) */
+    --background-cta-rgb: 226, 238, 255;
+  }
+}
+
+/* Background utilities */
+.bg-background-cta-5 {
+  background-color: rgba(var(--background-cta-rgb), 0.05);
+}
+
+.bg-background-cta-10 {
+  background-color: rgba(var(--background-cta-rgb), 0.1);
+}
+
+.hover\:bg-background-cta-5:hover {
+  background-color: rgba(var(--background-cta-rgb), 0.05);
+}
+
+.hover\:bg-background-cta-10:hover {
+  background-color: rgba(var(--background-cta-rgb), 0.1);
+}
+
+/* Border utilities */
+.border-background-cta-10 {
+  border-color: rgba(var(--background-cta-rgb), 0.1);
+}
+
+.border-background-cta-20 {
+  border-color: rgba(var(--background-cta-rgb), 0.2);
+}
+
+/* Text utilities */
+.text-background-cta-50 {
+  color: rgba(var(--background-cta-rgb), 0.5);
+}
+
+.text-background-cta-60 {
+  color: rgba(var(--background-cta-rgb), 0.6);
+}
+
+.text-background-cta-70 {
+  color: rgba(var(--background-cta-rgb), 0.7);
+}
+
+.text-background-cta-80 {
+  color: rgba(var(--background-cta-rgb), 0.8);
+}
+
+.hover\:text-background-cta-70:hover {
+  color: rgba(var(--background-cta-rgb), 0.7);
+}
+
+/* Focus ring utilities */
+.focus\:ring-background-cta-40:focus {
+  --tw-ring-color: rgba(var(--background-cta-rgb), 0.4);
+}

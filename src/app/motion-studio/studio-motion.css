@@ -1,0 +1,153 @@
+/*
+ * Drag and drop motion for the motion studio, built on the transitions.dev
+ * token scale (see ~/.claude/skills/transitions-dev/_root.css). Pickup lifts
+ * the row, neighbours glide out of the way with the smooth-out ease, and the
+ * drop settles with the bounce ease so the row lands with a little weight.
+ */
+:root {
+  --duration-fast: 250ms;
+  --duration-slow: 400ms;
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.36, 0.64, 1);
+
+  --drag-dur: var(--duration-fast);
+  --drag-ease: var(--ease-smooth-out);
+  --drag-settle-dur: var(--duration-slow);
+  --drag-settle-ease: var(--ease-bounce);
+  --drag-lift-scale: 1.02;
+  --drag-lift-shadow: 0 6px 18px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Row that can be picked up and restacked. */
+.t-drag-row {
+  position: relative;
+  transform: translateY(var(--drag-y, 0px)) scale(1);
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  transition:
+    transform var(--drag-dur) var(--drag-ease),
+    box-shadow var(--drag-dur) var(--drag-ease);
+}
+
+/* Held by the pointer: rides along, lifted, no easing so it tracks 1:1. */
+.t-drag-row.is-dragging {
+  z-index: 2;
+  will-change: transform;
+  transform: translateY(var(--drag-y, 0px)) scale(var(--drag-lift-scale));
+  box-shadow: var(--drag-lift-shadow);
+  transition: box-shadow var(--drag-dur) var(--drag-ease);
+  background-color: #fff;
+}
+
+/* Rows riding along under a held parent: same lift, no shadow, a little quieter. */
+.t-drag-row.t-drag-follow {
+  z-index: 2;
+  will-change: transform;
+  transform: translateY(var(--drag-y, 0px));
+  opacity: 0.7;
+  transition: opacity var(--drag-dur) var(--drag-ease);
+}
+
+/*
+ * Held row's indent eases toward the column it will land in, so the name
+ * steps sideways with it. This is the one place we animate a layout value
+ * instead of a transform: it is one 16px step on a single row, and it keeps
+ * the name from sliding under the action buttons.
+ */
+.t-drag-shift {
+  transition: padding-left var(--drag-dur) var(--drag-ease);
+}
+
+/* Parent the held row is about to join: a soft ring, no layout change. */
+.t-drag-row.t-drop-parent {
+  box-shadow: inset 0 0 0 1.5px rgba(37, 99, 235, 0.45);
+  background-color: rgba(37, 99, 235, 0.06);
+}
+
+/* Just dropped: a brief tint that fades, so the landing reads without motion. */
+.t-drag-row.t-drop-landed {
+  animation: t-drop-landed var(--drag-settle-dur) var(--drag-ease) both;
+}
+@keyframes t-drop-landed {
+  from {
+    background-color: rgba(37, 99, 235, 0.16);
+  }
+  to {
+    background-color: rgba(37, 99, 235, 0);
+  }
+}
+
+/*
+ * Insertion line for tree drops: a dot at the target depth plus a rule. It
+ * stays mounted for the whole drag and glides between slots and columns.
+ */
+.t-drop-line {
+  height: 2px;
+  margin-top: -1px;
+  background: #2563eb;
+  border-radius: 1px;
+  opacity: 0;
+  transition:
+    transform var(--drag-dur) var(--drag-ease),
+    width var(--drag-dur) var(--drag-ease),
+    opacity var(--drag-dur) var(--drag-ease);
+}
+.t-drop-line.is-visible {
+  opacity: 1;
+}
+.t-drop-line::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid #2563eb;
+  background: #fff;
+}
+
+/* First frame after drop: parked at the release point with no transition. */
+.t-drag-row.is-settling {
+  z-index: 2;
+  will-change: transform;
+  transition: none;
+}
+
+/* Next frame: bounce home. */
+.t-drag-row.is-settling.is-live {
+  transition:
+    transform var(--drag-settle-dur) var(--drag-settle-ease),
+    box-shadow var(--drag-settle-dur) var(--drag-ease);
+}
+
+/* Timeline bar being dragged along the clock. */
+.t-drag-bar {
+  transition:
+    transform var(--drag-settle-dur) var(--drag-settle-ease),
+    box-shadow var(--drag-dur) var(--drag-ease);
+}
+.t-drag-bar.is-dragging {
+  transform: scaleY(1.25);
+  box-shadow: var(--drag-lift-shadow);
+  transition: box-shadow var(--drag-dur) var(--drag-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-drop-line,
+  .t-drag-shift {
+    transition: none;
+  }
+  .t-drag-row.t-drop-landed {
+    animation: none;
+  }
+  .t-drag-row,
+  .t-drag-row.is-dragging,
+  .t-drag-row.t-drag-follow,
+  .t-drag-row.is-settling.is-live,
+  .t-drag-bar,
+  .t-drag-bar.is-dragging {
+    transition: none;
+    transform: none;
+    box-shadow: none;
+  }
+}

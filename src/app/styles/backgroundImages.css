@@ -1,0 +1,50 @@
+:root {
+  /* Confetti Background Images */
+  --confetti-bg: url(/confetti/confetti_background_light.svg);
+  --confetti-bg-2: url(/confetti/confetti_background2_light.svg);
+  /* Fill for the individually-animated confetti pieces (FallingConfetti).
+     Uses background-2 so the falling pieces read tone-on-tone against the
+     background base of the "How to Join" section. Tracks --background-2, which
+     is itself redefined for dark mode, so no separate dark override is needed. */
+  --confetti-piece-fill: var(--background-2);
+
+  /* Hands Background Images */
+  --hands-bg: url(/pageHome/hands_light.svg);
+
+  /* Thumbs Up Background Images */
+  --thumbs-up-bg: url(/pageOnboarding/thumbs-up_light.svg);
+
+  /* Party Time Background Images */
+  --party-time-bg: url(/pageCode/partyTime_light.svg);
+
+  /* Ed and Hova Images */
+  --ed-and-hova: url(/pageAbout/edAndHova_light.svg);
+
+  /* Hero and Rainbow Images */
+  --warm-rainbow: url(/rainbow-things/warm-rainbow-2.svg);
+  --cool-rainbow: url(/rainbow-things/cool-rainbow.svg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Confetti Background Images */
+    --confetti-bg: url(/confetti/confetti_background_dark.svg);
+    --confetti-bg-2: url(/confetti/confetti_background2_dark.svg);
+
+    /* Hands Background Images */
+    --hands-bg: url(/pageHome/hands_dark.svg);
+
+    /* Thumbs Up Background Images */
+    --thumbs-up-bg: url(/pageOnboarding/thumbs-up_dark.svg);
+
+    /* Party Time Background Images */
+    --party-time-bg: url(/pageCode/partyTime_dark.svg);
+
+    /* Ed and Hova Images */
+    --ed-and-hova: url(/pageAbout/edAndHova_dark.svg);
+
+    /* Hero and Rainbow Images */
+    --warm-rainbow: url(/rainbow-things/warm-rainbow-2.svg);
+    --cool-rainbow: url(/rainbow-things/cool-rainbow.svg);
+  }
+}

@@ -1,0 +1,348 @@
+/* Typography Styles
+   Editorial headings: Gelasio, then Georgia, serif.
+   Interface and body copy: Work Sans, then Arial, sans-serif.
+   Stepped at the 768px and 1024px breakpoints. */
+
+/* Compact product typography. Only the three largest editorial roles step up
+   on wider viewports; product body, support, controls, and form text remain
+   stable so dense screens keep a clear, legible hierarchy. */
+:root {
+  --type-display-size: 2.125rem;
+  --type-display-line-height: 2.5rem;
+  --type-page-title-size: 2rem;
+  --type-page-title-line-height: 2.375rem;
+  --type-entity-title-size: 1.75rem;
+  --type-entity-title-line-height: 2.125rem;
+  --type-section-title-size: 1.5rem;
+  --type-section-title-line-height: 1.875rem;
+  --type-section-title-weight: 600;
+  --type-card-title-size: 1.25rem;
+  --type-card-title-line-height: 1.625rem;
+  --type-card-title-weight: 600;
+  --type-group-title-size: 1rem;
+  --type-group-title-line-height: 1.5rem;
+  --type-group-title-weight: 600;
+  --type-body-size: 1rem;
+  --type-body-line-height: 1.5rem;
+  --type-body-weight: 500;
+  --type-body-compact-size: 0.9375rem;
+  --type-body-compact-line-height: 1.375rem;
+  --type-body-compact-weight: 500;
+  --type-support-size: 0.875rem;
+  --type-support-line-height: 1.25rem;
+  --type-support-weight: 500;
+  --type-control-size: 0.875rem;
+  --type-control-line-height: 1.25rem;
+  --type-control-weight: 600;
+  --type-input-size: 1rem;
+  --type-input-line-height: 1.5rem;
+  --type-input-weight: 500;
+  --type-field-label-size: 0.8125rem;
+  --type-field-label-line-height: 1.125rem;
+  --type-field-label-weight: 600;
+  --type-eyebrow-size: 0.75rem;
+  --type-eyebrow-line-height: 1rem;
+  --type-eyebrow-weight: 700;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --type-display-size: 2.5rem;
+    --type-display-line-height: 2.75rem;
+    --type-page-title-size: 2.25rem;
+    --type-page-title-line-height: 2.625rem;
+    --type-entity-title-size: 2rem;
+    --type-entity-title-line-height: 2.375rem;
+  }
+}
+
+.type-display,
+.type-page-title,
+.type-entity-title,
+.type-section-title,
+.type-card-title {
+  font-family: var(--font-gelasio), Georgia, serif;
+  font-weight: 600;
+}
+
+.type-display {
+  font-size: var(--type-display-size);
+  line-height: var(--type-display-line-height);
+  letter-spacing: -0.02em;
+}
+
+.type-page-title {
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
+  letter-spacing: -0.02em;
+}
+
+.type-entity-title {
+  font-size: var(--type-entity-title-size);
+  line-height: var(--type-entity-title-line-height);
+  letter-spacing: -0.015em;
+}
+
+.type-section-title {
+  font-size: var(--type-section-title-size);
+  line-height: var(--type-section-title-line-height);
+  font-weight: var(--type-section-title-weight);
+  letter-spacing: -0.01em;
+}
+
+.type-card-title {
+  font-size: var(--type-card-title-size);
+  line-height: var(--type-card-title-line-height);
+  font-weight: var(--type-card-title-weight);
+  letter-spacing: -0.01em;
+}
+
+.type-group-title,
+.type-body,
+.type-body-compact,
+.type-support,
+.type-control,
+.type-input,
+.type-field-label,
+.type-eyebrow {
+  font-family: var(--font-work-sans), Arial, sans-serif;
+  letter-spacing: normal;
+}
+
+.type-group-title {
+  font-size: var(--type-group-title-size);
+  line-height: var(--type-group-title-line-height);
+  font-weight: var(--type-group-title-weight);
+}
+
+.type-body {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: var(--type-body-weight);
+}
+
+.type-body-compact {
+  font-size: var(--type-body-compact-size);
+  line-height: var(--type-body-compact-line-height);
+  font-weight: var(--type-body-compact-weight);
+}
+
+.type-support {
+  font-size: var(--type-support-size);
+  line-height: var(--type-support-line-height);
+  font-weight: var(--type-support-weight);
+}
+
+.type-control {
+  font-size: var(--type-control-size);
+  line-height: var(--type-control-line-height);
+  font-weight: var(--type-control-weight);
+}
+
+.type-input {
+  font-size: var(--type-input-size);
+  line-height: var(--type-input-line-height);
+  font-weight: var(--type-input-weight);
+}
+
+.type-field-label {
+  font-size: var(--type-field-label-size);
+  line-height: var(--type-field-label-line-height);
+  font-weight: var(--type-field-label-weight);
+}
+
+.type-eyebrow {
+  font-size: var(--type-eyebrow-size);
+  line-height: var(--type-eyebrow-line-height);
+  font-weight: var(--type-eyebrow-weight);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Hero heading: editorial, not oversized. 36 / 48 / 60px. */
+.heading-hero {
+  font-family: var(--font-gelasio), Georgia, serif;
+  font-weight: 600;
+  font-size: 2.25rem; /* 36px - Mobile */
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  .heading-hero {
+    font-size: 3rem; /* 48px - Tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .heading-hero {
+    font-size: 3.75rem; /* 60px - Desktop */
+  }
+}
+
+.heading-1 {
+  font-family: var(--font-gelasio), Georgia, serif;
+  font-weight: 600;
+  font-size: 2.5rem; /* 40px - Mobile */
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  .heading-1 {
+    font-size: 3.25rem; /* 52px - Tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .heading-1 {
+    font-size: 4.106rem; /* 65.69px - Desktop */
+  }
+}
+
+.heading-2 {
+  font-family: var(--font-gelasio), Georgia, serif;
+  font-weight: 600;
+  font-size: 2rem; /* 32px - Mobile */
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  .heading-2 {
+    font-size: 2.75rem; /* 44px - Tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .heading-2 {
+    font-size: 3.421rem; /* 54.74px - Desktop */
+  }
+}
+
+.heading-3 {
+  font-family: var(--font-work-sans), Arial, sans-serif;
+  font-weight: 500;
+  font-size: 1.75rem; /* 28px - Mobile */
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+@media (min-width: 768px) {
+  .heading-3 {
+    font-size: 2.25rem; /* 36px - Tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .heading-3 {
+    font-size: 2.851rem; /* 45.62px - Desktop */
+  }
+}
+
+/* Card heading size: 24px at every width. */
+.heading-4 {
+  font-family: var(--font-work-sans), Arial, sans-serif;
+  font-weight: 500;
+  font-size: 1.5rem; /* 24px */
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.heading-5 {
+  font-family: var(--font-work-sans), Arial, sans-serif;
+  font-weight: 500;
+  font-size: 1.25rem; /* 20px - Mobile */
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+@media (min-width: 768px) {
+  .heading-5 {
+    font-size: 1.5rem; /* 24px - Tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .heading-5 {
+    font-size: 1.98rem; /* 31.68px - Desktop */
+  }
+}
+
+/* Editorial card heading: serif, 24px at every width. */
+.heading-card {
+  font-family: var(--font-gelasio), Georgia, serif;
+  font-weight: 600;
+  font-size: 1.5rem; /* 24px */
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.paragraph {
+  font-family: var(--font-work-sans), Arial, sans-serif;
+  font-weight: 500;
+  font-size: 1rem;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+
+.paragraph-bold {
+  font-family: var(--font-work-sans), Arial, sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+
+/* Serif body copy: paragraph metrics in the editorial serif. Chippy's chat
+   questions use this so they sit at the prompt/body size (16px) while keeping
+   the serif voice. */
+.paragraph-serif {
+  font-family: var(--font-gelasio), Georgia, serif;
+  font-weight: 500;
+  font-size: 1rem;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+
+.smol {
+  font-family: var(--font-work-sans), Arial, sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  letter-spacing: normal;
+}
+
+/* Section eyebrow: tiny, bold, uppercase, wide tracking. */
+.eyebrow {
+  font-family: var(--font-work-sans), Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Big display numerals for stat call-outs (e.g. the home "Problem" section).
+   Work Sans, heavy weight, tight tracking. A bare `font-bold` utility can't be
+   used on the heading tokens here: typography.css is imported unlayered, so its
+   font-weight beats Tailwind's layered utilities, hence a dedicated token. */
+.stat-number {
+  font-family: var(--font-work-sans), Arial, sans-serif;
+  font-weight: 700;
+  font-size: 2.25rem; /* 36px - Mobile */
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+@media (min-width: 768px) {
+  .stat-number {
+    font-size: 2.75rem; /* 44px - Tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .stat-number {
+    font-size: 2.875rem; /* 46px - Desktop */
+  }
+}
