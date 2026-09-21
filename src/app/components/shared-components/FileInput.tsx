@@ -48,7 +48,7 @@ export function FileInput({
         htmlFor={inputId}
         aria-disabled={disabled}
         className={`atm-button-type inline-flex items-center rounded-md border border-transparent bg-primary text-on-primary leading-none transition-[background-color,box-shadow] duration-200 ${
-          size === "sm" ? "text-[11px] min-h-7 px-2.5 py-1" : "text-sm min-h-11 px-6 py-2"
+          size === "sm" ? "text-[11px] min-h-7 pointer-coarse:min-h-11 px-2.5 py-1" : "text-sm min-h-11 px-6 py-2"
         } ${
           disabled
             ? "opacity-[0.42] cursor-not-allowed"

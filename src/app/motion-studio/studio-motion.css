@@ -133,7 +133,72 @@
   transition: box-shadow var(--drag-dur) var(--drag-ease);
 }
 
+/*
+ * Phone action sheet (ClipActionSheet): rises from the bottom edge over a
+ * dimmed stage. The scrim is the deep-ink inverse surface at the scrim opacity.
+ */
+.atm-sheet::backdrop {
+  background: color-mix(in srgb, var(--surface-inverse) 62%, transparent);
+}
+.atm-sheet[open] {
+  animation: atm-sheet-rise var(--duration-fast) var(--ease-smooth-out);
+}
+.atm-sheet[open]::backdrop {
+  animation: atm-sheet-fade var(--duration-fast) var(--ease-smooth-out);
+}
+@keyframes atm-sheet-rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes atm-sheet-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/*
+ * Panels entering: drawers and the desktop panels shown from the app bar
+ * slide in from their own edge. Transform and opacity only.
+ */
+.atm-drawer-left {
+  animation: atm-in-left var(--duration-fast) var(--ease-smooth-out);
+}
+.atm-drawer-right {
+  animation: atm-in-right var(--duration-fast) var(--ease-smooth-out);
+}
+.atm-drawer-up {
+  animation: atm-in-up var(--duration-fast) var(--ease-smooth-out);
+}
+@keyframes atm-in-left {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+@keyframes atm-in-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes atm-in-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .atm-drawer-left,
+  .atm-drawer-right,
+  .atm-drawer-up {
+    animation: none;
+  }
+  .atm-sheet[open],
+  .atm-sheet[open]::backdrop {
+    animation: none;
+  }
   .t-drop-line,
   .t-drag-shift {
     transition: none;

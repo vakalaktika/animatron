@@ -3,6 +3,8 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { treeRows, type DropTarget } from "../lib/tree";
+import { ClipActionSheet } from "./ClipActionSheet";
+import { MoreIcon } from "./icons";
 import { DragHandle, MoveButtons } from "./reorderChrome";
 import { TREE_INDENT, useTreeDrag } from "./useTreeDrag";
 
@@ -45,6 +47,8 @@ export function ClipTree({
 }: Props) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [landedId, setLandedId] = useState<string | null>(null);
+  // Phones: the clip whose row actions are open in the action sheet.
+  const [sheetId, setSheetId] = useState<string | null>(null);
   const rows = treeRows(doc.clips, collapsed);
   const drag = useTreeDrag(rows, doc.clips, (id, target) => {
     onDrop(id, target);
@@ -120,16 +124,28 @@ export function ClipTree({
               <button type="button" className="min-w-0 flex-1 truncate text-left" onClick={() => onSelect(clip.id)}>
                 {clip.name} <span className="text-[13px] text-ink-muted">{clip.type}</span>
               </button>
-              <button type="button" className="text-[13px] text-ink-muted hover:text-ink" aria-label={`Solo ${clip.name}`} onClick={() => onSolo(clip.id)}>
-                solo
-              </button>
-              <button type="button" className="text-[13px] text-ink-muted hover:text-ink" aria-label={`Duplicate ${clip.name}`} onClick={() => onDuplicate(clip)}>
-                dup
-              </button>
-              <button type="button" className="text-[13px] text-error hover:text-accent-hover" aria-label={`Delete ${clip.name}`} onClick={() => onDelete(clip.id)}>
-                del
+              <span className="hidden items-center gap-2 lg:flex">
+                <button type="button" className="text-[13px] text-ink-muted hover:text-ink pointer-coarse:min-h-11 pointer-coarse:px-1" aria-label={`Solo ${clip.name}`} onClick={() => onSolo(clip.id)}>
+                  solo
+                </button>
+                <button type="button" className="text-[13px] text-ink-muted hover:text-ink pointer-coarse:min-h-11 pointer-coarse:px-1" aria-label={`Duplicate ${clip.name}`} onClick={() => onDuplicate(clip)}>
+                  dup
+                </button>
+                <button type="button" className="text-[13px] text-error hover:text-accent-hover pointer-coarse:min-h-11 pointer-coarse:px-1" aria-label={`Delete ${clip.name}`} onClick={() => onDelete(clip.id)}>
+                  del
+                </button>
+              </span>
+              <button
+                type="button"
+                className="-my-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-sunken lg:hidden"
+                aria-label={`${clip.name} actions`}
+                aria-haspopup="dialog"
+                onClick={() => setSheetId(clip.id)}
+              >
+                <MoreIcon />
               </button>
               <MoveButtons
+                className="hidden lg:flex"
                 label={clip.name}
                 canUp
                 canDown
@@ -150,6 +166,14 @@ export function ClipTree({
           }}
         />
       )}
+      <ClipActionSheet
+        clip={doc.clips.find((c) => c.id === sheetId) ?? null}
+        onClose={() => setSheetId(null)}
+        onSolo={onSolo}
+        onDuplicate={onDuplicate}
+        onDelete={onDelete}
+        onMoveSibling={onMoveSibling}
+      />
     </div>
   );
 }

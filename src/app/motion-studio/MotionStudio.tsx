@@ -14,6 +14,7 @@ import { attachedTextFor, detachRun, restoreRun, setRunText } from "./lib/textRu
 import { moveAmongSiblings, normalizeOrder, type DropTarget } from "./lib/tree";
 import { ClipControls } from "./panel/ClipControls";
 import { ClipTree } from "./panel/ClipTree";
+import type { MobileTab } from "./panel/MobileTabs";
 import { StagePanel } from "./panel/StagePanel";
 import { Transport } from "./panel/Transport";
 import {
@@ -33,6 +34,12 @@ import {
 } from "./presets";
 import { EditorStage } from "./stage/EditorStage";
 import { loadDoc, saveDoc } from "./lib/persistence";
+import { useMediaQuery } from "./lib/useMediaQuery";
+import { ChevronLeftIcon } from "./panel/icons";
+import { DesktopShell } from "./shell/DesktopShell";
+import { LandscapeShell } from "./shell/LandscapeShell";
+import { PortraitShell } from "./shell/PortraitShell";
+import type { StudioSlots } from "./shell/types";
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "animation";
 
@@ -61,6 +68,15 @@ export function MotionStudio() {
     typeof window === "undefined" ? [] : loadSavedPresets(),
   );
   const [notice, setNotice] = useState<string | null>(null);
+  // Phone portrait: which panel the bottom tab bar shows under the stage.
+  const [mobileTab, setMobileTab] = useState<MobileTab>("timeline");
+  // Portrait: panels hidden so the stage fills the screen.
+  const [portraitFocused, setPortraitFocused] = useState(false);
+  // Landscape phone: which drawer is open beside the full-screen stage.
+  const [landscapeDrawer, setLandscapeDrawer] = useState<MobileTab | null>(null);
+  const isDesktop = useMediaQuery("(min-width: 1024px) and (min-height: 501px)");
+  const isLandscapePhone = useMediaQuery("(orientation: landscape) and (max-height: 500px)");
+  const mode: "desktop" | "landscape" | "portrait" = isDesktop ? "desktop" : isLandscapePhone ? "landscape" : "portrait";
   const [recording, setRecording] = useState<Recording | null>(null);
   const [codePreview, setCodePreview] = useState<{ title: string; code: string } | null>(null);
   const stopTimer = useRef<number | null>(null);
@@ -300,142 +316,164 @@ export function MotionStudio() {
     return () => window.removeEventListener("keydown", onKey);
   }, [clock]);
 
-  return (
-    <div className="flex h-screen flex-col bg-surface font-body text-ink">
-      <style>{"nextjs-portal { display: none; }"}</style>
-      {!clean && (
-        <header className="flex items-center gap-4 border-b border-border-strong bg-surface-raised px-4 py-2">
-          <h1 className="flex items-center gap-2 font-display text-xl font-semibold tracking-[-0.01em]">
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 text-primary" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-              <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none" />
-              <ellipse cx="12" cy="12" rx="10" ry="4" />
-              <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)" />
-              <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-60 12 12)" />
-            </svg>
-            Animatron
-          </h1>
-          <span className="text-xs text-background-cta-60">{doc.name}</span>
-        </header>
-      )}
-      <div className="flex min-h-0 flex-1">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 p-4">
-            <EditorStage
-              doc={doc}
-              time={clock.time}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              onMoveClip={moveClip}
-              onMovePoint={movePoint}
-              onChangeClip={updateClip}
-              clean={clean}
-            />
-          </div>
-          {!clean && (
-            <Transport
-              doc={doc}
-              time={clock.time}
-              duration={duration}
-              playing={clock.playing}
-              speed={speed}
-              loop={loop}
-              selectedId={selectedId}
-              onToggle={clock.toggle}
-              onReplay={clock.replay}
-              onSeek={(s) => {
-                clock.pause();
-                clock.seek(s);
-              }}
-              onSpeed={setSpeed}
-              onLoop={setLoop}
-              onSelect={setSelectedId}
-              onSetStart={setClipStart}
-              onReorder={reorderClips}
-            />
-          )}
+  const transportProps = {
+    doc,
+    time: clock.time,
+    duration,
+    playing: clock.playing,
+    speed,
+    loop,
+    selectedId,
+    onToggle: clock.toggle,
+    onReplay: clock.replay,
+    onSeek: (s: number) => {
+      clock.pause();
+      clock.seek(s);
+    },
+    onSpeed: setSpeed,
+    onLoop: setLoop,
+    onSelect: setSelectedId,
+    onSetStart: setClipStart,
+    onReorder: reorderClips,
+  };
+
+  // Choosing a clip from the list opens its settings wherever they live.
+  const pickClip = (id: string) => {
+    setSelectedId(id);
+    setMobileTab("edit");
+    setLandscapeDrawer((open) => (open ? "edit" : open));
+  };
+
+  const stage = (
+    <EditorStage
+      doc={doc}
+      time={clock.time}
+      selectedId={selectedId}
+      onSelect={setSelectedId}
+      onMoveClip={moveClip}
+      onMovePoint={movePoint}
+      onChangeClip={updateClip}
+      clean={clean}
+    />
+  );
+
+  const slots: StudioSlots = {
+    docName: doc.name,
+    stage,
+    playback: <Transport {...transportProps} layout="bar" />,
+    timeline: <Transport {...transportProps} layout="full" />,
+    tracks: <Transport {...transportProps} layout="tracks" />,
+    clips: (
+      <>
+        <ClipTree
+          doc={doc}
+          selectedId={selectedId}
+          onSelect={pickClip}
+          onToggleEnabled={(clip, enabled) => updateClip({ ...clip, enabled })}
+          onSolo={(id) => setDoc((d) => ({ ...d, clips: d.clips.map((c) => ({ ...c, enabled: c.id === id })) }))}
+          onDuplicate={(clip) => addClip({ ...clip, id: newId(), name: `${clip.name} copy` })}
+          onDelete={removeClip}
+          onDrop={dropInTree}
+          onMoveSibling={moveSibling}
+        />
+        <div className="mt-3 flex gap-2">
+          <Button size="xs" variant="outline" onClick={() => setDoc((d) => ({ ...d, clips: d.clips.map((c) => ({ ...c, enabled: true })) }))}>
+            Show all
+          </Button>
         </div>
-        {!clean && (
-          <aside className="flex w-[380px] shrink-0 flex-col border-l border-border-strong bg-surface-raised">
-            <div className="border-b border-hairline p-6">
-              <div className="mb-3 flex items-baseline justify-between gap-3">
-                <h2 className="atm-section-label text-ink">Clips</h2>
-                <span className="text-xs text-ink-muted">lower rows paint on top · drag right to nest</span>
-              </div>
-              <ClipTree
-                doc={doc}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                onToggleEnabled={(clip, enabled) => updateClip({ ...clip, enabled })}
-                onSolo={(id) => setDoc((d) => ({ ...d, clips: d.clips.map((c) => ({ ...c, enabled: c.id === id })) }))}
-                onDuplicate={(clip) => addClip({ ...clip, id: newId(), name: `${clip.name} copy` })}
-                onDelete={removeClip}
-                onDrop={dropInTree}
-                onMoveSibling={moveSibling}
-              />
-              <div className="mt-3 flex gap-2">
-                <Button size="xs" variant="outline" onClick={() => setDoc((d) => ({ ...d, clips: d.clips.map((c) => ({ ...c, enabled: true })) }))}>
-                  Show all
+      </>
+    ),
+    edit: (
+      <>
+        {selected ? (
+          <>
+            <div className="mb-4 flex items-center justify-between gap-2">
+              {mode !== "desktop" && (
+                <button
+                  type="button"
+                  className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-sunken"
+                  aria-label="Back to stage settings"
+                  onClick={() => setSelectedId(null)}
+                >
+                  <ChevronLeftIcon />
+                </button>
+              )}
+              <h2 className="min-w-0 flex-1 truncate font-display text-lg font-semibold">{selected.name}</h2>
+              <div className="flex gap-2">
+                <Button size="xs" variant="outline" onClick={() => setCodePreview({ title: `${selected.name}.tsx`, code: clipComponentCode(doc, selected) })}>
+                  Code
+                </Button>
+                <Button size="xs" variant="outline" onClick={() => downloadText(JSON.stringify(selected, null, 2), `${slug(selected.name)}.clip.json`, "application/json")}>
+                  JSON
                 </Button>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-6">
-              {selected ? (
-                <>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="font-display text-lg font-semibold">{selected.name}</h2>
-                    <div className="flex gap-2">
-                      <Button size="xs" variant="outline" onClick={() => setCodePreview({ title: `${selected.name}.tsx`, code: clipComponentCode(doc, selected) })}>
-                        Code
-                      </Button>
-                      <Button size="xs" variant="outline" onClick={() => downloadText(JSON.stringify(selected, null, 2), `${slug(selected.name)}.clip.json`, "application/json")}>
-                        JSON
-                      </Button>
-                    </div>
-                  </div>
-                  <ClipControls
-                    key={selected.id}
-                    doc={doc}
-                    clip={selected}
-                    onChange={updateClip}
-                    onReparent={(p) => reparent(selected.id, p)}
-                    focusText={freshId === selected.id}
-                    artwork={artwork}
-                  />
-                  <Button size="xs" variant="outline" className="mt-6" onClick={() => setSelectedId(null)}>
-                    Back to stage settings
-                  </Button>
-                </>
-              ) : (
-                <StagePanel
-                  doc={doc}
-                  onChangeDoc={setDoc}
-                  saved={saved}
-                  onSavePreset={savePreset}
-                  onLoadPreset={(d) => {
-                    setDoc(d);
-                    setSelectedId(null);
-                    clock.replay();
-                  }}
-                  onDeletePreset={deletePreset}
-                  onImportFile={(f) => void importFile(f)}
-                  onAddClip={addByType}
-                  onExportDocCode={() => setCodePreview({ title: `${slug(doc.name)}.tsx`, code: docComponentCode(doc) })}
-                  onExportDocJson={() => downloadText(JSON.stringify(doc, null, 2), `${slug(doc.name)}.studio.json`, "application/json")}
-                  onRecord={() => void record()}
-                  recording={recording !== null}
-                  onClean={() => setClean(true)}
-                  notice={notice}
-                />
-              )}
-            </div>
-          </aside>
+            <ClipControls
+              key={selected.id}
+              doc={doc}
+              clip={selected}
+              onChange={updateClip}
+              onReparent={(p) => reparent(selected.id, p)}
+              focusText={freshId === selected.id}
+              artwork={artwork}
+            />
+            {mode === "desktop" && (
+              <Button size="xs" variant="outline" className="mt-6" onClick={() => setSelectedId(null)}>
+                Back to stage settings
+              </Button>
+            )}
+          </>
+        ) : (
+          <StagePanel
+            doc={doc}
+            onChangeDoc={setDoc}
+            saved={saved}
+            onSavePreset={savePreset}
+            onLoadPreset={(d) => {
+              setDoc(d);
+              setSelectedId(null);
+              clock.replay();
+            }}
+            onDeletePreset={deletePreset}
+            onImportFile={(f) => void importFile(f)}
+            onAddClip={addByType}
+            onExportDocCode={() => setCodePreview({ title: `${slug(doc.name)}.tsx`, code: docComponentCode(doc) })}
+            onExportDocJson={() => downloadText(JSON.stringify(doc, null, 2), `${slug(doc.name)}.studio.json`, "application/json")}
+            onRecord={() => void record()}
+            recording={recording !== null}
+            onClean={() => setClean(true)}
+            notice={notice}
+          />
         )}
-      </div>
+      </>
+    ),
+  };
+
+  const shell =
+    mode === "desktop" ? (
+      <DesktopShell {...slots} />
+    ) : mode === "landscape" ? (
+      <LandscapeShell {...slots} drawer={landscapeDrawer} onDrawer={setLandscapeDrawer} />
+    ) : (
+      <PortraitShell
+        {...slots}
+        stageAspect={`${doc.stage.width} / ${doc.stage.height}`}
+        tab={mobileTab}
+        onTab={setMobileTab}
+        focused={portraitFocused}
+        onFocused={setPortraitFocused}
+      />
+    );
+
+  return (
+    <>
+      <style>{"nextjs-portal { display: none; }"}</style>
+      {clean ? <div className="h-dvh">{stage}</div> : shell}
       {codePreview && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-surface-inverse/60 p-6" role="dialog" aria-modal="true" aria-label={codePreview.title}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-surface-inverse/60 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={codePreview.title}>
           <div className="flex max-h-full w-full max-w-4xl flex-col rounded-lg border border-border-strong bg-surface-raised shadow-lg">
-            <div className="flex items-center gap-2 border-b border-background-cta-10 px-4 py-3">
-              <h2 className="flex-1 font-display text-xl font-semibold">{codePreview.title}</h2>
+            <div className="flex flex-wrap items-center gap-2 border-b border-background-cta-10 px-4 py-3">
+              <h2 className="min-w-0 flex-1 truncate font-display text-xl font-semibold">{codePreview.title}</h2>
               <Button size="xs" variant="outline" onClick={() => void navigator.clipboard.writeText(codePreview.code).then(() => setNotice("Copied"))}>
                 Copy
               </Button>
@@ -451,6 +489,6 @@ export function MotionStudio() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

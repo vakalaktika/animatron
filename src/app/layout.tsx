@@ -5,6 +5,8 @@ import "./styles/globals.css";
 import "./motion-studio/studio-motion.css";
 
 export const viewport: Viewport = {
+  // Lets the phone layout reach the screen edges and pad with safe-area insets.
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#000000" },
