@@ -301,11 +301,19 @@ export function MotionStudio() {
   }, [clock]);
 
   return (
-    <div className="flex h-screen flex-col bg-background-cta-5 text-black">
+    <div className="flex h-screen flex-col bg-surface font-body text-ink">
       <style>{"nextjs-portal { display: none; }"}</style>
       {!clean && (
-        <header className="flex items-center gap-4 border-b border-background-cta-10 bg-white px-4 py-2">
-          <h1 className="text-sm font-semibold">Animatron</h1>
+        <header className="flex items-center gap-4 border-b border-border-strong bg-surface-raised px-4 py-2">
+          <h1 className="flex items-center gap-2 font-display text-xl font-semibold tracking-[-0.01em]">
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 text-primary" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+              <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none" />
+              <ellipse cx="12" cy="12" rx="10" ry="4" />
+              <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)" />
+              <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-60 12 12)" />
+            </svg>
+            Animatron
+          </h1>
           <span className="text-xs text-background-cta-60">{doc.name}</span>
         </header>
       )}
@@ -347,11 +355,11 @@ export function MotionStudio() {
           )}
         </div>
         {!clean && (
-          <aside className="flex w-[380px] shrink-0 flex-col border-l border-background-cta-10 bg-white">
-            <div className="border-b border-background-cta-10 p-3">
-              <div className="mb-2 flex items-baseline justify-between">
-                <h2 className="eyebrow">Clips</h2>
-                <span className="text-[11px] text-background-cta-50">lower rows paint on top · drag right to nest</span>
+          <aside className="flex w-[380px] shrink-0 flex-col border-l border-border-strong bg-surface-raised">
+            <div className="border-b border-hairline p-6">
+              <div className="mb-3 flex items-baseline justify-between gap-3">
+                <h2 className="atm-section-label text-ink">Clips</h2>
+                <span className="text-xs text-ink-muted">lower rows paint on top · drag right to nest</span>
               </div>
               <ClipTree
                 doc={doc}
@@ -364,17 +372,17 @@ export function MotionStudio() {
                 onDrop={dropInTree}
                 onMoveSibling={moveSibling}
               />
-              <div className="mt-2 flex gap-2">
+              <div className="mt-3 flex gap-2">
                 <Button size="xs" variant="outline" onClick={() => setDoc((d) => ({ ...d, clips: d.clips.map((c) => ({ ...c, enabled: true })) }))}>
                   Show all
                 </Button>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
               {selected ? (
                 <>
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold">{selected.name}</h2>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="font-display text-lg font-semibold">{selected.name}</h2>
                     <div className="flex gap-2">
                       <Button size="xs" variant="outline" onClick={() => setCodePreview({ title: `${selected.name}.tsx`, code: clipComponentCode(doc, selected) })}>
                         Code
@@ -393,7 +401,7 @@ export function MotionStudio() {
                     focusText={freshId === selected.id}
                     artwork={artwork}
                   />
-                  <Button size="xs" variant="outline" className="mt-4" onClick={() => setSelectedId(null)}>
+                  <Button size="xs" variant="outline" className="mt-6" onClick={() => setSelectedId(null)}>
                     Back to stage settings
                   </Button>
                 </>
@@ -424,10 +432,10 @@ export function MotionStudio() {
         )}
       </div>
       {codePreview && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6" role="dialog" aria-modal="true" aria-label={codePreview.title}>
-          <div className="flex max-h-full w-full max-w-4xl flex-col rounded-lg bg-white shadow-xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-surface-inverse/60 p-6" role="dialog" aria-modal="true" aria-label={codePreview.title}>
+          <div className="flex max-h-full w-full max-w-4xl flex-col rounded-lg border border-border-strong bg-surface-raised shadow-lg">
             <div className="flex items-center gap-2 border-b border-background-cta-10 px-4 py-3">
-              <h2 className="heading-5 flex-1">{codePreview.title}</h2>
+              <h2 className="flex-1 font-display text-xl font-semibold">{codePreview.title}</h2>
               <Button size="xs" variant="outline" onClick={() => void navigator.clipboard.writeText(codePreview.code).then(() => setNotice("Copied"))}>
                 Copy
               </Button>
@@ -438,8 +446,8 @@ export function MotionStudio() {
                 Close
               </Button>
             </div>
-            <pre className="min-h-0 flex-1 overflow-auto p-4 text-xs leading-relaxed">{codePreview.code}</pre>
-            <pre className="border-t border-background-cta-10 bg-background-cta-5 p-4 text-xs leading-relaxed whitespace-pre-wrap">{HANDOFF_NOTES}</pre>
+            <pre className="min-h-0 flex-1 overflow-auto bg-surface-sunken p-4 text-xs leading-relaxed">{codePreview.code}</pre>
+            <pre className="border-t border-background-cta-10 p-4 text-xs leading-relaxed whitespace-pre-wrap text-ink-secondary">{HANDOFF_NOTES}</pre>
           </div>
         </div>
       )}

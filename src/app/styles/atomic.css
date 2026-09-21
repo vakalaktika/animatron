@@ -1,0 +1,224 @@
+/* Atomic Age design system tokens.
+   Source: https://claude.ai/artifact/CRanc5zZ9EUPdpmUZrqUYP (tokens.json v1).
+   Daylight is the default theme; After Dark follows prefers-color-scheme.
+   Font families come from next/font in layout-helpers.ts. */
+
+:root {
+  --surface: #f1ede7;
+  --surface-raised: #faf7f4;
+  --surface-sunken: #e5e0d6;
+  --surface-inverse: #16283a;
+  --ink: #2a241d;
+  --ink-secondary: #5a4f40;
+  --ink-muted: #645e56;
+  --ink-on-inverse: #f6efe3;
+  --border: #d0c8bc;
+  --border-strong: #b3a793;
+  --border-control: #6d6760;
+  --hairline: #dfd9ce;
+  --primary: #186a63;
+  --primary-hover: #12564f;
+  --primary-soft: #d7e6e2;
+  --on-primary: #fbf7f0;
+  --accent: #c33a26;
+  --accent-hover: #a52f1e;
+  --accent-soft: #f6ded6;
+  --on-accent: #fbf7f0;
+  --highlight: #e3a51f;
+  --on-highlight: #2a241d;
+  --success: #2f7a53;
+  --error: #c0362a;
+  --on-error: #fbf7f0;
+  --error-soft: #f6ddd8;
+  --info: #26648f;
+  --focus: #c33a26;
+  --disabled-surface: #e5e0d6;
+  --disabled-ink: #8d8880;
+  --chart-1: #186a63;
+  --chart-2: #c33a26;
+  --chart-3: #d69a2c;
+  --chart-4: #2b6cb0;
+
+  --atm-shadow-sm: 0 1px 0 rgba(42, 36, 29, 0.14);
+  --atm-shadow-md: 0 2px 0 rgba(42, 36, 29, 0.16), 0 8px 20px -12px rgba(42, 36, 29, 0.28);
+  --atm-shadow-lg: 0 3px 0 rgba(42, 36, 29, 0.18), 0 24px 48px -24px rgba(42, 36, 29, 0.34);
+  --atm-shadow-pop: 3px 3px 0 rgba(42, 36, 29, 0.13);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --opacity-disabled: 0.42;
+  --opacity-scrim: 0.62;
+
+  --atm-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --atm-ease-mech: cubic-bezier(0.65, 0, 0.35, 1);
+  --atm-dur-1: 120ms;
+  --atm-dur-2: 200ms;
+  --atm-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--focus);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #151311;
+    --surface-raised: #211e1d;
+    --surface-sunken: #0d0c0c;
+    --surface-inverse: #dfe8ea;
+    --ink: #f3ebdd;
+    --ink-secondary: #cbbda6;
+    --ink-muted: #9e978f;
+    --ink-on-inverse: #16283a;
+    --border: #37322f;
+    --border-strong: #524b44;
+    --border-control: #888278;
+    --hairline: #272321;
+    --primary: #4bc2b0;
+    --primary-hover: #6fd2c3;
+    --primary-soft: #1c3a37;
+    --on-primary: #0d0a05;
+    --accent: #e56a4e;
+    --accent-hover: #ef8368;
+    --accent-soft: #3c231b;
+    --on-accent: #161009;
+    --highlight: #f0c04e;
+    --on-highlight: #161009;
+    --success: #5cbd8a;
+    --error: #e8705f;
+    --on-error: #161009;
+    --error-soft: #3a1c17;
+    --info: #69a8d4;
+    --focus: #f0c04e;
+    --disabled-surface: #211e1d;
+    --disabled-ink: #716c66;
+    --chart-1: #4bc2b0;
+    --chart-2: #e56a4e;
+    --chart-3: #f0c04e;
+    --chart-4: #69a8d4;
+
+    --atm-shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.5);
+    --atm-shadow-md: 0 2px 0 rgba(0, 0, 0, 0.55), 0 8px 20px -12px rgba(0, 0, 0, 0.7);
+    --atm-shadow-lg: 0 3px 0 rgba(0, 0, 0, 0.6), 0 24px 48px -24px rgba(0, 0, 0, 0.75);
+    --atm-shadow-pop: 3px 3px 0 rgba(0, 0, 0, 0.42);
+  }
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-border-strong: var(--border-strong);
+  --color-border-control: var(--border-control);
+  --color-hairline: var(--hairline);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-focus: var(--focus);
+  --color-info: var(--info);
+
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-jost), "Century Gothic", Futura, system-ui, sans-serif;
+  --font-body: var(--font-work-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --shadow-sm: var(--atm-shadow-sm);
+  --shadow-md: var(--atm-shadow-md);
+  --shadow-lg: var(--atm-shadow-lg);
+  --shadow-pop: var(--atm-shadow-pop);
+}
+
+/* One visible focus ring everywhere: 2px focus color with a paper gap. In the
+   base layer so a component focus utility can still refine it. */
+@layer base {
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--atm-ring);
+  }
+}
+
+/* Native checkboxes, radios and range inputs take the primary hue. */
+:root {
+  accent-color: var(--primary);
+}
+
+/* Interface-sans roles: Jost, uppercase, wide tracking. */
+.atm-button-type {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Panel rhythm roles (Atomic Age "Rhythm & density"): a quiet uppercase
+   section anchor, the interface-sans field label, and muted helper copy. */
+.atm-section-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.atm-label {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.atm-help {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Bridge from the app's original theme variables (colors.css, the
+   safariBrowserFixes opacity utilities) to Atomic Age tokens, so existing
+   `background` / `background-cta` utilities pick up the new palette. This file
+   is imported after both, so these declarations win in either color scheme. */
+:root {
+  --background: var(--surface);
+  --background-2: var(--surface-raised);
+  --on-background: var(--ink);
+  --background-cta: var(--ink);
+  --on-background-cta: var(--surface);
+  --red-9: var(--error);
+  --red-10: var(--accent-hover);
+  --background-cta-rgb: 42, 36, 29;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-cta-rgb: 243, 235, 221;
+  }
+}
+
+/* Translucent ink text falls below 4.5:1 on raised paper; use the solid
+   secondary and muted inks instead. */
+.text-background-cta-40,
+.text-background-cta-50,
+.text-background-cta-60 {
+  color: var(--ink-muted);
+}
+.text-background-cta-70,
+.text-background-cta-80,
+.hover\:text-background-cta-70:hover {
+  color: var(--ink-secondary);
+}
+.border-background-cta-10 {
+  border-color: var(--hairline);
+}
+.border-background-cta-20,
+.border-background-cta-30 {
+  border-color: var(--border-control);
+}
+.focus\:ring-background-cta-40:focus {
+  --tw-ring-color: var(--focus);
+}

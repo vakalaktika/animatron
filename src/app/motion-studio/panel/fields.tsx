@@ -30,12 +30,12 @@ export function NumField({
 }) {
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold">{label}</span>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="atm-label">{label}</span>
         <input
           type="number"
           aria-label={`${label} value`}
-          className="w-[4.5rem] rounded border border-background-cta-20 bg-white px-1.5 py-0.5 text-right text-xs tabular-nums focus:outline-none focus:ring-2 focus:ring-background-cta-40"
+          className="w-[4.5rem] rounded-sm border border-border-control bg-surface-raised px-1.5 py-0.5 text-right text-xs tabular-nums focus:outline-none focus:border-primary"
           value={Number.isFinite(value) ? Number(value.toFixed(3)) : 0}
           step={step}
           onChange={(e) => {
@@ -63,7 +63,7 @@ export function TextField({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold">{label}</span>
+      <span className="mb-2 block atm-label">{label}</span>
       <TextInput variant="compact" className="w-full" value={value} onChange={(e) => onChange(e.target.value)} autoFocus={autoFocus} />
     </label>
   );
@@ -82,7 +82,7 @@ export function SelectField<T extends string>({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold">{label}</span>
+      <span className="mb-2 block atm-label">{label}</span>
       <Select variant="compact" className="w-full" value={value} onChange={(e) => onChange(e.target.value as T)}>
         {options.map((o) => (
           <option key={o.value} value={o.value}>

@@ -29,22 +29,24 @@ export type ButtonProps = Omit<
   fullWidth?: boolean;
 };
 
+// Atomic Age button: Jost uppercase label, radius-md, a 1px outline, and
+// the soft shadow-pop offset on hover.
 const BASE_CLASS =
-  "cursor-pointer rounded-full inline-flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed";
+  "atm-button-type cursor-pointer rounded-md border inline-flex items-center justify-center gap-2 whitespace-nowrap leading-none transition-[background-color,box-shadow] duration-200 enabled:hover:shadow-pop disabled:opacity-[0.42] disabled:cursor-not-allowed";
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary:
-    "bg-background-cta text-on-background-cta",
+    "border-transparent bg-primary text-on-primary enabled:hover:bg-primary-hover",
   outline:
-    "border border-background-cta text-background-cta hover:bg-background-cta/5",
-  danger: "bg-red-9 text-white hover:bg-red-10",
+    "border-border-control bg-transparent text-ink enabled:hover:bg-surface-raised",
+  danger: "border-transparent bg-error text-on-error",
 };
 
 const SIZE_CLASS: Record<ButtonSize, string> = {
-  xs: "text-xs font-semibold leading-4 min-h-7 px-2.5 py-1",
-  sm: "type-control min-h-11 sm:min-h-10 px-3 py-1",
-  md: "type-control min-h-11 sm:min-h-10 px-4 py-2",
-  lg: "type-control min-h-11 sm:min-h-10 px-6 py-3",
+  xs: "text-[11px] min-h-7 px-2.5 py-1",
+  sm: "text-[12.5px] min-h-11 sm:min-h-10 px-3 py-1",
+  md: "text-sm min-h-11 sm:min-h-10 px-4 py-2",
+  lg: "text-[15px] min-h-11 sm:min-h-10 px-6 py-3",
 };
 
 /**

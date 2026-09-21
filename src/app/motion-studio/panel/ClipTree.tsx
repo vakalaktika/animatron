@@ -69,7 +69,7 @@ export function ClipTree({
 
   return (
     <div ref={(el) => drag.attachContainer(el)} className="relative">
-      <ul className="space-y-0.5">
+      <ul className="flex flex-col">
         {rows.map(({ clip, depth, hasChildren }) => {
           const held = activeId === clip.id;
           const riding = carried.has(clip.id);
@@ -92,7 +92,7 @@ export function ClipTree({
             <li
               key={clip.id}
               data-tree-row
-              className={`group flex items-center gap-1 rounded px-1 py-0.5 text-[13px] ${selectedId === clip.id ? "bg-background-cta-10" : ""} ${rowClass}`}
+              className={`group flex items-center gap-2 rounded-sm px-2 py-3 text-sm ${selectedId === clip.id ? "bg-primary-soft" : "hover:bg-surface-sunken"} ${rowClass}`}
               style={style}
             >
               <DragHandle label={`Drag to move ${clip.name}`} index={0} data-tree-id={clip.id} {...drag.handleProps} />
@@ -118,15 +118,15 @@ export function ClipTree({
                 onChange={(e) => onToggleEnabled(clip, e.target.checked)}
               />
               <button type="button" className="min-w-0 flex-1 truncate text-left" onClick={() => onSelect(clip.id)}>
-                {clip.name} <span className="text-[11px] text-background-cta-50">{clip.type}</span>
+                {clip.name} <span className="text-[13px] text-ink-muted">{clip.type}</span>
               </button>
-              <button type="button" className="text-xs text-background-cta-60 hover:text-background-cta" aria-label={`Solo ${clip.name}`} onClick={() => onSolo(clip.id)}>
+              <button type="button" className="text-[13px] text-ink-muted hover:text-ink" aria-label={`Solo ${clip.name}`} onClick={() => onSolo(clip.id)}>
                 solo
               </button>
-              <button type="button" className="text-xs text-background-cta-60 hover:text-background-cta" aria-label={`Duplicate ${clip.name}`} onClick={() => onDuplicate(clip)}>
+              <button type="button" className="text-[13px] text-ink-muted hover:text-ink" aria-label={`Duplicate ${clip.name}`} onClick={() => onDuplicate(clip)}>
                 dup
               </button>
-              <button type="button" className="text-xs text-red-9 hover:text-red-10" aria-label={`Delete ${clip.name}`} onClick={() => onDelete(clip.id)}>
+              <button type="button" className="text-[13px] text-error hover:text-accent-hover" aria-label={`Delete ${clip.name}`} onClick={() => onDelete(clip.id)}>
                 del
               </button>
               <MoveButtons

@@ -51,14 +51,14 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint }: Props) {
   return (
     <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
       <motion.g transform={frame}>
-      <path d={d} fill="none" stroke="#2563eb" strokeWidth={2 / zoom} strokeDasharray={`${8 / zoom} ${6 / zoom}`} />
+      <path d={d} fill="none" stroke="#2b6cb0" strokeWidth={2 / zoom} strokeDasharray={`${8 / zoom} ${6 / zoom}`} />
       {clip.path.map((p, i) => (
         <g key={i}>
           <circle
             cx={clip.x + p.x}
             cy={clip.y + p.y}
             r={handleRadius}
-            fill={i === clip.path.length - 1 && !clip.loop ? "#C74028" : "#2563eb"}
+            fill={i === clip.path.length - 1 && !clip.loop ? "#c33a26" : "#2b6cb0"}
             stroke="#fff"
             strokeWidth={2 / zoom}
             style={{ cursor: "move", pointerEvents: "all" }}
@@ -71,7 +71,7 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint }: Props) {
             x={clip.x + p.x + handleRadius * 1.4}
             y={clip.y + p.y - handleRadius * 0.6}
             fontSize={12 / zoom}
-            fill="#2563eb"
+            fill="#2b6cb0"
             style={{ pointerEvents: "none", fontFamily: "var(--font-work-sans), sans-serif" }}
           >
             {i + 1}

@@ -12,7 +12,7 @@ interface Props {
   zoom: number;
 }
 
-const LEADER = "#2563eb";
+const LEADER = "#2b6cb0";
 
 /** Dashed line from a selected child's anchor to its parent's anchor, live with the clock. */
 function LeaderLine({ doc, time, selected, zoom }: Props) {

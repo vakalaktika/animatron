@@ -16,10 +16,8 @@ interface ToggleProps {
  * it, so clicking the label toggles it and it stays keyboard-accessible.
  *
  * The track color and knob position are driven off the `checked` prop rather
- * than the CSS `peer-checked` variant: the `bg-background-cta-10` off-state
- * color is an unlayered utility (safariBrowserFixes.css), so it would win the
- * cascade over a layered `peer-checked:bg-background-cta` and the on/off states
- * would look identical. Focus ring / disabled state still use the `peer`.
+ * than the CSS `peer-checked` variant: keeping both states as plain utilities
+ * avoids cascade surprises between the on and off fills. Focus ring / disabled state still use the `peer`.
  */
 export function Toggle({ checked, onChange, label, disabled, size = "md" }: ToggleProps) {
   const sm = size === "sm";
@@ -34,12 +32,12 @@ export function Toggle({ checked, onChange, label, disabled, size = "md" }: Togg
           className="peer sr-only"
         />
         <span
-          className={`${sm ? "h-5 w-9" : "h-6 w-11"} rounded-full transition-colors peer-disabled:opacity-50 peer-focus-visible:ring-2 peer-focus-visible:ring-background-cta peer-focus-visible:ring-offset-1 ${
-            checked ? "bg-background-cta" : "bg-background-cta-10"
+          className={`${sm ? "h-5 w-9" : "h-6 w-11"} rounded-full border transition-colors duration-200 peer-disabled:opacity-[0.42] peer-focus-visible:shadow-[var(--atm-ring)] ${
+            checked ? "border-primary bg-primary" : "border-border-control bg-surface-sunken"
           }`}
         />
         <span
-          className={`pointer-events-none absolute left-0.5 top-0.5 ${sm ? "h-4 w-4" : "h-5 w-5"} rounded-full bg-background shadow transition-transform ${
+          className={`pointer-events-none absolute left-0.5 top-0.5 ${sm ? "h-4 w-4" : "h-5 w-5"} rounded-full border bg-surface-raised transition-transform duration-200 ease-[cubic-bezier(0.65,0,0.35,1)] ${checked ? "border-primary-hover" : "border-border-strong"} ${
             checked ? (sm ? "translate-x-4" : "translate-x-5") : "translate-x-0"
           }`}
         />

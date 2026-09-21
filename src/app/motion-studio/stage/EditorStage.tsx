@@ -99,7 +99,7 @@ export function EditorStage({
       onPointerCancel={onPointerUp}
     >
       <div
-        className={clean ? "" : "shadow-lg ring-1 ring-black/10"}
+        className={clean ? "" : "border border-border-strong shadow-pop"}
         style={{ width: scaledW, height: scaledH, cursor: clean ? "default" : "grab" }}
       >
         <StageCanvas doc={doc} time={time} zoom={zoom}>
@@ -119,7 +119,7 @@ export function EditorStage({
           {!clean && selected && selected.type !== "sprite" && (
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-blue-600"
+              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#2b6cb0]"
               style={{ left: selected.x, top: selected.y }}
             />
           )}
