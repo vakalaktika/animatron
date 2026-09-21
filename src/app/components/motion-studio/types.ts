@@ -43,6 +43,13 @@ export interface Waypoint extends Vec2 {
   opacity?: number;
   /** Seconds to pause here before moving on. Adds to the clip's length. */
   hold?: number;
+  /**
+   * Seconds of travel from the clip start (holds excluded) to reach this
+   * point, set by dragging its timeline keyframe. Unset: paced by the clip's
+   * easing. Ignored on the first point and on an open path's last point,
+   * which always sit at the start and end of the travel.
+   */
+  time?: number;
 }
 
 export interface ClipBase {

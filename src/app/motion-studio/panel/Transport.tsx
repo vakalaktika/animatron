@@ -2,13 +2,13 @@
 
 import { useMotionValueEvent, type MotionValue } from "motion/react";
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { spriteTiming } from "@/app/components/motion-studio/engine/spriteTiming";
-import { clipDuration, clipEnd } from "@/app/components/motion-studio/engine/timing";
-import type { Clip, SpriteClip, StudioDoc } from "@/app/components/motion-studio/types";
+import { clipEnd } from "@/app/components/motion-studio/engine/timing";
+import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { Button, Select, Toggle } from "@/app/components/shared-components";
 import { DragHandle, MoveButtons } from "./reorderChrome";
 import { PauseIcon, PlayIcon, ReplayIcon } from "./icons";
 import { rowMotion, useReorderDrag } from "./useReorderDrag";
+import { WaypointMarkers } from "./WaypointMarkers";
 
 interface Props {
   doc: StudioDoc;
@@ -24,8 +24,12 @@ interface Props {
   onSpeed: (s: number) => void;
   onLoop: (v: boolean) => void;
   onSelect: (id: string) => void;
-  /** Waypoint being edited on the selected sprite; its timeline marker is highlighted. */
+  /** Waypoint being edited on the selected sprite; its keyframe is highlighted. */
   selectedPoint?: number | null;
+  /** A keyframe was pressed: select that sprite and waypoint. */
+  onSelectWaypoint: (clipId: string, index: number) => void;
+  /** A keyframe was dragged or nudged to a new travel time. */
+  onRetimeWaypoint: (clipId: string, index: number, travel: number) => void;
   /** Same effect as the clip's Start slider. */
   onSetStart: (id: string, start: number) => void;
   /** Row order is stacking order: later rows render on top of earlier ones. */
@@ -60,38 +64,6 @@ export function barSpan(clip: Clip, duration: number): { left: number; width: nu
   return { left, width: Math.max(0.5, end - left), clipped: rawEnd > 100 };
 }
 
-/**
- * Diamonds inside a sprite's bar at the moment it reaches each waypoint, with
- * a shaded band for any hold. Positions are fractions of the visible bar, so
- * they line up with the bar even when it runs past the composition's end.
- */
-function waypointMarks(clip: SpriteClip, duration: number, selected: number | null) {
-  const visible = Math.min(clipDuration(clip), duration - clip.start);
-  if (visible <= 0) return null;
-  const pct = (seconds: number) => (seconds / visible) * 100;
-  return spriteTiming(clip).points.map((point, i) => {
-    const at = pct(point.arrive);
-    if (at > 100) return null;
-    const isSelected = i === selected;
-    return (
-      <span key={i} aria-hidden="true">
-        {point.leave > point.arrive && (
-          <span
-            className="pointer-events-none absolute inset-y-0 bg-ink/20"
-            style={{ left: `${at}%`, width: `${Math.min(100, pct(point.leave)) - at}%` }}
-          />
-        )}
-        <span
-          className={`pointer-events-none absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-45 border border-ink ${
-            isSelected ? "h-2.5 w-2.5 bg-highlight" : "h-2 w-2 bg-surface-raised"
-          }`}
-          style={{ left: `${at}%` }}
-        />
-      </span>
-    );
-  });
-}
-
 /** Play controls, scrubber, and a timeline showing when each clip runs. */
 export function Transport({
   doc,
@@ -110,6 +82,8 @@ export function Transport({
   onSetStart,
   onReorder,
   selectedPoint = null,
+  onSelectWaypoint,
+  onRetimeWaypoint,
   layout = "full",
 }: Props) {
   const [now, setNow] = useState(0);
@@ -251,10 +225,18 @@ export function Transport({
             if (e.key === "ArrowLeft") onSetStart(clip.id, Math.max(0, Number((clip.start - START_STEP).toFixed(2))));
             if (e.key === "ArrowRight") onSetStart(clip.id, Number((clip.start + START_STEP).toFixed(2)));
           }}
-        >
-          {clip.type === "sprite" && waypointMarks(clip, duration, isSelected ? selectedPoint : null)}
-        </span>
+        />
         );
+        const markers =
+          clip.type === "sprite" ? (
+            <WaypointMarkers
+              clip={clip}
+              duration={duration}
+              selected={isSelected ? selectedPoint : null}
+              onSelect={(index) => onSelectWaypoint(clip.id, index)}
+              onRetime={(index, travel) => onRetimeWaypoint(clip.id, index, travel)}
+            />
+          ) : null;
         // Phone timeline: name and time on one line, the bar across the full
         // width below it, so names aren't squeezed into a narrow column.
         if (stacked) {
@@ -280,7 +262,10 @@ export function Transport({
                   {clip.start.toFixed(1)}–{clipEnd(clip).toFixed(1)}s
                 </span>
               </div>
-              <div className="relative mt-1 h-5 overflow-hidden">{barEl}</div>
+              <div className="relative mt-1 h-5 overflow-hidden">
+                {barEl}
+                {markers}
+              </div>
               </div>
             </div>
           );
@@ -312,6 +297,7 @@ export function Transport({
             </div>
             <div className="relative h-full min-w-0 flex-1 overflow-hidden">
               {barEl}
+              {markers}
             </div>
           </div>
         );

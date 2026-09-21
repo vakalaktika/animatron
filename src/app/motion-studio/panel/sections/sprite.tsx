@@ -1,10 +1,10 @@
 "use client";
 
 import { EASE_LABELS } from "@/app/components/motion-studio/engine/easing";
-import { WAYPOINT_DEFAULTS } from "@/app/components/motion-studio/engine/spriteTiming";
+import { spriteTiming, WAYPOINT_DEFAULTS } from "@/app/components/motion-studio/engine/spriteTiming";
 import type { Ease, SpriteClip, Waypoint } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
-import { NumField, SelectField, ToggleField } from "../fields";
+import { BUTTON_ROW, NumField, SelectField, ToggleField } from "../fields";
 import type { PanelSection } from "../PanelGroup";
 import { setter } from "./setter";
 
@@ -65,6 +65,8 @@ export interface WaypointControls {
   /** Adds a waypoint where the sprite is at the playhead (the W key does the same). */
   onAdd: () => void;
   onRemove: (index: number) => void;
+  /** Sets when the sprite reaches a waypoint, in seconds of travel (holds excluded). */
+  onRetime: (index: number, travel: number) => void;
 }
 
 const pointValue = (p: Waypoint, key: keyof typeof WAYPOINT_DEFAULTS) => p[key] ?? WAYPOINT_DEFAULTS[key];
@@ -89,6 +91,7 @@ export function pathSection(clip: SpriteClip, onChange: (c: SpriteClip) => void,
   const setPoint = (i: number, patch: Partial<Waypoint>) =>
     set("path", clip.path.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   const last = clip.path.length - 1;
+  const timing = spriteTiming(clip);
   return {
     id: "path",
     title: "Path and waypoints",
@@ -129,16 +132,25 @@ export function pathSection(clip: SpriteClip, onChange: (c: SpriteClip) => void,
                       <NumField label="Scale" value={pointValue(p, "scale")} min={0} max={4} onChange={(v) => setPoint(i, { scale: v })} />
                       <NumField label="Rotation (deg)" value={pointValue(p, "rotate")} min={-360} max={360} step={1} onChange={(v) => setPoint(i, { rotate: v })} />
                     </div>
+                    {timing.points[i]?.movable && (
+                      <NumField
+                        label="Arrives at (s)"
+                        value={clip.start + timing.points[i].arrive}
+                        min={clip.start}
+                        max={clip.start + timing.active}
+                        onChange={(v) => waypoints.onRetime(i, v - clip.start - (timing.points[i].arrive - timing.points[i].travel))}
+                      />
+                    )}
                     <div className="grid grid-cols-2 gap-4">
                       <NumField label="Opacity" value={pointValue(p, "opacity")} min={0} max={1} onChange={(v) => setPoint(i, { opacity: v })} />
                       <NumField label="Hold (s)" value={pointValue(p, "hold")} min={0} max={5} onChange={(v) => setPoint(i, { hold: v })} />
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className={BUTTON_ROW}>
                       <Button
                         variant="outline"
                         size="xs"
-                        onClick={() => setPoint(i, { scale: undefined, rotate: undefined, opacity: undefined, hold: undefined })}
-                        disabled={!summary}
+                        onClick={() => setPoint(i, { scale: undefined, rotate: undefined, opacity: undefined, hold: undefined, time: undefined })}
+                        disabled={!summary && p.time === undefined}
                       >
                         Reset values
                       </Button>

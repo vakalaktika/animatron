@@ -116,10 +116,10 @@ export function useTreeDrag(
     onPointerUp: () => {
       const s = session.current;
       session.current = null;
-      setState((prev) => {
-        if (s && prev.target) onDrop(s.activeId, prev.target);
-        return IDLE;
-      });
+      // Handlers are rebuilt every render, so `state` is the latest drag
+      // state. Drop outside the state updater: it updates the parent.
+      if (s && state.target) onDrop(s.activeId, state.target);
+      setState(IDLE);
     },
     onPointerCancel: () => {
       session.current = null;
