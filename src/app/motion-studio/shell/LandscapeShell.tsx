@@ -70,7 +70,7 @@ export function LandscapeShell({ stage, playback, tracks, clips, edit, drawer, o
         {drawer === "clips" && (
           <Drawer id="clips" onClose={close}>
             <div className="px-4 py-3">
-              <p className="atm-help mb-1">Lower rows paint on top. Drag a grip right to nest a clip.</p>
+              <p className="atm-help mb-1">Lower rows paint on top · drag a grip right to nest</p>
               {clips}
             </div>
           </Drawer>

@@ -96,7 +96,7 @@ export function ClipTree({
             <li
               key={clip.id}
               data-tree-row
-              className={`group flex items-center gap-2 rounded-sm px-2 py-3 text-sm ${selectedId === clip.id ? "bg-primary-soft" : "hover:bg-surface-sunken"} ${rowClass}`}
+              className={`group flex min-h-11 items-center gap-2 rounded-sm px-2 py-1 text-sm lg:py-3 ${selectedId === clip.id ? "bg-primary-soft" : "hover:bg-surface-sunken"} ${rowClass}`}
               style={style}
             >
               <DragHandle label={`Drag to move ${clip.name}`} index={0} data-tree-id={clip.id} {...drag.handleProps} />
@@ -137,7 +137,7 @@ export function ClipTree({
               </span>
               <button
                 type="button"
-                className="-my-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-sunken lg:hidden"
+                className="-my-1 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-sunken lg:hidden"
                 aria-label={`${clip.name} actions`}
                 aria-haspopup="dialog"
                 onClick={() => setSheetId(clip.id)}

@@ -45,7 +45,8 @@ export function EditorStage({
     if (!el) return;
     const fit = () => {
       const { width, height } = el.getBoundingClientRect();
-      const pad = clean ? 0 : width < 640 ? 16 : 32;
+      // Room for the 1px canvas border plus a small gutter on phones.
+      const pad = clean ? 0 : width < 640 ? 12 : 32;
       setZoom(
         Math.min((width - pad) / doc.stage.width, (height - pad) / doc.stage.height),
       );
@@ -99,7 +100,7 @@ export function EditorStage({
       onPointerCancel={onPointerUp}
     >
       <div
-        className={clean ? "" : "border border-border-strong shadow-pop"}
+        className={clean ? "" : "box-content border border-border-strong sm:shadow-pop"}
         style={{ width: scaledW, height: scaledH, cursor: clean ? "default" : "grab" }}
       >
         <StageCanvas doc={doc} time={time} zoom={zoom}>
