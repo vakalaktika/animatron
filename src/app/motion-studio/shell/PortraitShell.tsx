@@ -1,13 +1,11 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import { AtomMark, CollapseIcon, ExpandIcon } from "../panel/icons";
 import { MobileTabs, panelId, tabId, type MobileTab } from "../panel/MobileTabs";
 import { IconButton } from "./IconButton";
 import type { StudioSlots } from "./types";
 
 interface Props extends StudioSlots {
-  stageAspect: string;
   tab: MobileTab;
   onTab: (tab: MobileTab) => void;
   /** Panels hidden: the stage takes the space above the playback strip. */
@@ -16,11 +14,12 @@ interface Props extends StudioSlots {
 }
 
 /**
- * Phone (and tablet) portrait: app bar, stage sized to the canvas, a pinned
- * playback strip, one panel at a time, and a bottom tab bar in thumb reach.
- * The app bar can hide the panels so the stage gets the whole screen.
+ * Phone (and tablet) portrait: app bar, stage, a pinned playback strip, one
+ * panel at a time, and a bottom tab bar in thumb reach. The panel hugs its
+ * content (scrolling past 55dvh) and the stage absorbs the rest, so short
+ * panels never leave dead space. The app bar can hide the panels entirely.
  */
-export function PortraitShell({ docName, stage, playback, tracks, clips, edit, stageAspect, tab, onTab, focused, onFocused }: Props) {
+export function PortraitShell({ docName, stage, playback, tracks, clips, edit, tab, onTab, focused, onFocused }: Props) {
   const panel = (id: MobileTab) => ({ role: "tabpanel", id: panelId(id), "aria-labelledby": tabId(id) });
 
   return (
@@ -35,20 +34,16 @@ export function PortraitShell({ docName, stage, playback, tracks, clips, edit, s
           {focused ? <CollapseIcon /> : <ExpandIcon />}
         </IconButton>
       </header>
-      <div
-        className={focused ? "min-h-0 flex-1" : "aspect-[var(--stage-ar)] max-h-[46dvh] w-full shrink-0"}
-        style={{ "--stage-ar": stageAspect } as CSSProperties}
-      >
-        {stage}
-      </div>
+      {/* The stage takes whatever the panel doesn't need, canvas centered in it. */}
+      <div className="min-h-[28dvh] flex-1">{stage}</div>
       <div className="border-b border-hairline">{playback}</div>
       {!focused && (
-        <div className="min-h-0 flex-1 overflow-y-auto bg-surface-raised">
+        <div className="max-h-[55dvh] shrink-0 overflow-y-auto bg-surface-raised">
           {tab === "timeline" && <div {...panel("timeline")}>{tracks}</div>}
           {tab === "clips" && (
-            <div {...panel("clips")} className="px-4 py-3">
+            <div {...panel("clips")} className="px-3 py-2">
               <h2 className="sr-only">Clips</h2>
-              <p className="atm-help mb-1">Lower rows paint on top. Drag a grip right to nest a clip.</p>
+              <p className="atm-help mb-1 px-2">Lower rows paint on top · drag a grip right to nest</p>
               {clips}
             </div>
           )}

@@ -167,7 +167,7 @@ export function Transport({
   // Mobile: the always-visible playback strip under the stage.
   if (layout === "bar") {
     return (
-      <div className="flex items-center gap-2 bg-surface-raised px-3 py-1.5">
+      <div className="flex items-center gap-1.5 bg-surface-raised px-2 py-0.5">
         {playButton}
         {replayButton}
         {scrubber}
@@ -176,18 +176,77 @@ export function Transport({
     );
   }
 
+  const stacked = layout === "tracks";
   const tracks = (
     <div
       ref={(el) => {
         trackRef.current = el;
         reorder.attachContainer(el);
       }}
-      className="relative space-y-1"
+      className={`relative ${stacked ? "space-y-0.5" : "space-y-1"}`}
     >
       {doc.clips.map((clip, i) => {
         const { left, width, clipped } = barSpan(clip, duration);
         const isSelected = selectedId === clip.id;
         const motion = rowMotion(i, reorder.state);
+        const barEl = (
+        <span
+          role="slider"
+          tabIndex={0}
+          aria-label={`${clip.name} start`}
+          aria-valuemin={0}
+          aria-valuenow={clip.start}
+          aria-valuetext={`${clip.start.toFixed(2)} seconds`}
+          className={`t-drag-bar absolute ${stacked ? "" : "top-0.5 h-4"} cursor-ew-resize touch-none rounded-full ${stacked ? "top-0 h-full" : "pointer-coarse:top-2 pointer-coarse:h-7"} ${draggingBar === clip.id ? "is-dragging" : ""}`}
+          style={{
+            left: `${left}%`,
+            width: `${width}%`,
+            backgroundColor: TYPE_COLOR[clip.type],
+            opacity: clip.enabled ? 0.85 : 0.25,
+            borderTopRightRadius: clipped ? 0 : undefined,
+            borderBottomRightRadius: clipped ? 0 : undefined,
+          }}
+          title={clipped ? "Runs past the end of the enabled composition" : undefined}
+          onPointerDown={onBarDown(clip)}
+          onPointerMove={onBarMove}
+          onPointerUp={onBarUp}
+          onPointerCancel={onBarUp}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft") onSetStart(clip.id, Math.max(0, Number((clip.start - START_STEP).toFixed(2))));
+            if (e.key === "ArrowRight") onSetStart(clip.id, Number((clip.start + START_STEP).toFixed(2)));
+          }}
+        />
+        );
+        // Phone timeline: name and time on one line, the bar across the full
+        // width below it, so names aren't squeezed into a narrow column.
+        if (stacked) {
+          return (
+            <div
+              key={clip.id}
+              data-reorder-row
+              className={`group flex items-center gap-0.5 rounded-md py-1 pr-1 ${isSelected ? "bg-primary-soft" : ""} ${motion.className}`}
+              style={motion.style}
+            >
+              <DragHandle className="w-5 shrink-0 text-center" label={`Drag to restack ${clip.name}`} index={i} {...reorder.handleProps} />
+              <div className="min-w-0 flex-1">
+              <div className="flex h-5 items-center gap-2 pl-1.5">
+                <button
+                  type="button"
+                  onClick={() => onSelect(clip.id)}
+                  className="h-full min-w-0 flex-1 truncate text-left text-[13px] leading-5 text-ink"
+                  aria-label={`${clip.name}, ${clip.start.toFixed(2)}s to ${clipEnd(clip).toFixed(2)}s`}
+                >
+                  {clip.name}
+                </button>
+                <span aria-hidden="true" className="shrink-0 font-sans text-[11px] tabular-nums tracking-[0.04em] text-ink-muted">
+                  {clip.start.toFixed(1)}–{clipEnd(clip).toFixed(1)}s
+                </span>
+              </div>
+              <div className="relative mt-1 h-5 overflow-hidden">{barEl}</div>
+              </div>
+            </div>
+          );
+        }
         return (
           <div
             key={clip.id}
@@ -214,32 +273,7 @@ export function Transport({
               />
             </div>
             <div className="relative h-full min-w-0 flex-1 overflow-hidden">
-              <span
-                role="slider"
-                tabIndex={0}
-                aria-label={`${clip.name} start`}
-                aria-valuemin={0}
-                aria-valuenow={clip.start}
-                aria-valuetext={`${clip.start.toFixed(2)} seconds`}
-                className={`t-drag-bar absolute top-0.5 h-4 cursor-ew-resize touch-none rounded-full pointer-coarse:top-2 pointer-coarse:h-7 ${draggingBar === clip.id ? "is-dragging" : ""}`}
-                style={{
-                  left: `${left}%`,
-                  width: `${width}%`,
-                  backgroundColor: TYPE_COLOR[clip.type],
-                  opacity: clip.enabled ? 0.85 : 0.25,
-                  borderTopRightRadius: clipped ? 0 : undefined,
-                  borderBottomRightRadius: clipped ? 0 : undefined,
-                }}
-                title={clipped ? "Runs past the end of the enabled composition" : undefined}
-                onPointerDown={onBarDown(clip)}
-                onPointerMove={onBarMove}
-                onPointerUp={onBarUp}
-                onPointerCancel={onBarUp}
-                onKeyDown={(e) => {
-                  if (e.key === "ArrowLeft") onSetStart(clip.id, Math.max(0, Number((clip.start - START_STEP).toFixed(2))));
-                  if (e.key === "ArrowRight") onSetStart(clip.id, Number((clip.start + START_STEP).toFixed(2)));
-                }}
-              />
+              {barEl}
             </div>
           </div>
         );
@@ -255,10 +289,10 @@ export function Transport({
   // Mobile timeline tab: playback lives in the bar, so this is speed, loop and tracks.
   if (layout === "tracks") {
     return (
-      <div className="space-y-4 bg-surface-raised px-4 py-4 [--label-w:136px] sm:[--label-w:190px]">
-        <div className="flex items-center justify-between gap-4">{speedAndLoop}</div>
+      <div className="space-y-2 bg-surface-raised px-3 py-2 [--label-w:22px]">
+        <div className="flex items-center justify-between gap-4 px-1">{speedAndLoop}</div>
         {tracks}
-        <p className="atm-help">Drag a bar to change when a clip starts. Drag the grip to restack.</p>
+        <p className="atm-help px-1">Drag a bar to change when a clip starts. Drag the grip to restack.</p>
       </div>
     );
   }

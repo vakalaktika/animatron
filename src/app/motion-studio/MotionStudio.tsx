@@ -457,7 +457,6 @@ export function MotionStudio() {
     ) : (
       <PortraitShell
         {...slots}
-        stageAspect={`${doc.stage.width} / ${doc.stage.height}`}
         tab={mobileTab}
         onTab={setMobileTab}
         focused={portraitFocused}
