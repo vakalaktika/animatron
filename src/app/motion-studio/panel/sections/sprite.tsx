@@ -1,7 +1,8 @@
 "use client";
 
 import { EASE_LABELS } from "@/app/components/motion-studio/engine/easing";
-import type { Ease, SpriteClip } from "@/app/components/motion-studio/types";
+import { WAYPOINT_DEFAULTS } from "@/app/components/motion-studio/engine/spriteTiming";
+import type { Ease, SpriteClip, Waypoint } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
 import { NumField, SelectField, ToggleField } from "../fields";
 import type { PanelSection } from "../PanelGroup";
@@ -57,35 +58,102 @@ export function motionSection(clip: SpriteClip, onChange: (c: SpriteClip) => voi
   };
 }
 
-/** Waypoint list; the same points are draggable on the stage. */
-export function pathSection(clip: SpriteClip, onChange: (c: SpriteClip) => void): PanelSection {
+/** How the Path panel reads and changes which waypoint is being edited. */
+export interface WaypointControls {
+  selected: number | null;
+  onSelect: (index: number | null) => void;
+  /** Adds a waypoint where the sprite is at the playhead (the W key does the same). */
+  onAdd: () => void;
+  onRemove: (index: number) => void;
+}
+
+const pointValue = (p: Waypoint, key: keyof typeof WAYPOINT_DEFAULTS) => p[key] ?? WAYPOINT_DEFAULTS[key];
+
+/** Short summary of what a waypoint changes, for its collapsed row. */
+function pointSummary(p: Waypoint): string {
+  const parts: string[] = [];
+  if (pointValue(p, "scale") !== 1) parts.push(`${pointValue(p, "scale")}x`);
+  if (pointValue(p, "rotate") !== 0) parts.push(`${pointValue(p, "rotate")}°`);
+  if (pointValue(p, "opacity") !== 1) parts.push(`${Math.round(pointValue(p, "opacity") * 100)}%`);
+  if (pointValue(p, "hold") > 0) parts.push(`hold ${pointValue(p, "hold")}s`);
+  return parts.join(" · ");
+}
+
+/**
+ * Waypoint list. Each row selects its waypoint (so do the dots on stage and
+ * the W key); the selected one opens its position and the values the sprite
+ * takes on as it passes through.
+ */
+export function pathSection(clip: SpriteClip, onChange: (c: SpriteClip) => void, waypoints: WaypointControls): PanelSection {
   const set = setter(clip, onChange);
-  const setPoint = (i: number, axis: "x" | "y", v: number) =>
-    set("path", clip.path.map((p, j) => (j === i ? { ...p, [axis]: v } : p)));
-  const addPoint = () => {
-    const last = clip.path[clip.path.length - 1] ?? { x: 0, y: 0 };
-    const prev = clip.path[clip.path.length - 2] ?? { x: last.x - 300, y: last.y };
-    const mid = { x: (prev.x + last.x) / 2, y: (prev.y + last.y) / 2 - 120 };
-    set("path", [...clip.path.slice(0, -1), mid, last]);
-  };
-  const removePoint = (i: number) => set("path", clip.path.filter((_, j) => j !== i));
+  const setPoint = (i: number, patch: Partial<Waypoint>) =>
+    set("path", clip.path.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+  const last = clip.path.length - 1;
   return {
     id: "path",
-    title: "Path (relative to the anchor; drag the dots on stage)",
+    title: "Path and waypoints",
     content: (
       <>
-        {clip.path.map((p, i) => (
-          <div key={i} className="grid grid-cols-[1.25rem_1fr_1fr_auto] items-end gap-2">
-            <span className="pb-1 text-xs tabular-nums text-background-cta-60">{i + 1}</span>
-            <NumField label="x" value={p.x} min={-2500} max={2500} step={1} onChange={(v) => setPoint(i, "x", v)} />
-            <NumField label="y" value={p.y} min={-2500} max={2500} step={1} onChange={(v) => setPoint(i, "y", v)} />
-            <Button variant="outline" size="xs" onClick={() => removePoint(i)} disabled={clip.path.length <= 2} aria-label={`Remove point ${i + 1}`}>
-              x
-            </Button>
-          </div>
-        ))}
-        <Button variant="outline" size="xs" onClick={addPoint}>
-          + Add waypoint
+        <p className="atm-help">Drag the dots on stage to move waypoints. Press W to add one where the sprite is at the playhead.</p>
+        <ol className="flex flex-col gap-1">
+          {clip.path.map((p, i) => {
+            const open = waypoints.selected === i;
+            const summary = pointSummary(p);
+            const name = !clip.loop && i === last ? "Landing point" : `Waypoint ${i + 1}`;
+            return (
+              <li key={i} className={`rounded-md border ${open ? "border-primary bg-primary-soft/40" : "border-transparent"}`}>
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  onClick={() => waypoints.onSelect(open ? null : i)}
+                  className="flex min-h-10 w-full items-center gap-2 rounded-md px-2 text-left hover:bg-surface-sunken"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-sans text-[11px] font-semibold tabular-nums ${
+                      open ? "bg-highlight text-on-highlight" : "bg-surface-sunken text-ink-secondary"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm">{name}</span>
+                  {summary && <span className="shrink-0 font-sans text-[11px] tabular-nums text-ink-muted">{summary}</span>}
+                </button>
+                {open && (
+                  <div className="flex flex-col gap-4 px-2 pt-2 pb-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <NumField label="X" value={p.x} min={-2500} max={2500} step={1} onChange={(v) => setPoint(i, { x: v })} />
+                      <NumField label="Y" value={p.y} min={-2500} max={2500} step={1} onChange={(v) => setPoint(i, { y: v })} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <NumField label="Scale" value={pointValue(p, "scale")} min={0} max={4} onChange={(v) => setPoint(i, { scale: v })} />
+                      <NumField label="Rotation (deg)" value={pointValue(p, "rotate")} min={-360} max={360} step={1} onChange={(v) => setPoint(i, { rotate: v })} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <NumField label="Opacity" value={pointValue(p, "opacity")} min={0} max={1} onChange={(v) => setPoint(i, { opacity: v })} />
+                      <NumField label="Hold (s)" value={pointValue(p, "hold")} min={0} max={5} onChange={(v) => setPoint(i, { hold: v })} />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setPoint(i, { scale: undefined, rotate: undefined, opacity: undefined, hold: undefined })}
+                        disabled={!summary}
+                      >
+                        Reset values
+                      </Button>
+                      <Button variant="danger" size="xs" onClick={() => waypoints.onRemove(i)} disabled={clip.path.length <= 2}>
+                        Remove waypoint
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        <Button variant="outline" size="xs" onClick={waypoints.onAdd}>
+          + Add waypoint at playhead
         </Button>
       </>
     ),

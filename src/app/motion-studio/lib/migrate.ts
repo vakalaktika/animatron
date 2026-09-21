@@ -2,6 +2,7 @@ import { loopMemberIds } from "@/app/components/motion-studio/engine/hierarchy";
 import { AUTO_TAIL_LENGTH, AUTO_TAIL_POSITION } from "@/app/components/motion-studio/engine/text";
 import { DOC_VERSION, type Clip, type StudioDoc, type TextClip } from "@/app/components/motion-studio/types";
 import { normalizeOrder } from "./tree";
+import { sanitizePath } from "./waypoints";
 
 export interface Normalized {
   doc: StudioDoc;
@@ -106,6 +107,7 @@ export function normalizeClip(raw: Clip | LegacyBubble): Clip {
     const legacy = raw as LegacyText;
     return { ...PLAIN_TEXT_DEFAULTS, ...legacy, parentId, followRotation };
   }
+  if (raw.type === "sprite") return { ...raw, path: sanitizePath(raw.path), parentId, followRotation };
   return { ...raw, parentId, followRotation };
 }
 

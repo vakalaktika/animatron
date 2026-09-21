@@ -1,5 +1,6 @@
 import type { Clip, StudioDoc } from "../types";
 import { LOGO_LAYER_COUNT } from "../assets/logoPaths";
+import { spriteActiveDuration } from "./spriteTiming";
 import { revealDuration } from "./text";
 
 export const IDLE_FLAP_SECONDS = 0.55;
@@ -14,7 +15,8 @@ export function clipDuration(clip: Clip): number {
       return Math.max(layers, letter);
     }
     case "sprite": {
-      if (clip.loop) return clip.duration;
+      const active = spriteActiveDuration(clip);
+      if (clip.loop) return active;
       const perch =
         clip.source.kind === "chippy"
           ? Math.max(
@@ -22,7 +24,7 @@ export function clipDuration(clip: Clip): number {
               clip.landing.settleFlaps * IDLE_FLAP_SECONDS + clip.landing.foldDuration,
             )
           : 0;
-      return clip.duration + perch;
+      return active + perch;
     }
     case "text": {
       const ruleEnd = clip.rule ? clip.ruleDelay + clip.ruleDuration : 0;

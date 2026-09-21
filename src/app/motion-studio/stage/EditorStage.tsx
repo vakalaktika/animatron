@@ -15,6 +15,9 @@ interface Props {
   onSelect: (id: string | null) => void;
   onMoveClip: (id: string, delta: Vec2) => void;
   onMovePoint: (clipId: string, index: number, delta: Vec2) => void;
+  /** Waypoint being edited on the selected sprite, if any. */
+  selectedPoint: number | null;
+  onSelectPoint: (index: number) => void;
   onChangeClip: (next: Clip) => void;
   /** Recording mode: fill the window, no chrome, no handles. */
   clean: boolean;
@@ -33,6 +36,8 @@ export function EditorStage({
   onSelect,
   onMoveClip,
   onMovePoint,
+  selectedPoint,
+  onSelectPoint,
   onChangeClip,
   clean,
 }: Props) {
@@ -111,6 +116,8 @@ export function EditorStage({
               time={time}
               zoom={zoom}
               onMovePoint={(index, delta) => onMovePoint(selected.id, index, delta)}
+              selectedPoint={selectedPoint}
+              onSelectPoint={onSelectPoint}
             />
           )}
           {!clean && selected?.type === "text" && selected.tail.mode === "manual" && (

@@ -1,7 +1,7 @@
 import type { Clip, SpriteClip, StudioDoc, TextClip, Vec2 } from "../types";
-import { clamp01, lerp, resolveEase } from "./easing";
+import { clamp01, lerp } from "./easing";
 import { ancestorChain } from "./hierarchy";
-import { buildPath, type PathSampler } from "./path";
+import { spriteActiveDuration, spritePath, spriteProgress, waypointValuesAt } from "./spriteTiming";
 import { revealTransform } from "./text";
 import { LANDING_SQUASH_SECONDS } from "./timing";
 
@@ -51,27 +51,9 @@ export function facing(angleDeg: number): number {
   return c < 0 ? -eased : eased;
 }
 
-// Clips are replaced immutably on every edit, so the clip object itself is a
-// sound cache key for its spline.
-const samplers = new WeakMap<SpriteClip, PathSampler>();
-export function spritePath(clip: SpriteClip): PathSampler {
-  const cached = samplers.get(clip);
-  if (cached) return cached;
-  const built = buildPath(clip.path, clip.loop);
-  samplers.set(clip, built);
-  return built;
-}
-
-/** Eased 0..1 progress along the path (or the raw looping phase). */
-export function spriteProgress(clip: SpriteClip, t: number): number {
-  const raw = (t - clip.start) / Math.max(0.001, clip.duration);
-  if (clip.loop) return raw <= 0 ? 0 : raw % 1;
-  return resolveEase(clip.ease)(clamp01(raw));
-}
-
 function landingSquash(clip: SpriteClip, t: number): number {
   if (clip.loop || clip.source.kind !== "chippy" || clip.landing.squash <= 0) return 1;
-  const since = t - (clip.start + clip.duration);
+  const since = t - (clip.start + spriteActiveDuration(clip));
   if (since < 0 || since > LANDING_SQUASH_SECONDS) return 1;
   const u = since / LANDING_SQUASH_SECONDS;
   const bump = Math.sin(u * Math.PI) * (u < 0.5 ? -1 : 0.3);
@@ -83,14 +65,16 @@ function spriteLocal(clip: SpriteClip, t: number): WorldTransform {
   const sample = spritePath(clip).at(p);
   const settle = clip.loop ? 1 : 1 - p;
   const grow = clip.loop ? 1 : lerp(clip.scaleFrom, 1, p);
+  const point = waypointValuesAt(clip, sample);
   const local = t - clip.start;
+  const fade = local < 0 ? 0 : clip.fadeIn > 0 ? clamp01(local / clip.fadeIn) : 1;
   return {
     x: clip.x + sample.x,
     y: clip.y + sample.y,
-    rotation: foldedHeading(sample.angle) * clip.bank * settle,
-    scaleX: clip.scale * grow * (clip.autoFlip ? facing(sample.angle) : 1),
-    scaleY: clip.scale * grow * landingSquash(clip, t),
-    opacity: local < 0 ? 0 : clip.fadeIn > 0 ? clamp01(local / clip.fadeIn) : 1,
+    rotation: foldedHeading(sample.angle) * clip.bank * settle + point.rotate,
+    scaleX: clip.scale * grow * point.scale * (clip.autoFlip ? facing(sample.angle) : 1),
+    scaleY: clip.scale * grow * point.scale * landingSquash(clip, t),
+    opacity: fade * point.opacity,
   };
 }
 

@@ -2,7 +2,8 @@
 
 import { motion, useTransform, type MotionValue } from "motion/react";
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
-import { parentTransformAt, spritePath } from "@/app/components/motion-studio/engine/transform";
+import { spritePath } from "@/app/components/motion-studio/engine/spriteTiming";
+import { parentTransformAt } from "@/app/components/motion-studio/engine/transform";
 import type { SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 
 interface Props {
@@ -12,6 +13,9 @@ interface Props {
   zoom: number;
   /** Delta in stage pixels; the caller converts it into the parent's frame. */
   onMovePoint: (index: number, delta: Vec2) => void;
+  selectedPoint: number | null;
+  /** Pressing a handle selects that waypoint for editing. */
+  onSelectPoint: (index: number) => void;
 }
 
 /**
@@ -19,7 +23,7 @@ interface Props {
  * live in the sprite's parent frame, so the whole drawing rides the parent's
  * live transform; for a root sprite that frame is the stage itself.
  */
-export function PathEditor({ doc, clip, time, zoom, onMovePoint }: Props) {
+export function PathEditor({ doc, clip, time, zoom, onMovePoint, selectedPoint, onSelectPoint }: Props) {
   const sampler = spritePath(clip);
   const drag = useRef<{ index: number; lastX: number; lastY: number } | null>(null);
   const handleRadius = 9 / zoom;
@@ -34,6 +38,7 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint }: Props) {
 
   const start = (index: number) => (e: ReactPointerEvent<SVGCircleElement>) => {
     e.stopPropagation();
+    onSelectPoint(index);
     drag.current = { index, lastX: e.clientX, lastY: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -54,6 +59,16 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint }: Props) {
       <path d={d} fill="none" stroke="#2b6cb0" strokeWidth={2 / zoom} strokeDasharray={`${8 / zoom} ${6 / zoom}`} />
       {clip.path.map((p, i) => (
         <g key={i}>
+          {i === selectedPoint && (
+            <circle
+              cx={clip.x + p.x}
+              cy={clip.y + p.y}
+              r={handleRadius * 1.75}
+              fill="none"
+              stroke="#e3a51f"
+              strokeWidth={3 / zoom}
+            />
+          )}
           <circle
             cx={clip.x + p.x}
             cy={clip.y + p.y}

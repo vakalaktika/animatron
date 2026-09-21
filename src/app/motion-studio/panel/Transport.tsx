@@ -2,8 +2,9 @@
 
 import { useMotionValueEvent, type MotionValue } from "motion/react";
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { clipEnd } from "@/app/components/motion-studio/engine/timing";
-import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
+import { spriteTiming } from "@/app/components/motion-studio/engine/spriteTiming";
+import { clipDuration, clipEnd } from "@/app/components/motion-studio/engine/timing";
+import type { Clip, SpriteClip, StudioDoc } from "@/app/components/motion-studio/types";
 import { Button, Select, Toggle } from "@/app/components/shared-components";
 import { DragHandle, MoveButtons } from "./reorderChrome";
 import { PauseIcon, PlayIcon, ReplayIcon } from "./icons";
@@ -23,6 +24,8 @@ interface Props {
   onSpeed: (s: number) => void;
   onLoop: (v: boolean) => void;
   onSelect: (id: string) => void;
+  /** Waypoint being edited on the selected sprite; its timeline marker is highlighted. */
+  selectedPoint?: number | null;
   /** Same effect as the clip's Start slider. */
   onSetStart: (id: string, start: number) => void;
   /** Row order is stacking order: later rows render on top of earlier ones. */
@@ -57,6 +60,38 @@ export function barSpan(clip: Clip, duration: number): { left: number; width: nu
   return { left, width: Math.max(0.5, end - left), clipped: rawEnd > 100 };
 }
 
+/**
+ * Diamonds inside a sprite's bar at the moment it reaches each waypoint, with
+ * a shaded band for any hold. Positions are fractions of the visible bar, so
+ * they line up with the bar even when it runs past the composition's end.
+ */
+function waypointMarks(clip: SpriteClip, duration: number, selected: number | null) {
+  const visible = Math.min(clipDuration(clip), duration - clip.start);
+  if (visible <= 0) return null;
+  const pct = (seconds: number) => (seconds / visible) * 100;
+  return spriteTiming(clip).points.map((point, i) => {
+    const at = pct(point.arrive);
+    if (at > 100) return null;
+    const isSelected = i === selected;
+    return (
+      <span key={i} aria-hidden="true">
+        {point.leave > point.arrive && (
+          <span
+            className="pointer-events-none absolute inset-y-0 bg-ink/20"
+            style={{ left: `${at}%`, width: `${Math.min(100, pct(point.leave)) - at}%` }}
+          />
+        )}
+        <span
+          className={`pointer-events-none absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-45 border border-ink ${
+            isSelected ? "h-2.5 w-2.5 bg-highlight" : "h-2 w-2 bg-surface-raised"
+          }`}
+          style={{ left: `${at}%` }}
+        />
+      </span>
+    );
+  });
+}
+
 /** Play controls, scrubber, and a timeline showing when each clip runs. */
 export function Transport({
   doc,
@@ -74,6 +109,7 @@ export function Transport({
   onSelect,
   onSetStart,
   onReorder,
+  selectedPoint = null,
   layout = "full",
 }: Props) {
   const [now, setNow] = useState(0);
@@ -215,7 +251,9 @@ export function Transport({
             if (e.key === "ArrowLeft") onSetStart(clip.id, Math.max(0, Number((clip.start - START_STEP).toFixed(2))));
             if (e.key === "ArrowRight") onSetStart(clip.id, Number((clip.start + START_STEP).toFixed(2)));
           }}
-        />
+        >
+          {clip.type === "sprite" && waypointMarks(clip, duration, isSelected ? selectedPoint : null)}
+        </span>
         );
         // Phone timeline: name and time on one line, the bar across the full
         // width below it, so names aren't squeezed into a narrow column.
@@ -305,7 +343,7 @@ export function Transport({
         <span className="w-28">{readout}</span>
         {speedAndLoop}
         <span className="ml-auto text-xs text-ink-muted">
-          Drag a bar to change its start · drag ⋮⋮ to restack · Space: play/pause · R: replay · Esc: exit clean mode
+          Drag a bar to change its start · drag ⋮⋮ to restack · Space: play/pause · R: replay · W: add waypoint · Esc: exit clean mode
         </span>
       </div>
       <div className="flex items-center gap-2">

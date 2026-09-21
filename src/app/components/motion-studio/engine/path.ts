@@ -5,6 +5,10 @@ export interface PathSample {
   y: number;
   /** Direction of travel in degrees, screen coordinates (y down). */
   angle: number;
+  /** Index of the waypoint this sample is leaving. */
+  segment: number;
+  /** 0..1 distance through that segment, by spline parameter. */
+  segmentT: number;
 }
 
 export interface PathSampler {
@@ -12,6 +16,8 @@ export interface PathSampler {
   /** Dense polyline of the whole path, for drawing it in the editor. */
   polyline: Vec2[];
   length: number;
+  /** 0..1 progress (fraction of the path's length) at which each waypoint sits. */
+  pointProgress: number[];
 }
 
 const SAMPLES_PER_SEGMENT = 40;
@@ -42,12 +48,12 @@ function catmullRom(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: number): Vec2 {
  */
 export function buildPath(points: Vec2[], closed: boolean): PathSampler {
   if (points.length === 0) {
-    const origin = { x: 0, y: 0, angle: 0 };
-    return { at: () => origin, polyline: [], length: 0 };
+    const origin = { x: 0, y: 0, angle: 0, segment: 0, segmentT: 0 };
+    return { at: () => origin, polyline: [], length: 0, pointProgress: [] };
   }
   if (points.length === 1) {
-    const only = { ...points[0], angle: 0 };
-    return { at: () => only, polyline: [points[0]], length: 0 };
+    const only = { x: points[0].x, y: points[0].y, angle: 0, segment: 0, segmentT: 0 };
+    return { at: () => only, polyline: [points[0]], length: 0, pointProgress: [0] };
   }
 
   const n = points.length;
@@ -72,6 +78,10 @@ export function buildPath(points: Vec2[], closed: boolean): PathSampler {
     cumulative.push(cumulative[i - 1] + Math.hypot(dx, dy));
   }
   const length = cumulative[cumulative.length - 1];
+  // Waypoint i is polyline sample i * SAMPLES_PER_SEGMENT (the open path's last one is the final sample).
+  const pointProgress = points.map((_, i) =>
+    length === 0 ? 0 : cumulative[Math.min(i * SAMPLES_PER_SEGMENT, cumulative.length - 1)] / length,
+  );
 
   const at = (progress: number): PathSample => {
     const p = progress < 0 ? 0 : progress > 1 ? 1 : progress;
@@ -88,8 +98,10 @@ export function buildPath(points: Vec2[], closed: boolean): PathSampler {
     const span = cumulative[hi] - cumulative[lo];
     const t = span === 0 ? 0 : (target - cumulative[lo]) / span;
     const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
-    return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, angle };
+    const segment = Math.min(segments - 1, Math.floor(lo / SAMPLES_PER_SEGMENT));
+    const segmentT = Math.min(1, (lo - segment * SAMPLES_PER_SEGMENT + t) / SAMPLES_PER_SEGMENT);
+    return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, angle, segment, segmentT };
   };
 
-  return { at, polyline, length };
+  return { at, polyline, length, pointProgress };
 }

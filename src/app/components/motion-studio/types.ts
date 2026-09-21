@@ -28,6 +28,23 @@ export interface Vec2 {
   y: number;
 }
 
+/**
+ * A point on a sprite's path, relative to its anchor. The optional values
+ * shape the sprite as it passes through: each one eases smoothly from the
+ * previous waypoint to this one. Missing values use the defaults in
+ * engine/spriteTiming.ts (scale 1, rotate 0, opacity 1, hold 0).
+ */
+export interface Waypoint extends Vec2 {
+  /** Multiplier on the clip's scale at this point. */
+  scale?: number;
+  /** Degrees added on top of the banking at this point, clockwise. */
+  rotate?: number;
+  /** 0..1 opacity at this point. */
+  opacity?: number;
+  /** Seconds to pause here before moving on. Adds to the clip's length. */
+  hold?: number;
+}
+
 export interface ClipBase {
   id: string;
   name: string;
@@ -96,7 +113,7 @@ export interface SpriteClip extends ClipBase {
    * Waypoints relative to the anchor. The sprite travels through them in
    * order with a smooth spline. For a landing, the last point is (0, 0).
    */
-  path: Vec2[];
+  path: Waypoint[];
   duration: number;
   ease: Ease;
   /** Closed path that repeats forever (loading / processing screens). */
