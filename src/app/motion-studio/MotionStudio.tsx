@@ -34,6 +34,7 @@ import {
 } from "./presets";
 import { EditorStage } from "./stage/EditorStage";
 import { loadDoc, saveDoc } from "./lib/persistence";
+import { insertWaypointAt } from "./lib/waypoints";
 import { useMediaQuery } from "./lib/useMediaQuery";
 import { ChevronLeftIcon } from "./panel/icons";
 import { DesktopShell } from "./shell/DesktopShell";
@@ -95,6 +96,12 @@ export function MotionStudio() {
   const clock = useStudioClock(duration, { autoplay: true, loop: loop || hasLoopingClip, speed });
 
   const selected = doc.clips.find((c) => c.id === selectedId) ?? null;
+  // The waypoint being edited, remembered with its clip so switching clips clears it.
+  const [pointSelection, setPointSelection] = useState<{ clipId: string; index: number } | null>(null);
+  const selectedPoint =
+    selected?.type === "sprite" && pointSelection?.clipId === selected.id && pointSelection.index < selected.path.length
+      ? pointSelection.index
+      : null;
 
   const updateClip = useCallback((next: Clip) => {
     setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === next.id ? next : c)) }));
@@ -149,13 +156,13 @@ export function MotionStudio() {
             x: c.x + delta.x,
             y: c.y + delta.y,
             path: c.path.map((p, i) =>
-              i === index ? p : { x: p.x - delta.x, y: p.y - delta.y },
+              i === index ? p : { ...p, x: p.x - delta.x, y: p.y - delta.y },
             ),
           };
         }
         return {
           ...c,
-          path: c.path.map((p, i) => (i === index ? { x: p.x + delta.x, y: p.y + delta.y } : p)),
+          path: c.path.map((p, i) => (i === index ? { ...p, x: p.x + delta.x, y: p.y + delta.y } : p)),
         };
       }),
     }));
@@ -302,19 +309,47 @@ export function MotionStudio() {
     }
   };
 
+  const selectPoint = useCallback(
+    (index: number | null) => setPointSelection(index === null || !selectedId ? null : { clipId: selectedId, index }),
+    [selectedId],
+  );
+
+  /** Adds a waypoint where the selected sprite is at the playhead, and selects it. */
+  const addWaypoint = useCallback(() => {
+    if (selected?.type !== "sprite") return;
+    const { clip, index } = insertWaypointAt(selected, clock.time.get());
+    updateClip(clip);
+    setPointSelection({ clipId: clip.id, index });
+  }, [selected, clock.time, updateClip]);
+
+  /** Removes a waypoint; a path keeps at least two. */
+  const removeWaypoint = useCallback(
+    (index: number) => {
+      if (selected?.type !== "sprite" || selected.path.length <= 2) return;
+      updateClip({ ...selected, path: selected.path.filter((_, i) => i !== index) });
+      setPointSelection(null);
+    },
+    [selected, updateClip],
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === " ") {
         e.preventDefault();
         clock.toggle();
       } else if (e.key === "r" || e.key === "R") clock.replay();
-      else if (e.key === "Escape") setClean(false);
+      else if (e.key === "w" || e.key === "W") addWaypoint();
+      else if ((e.key === "Delete" || e.key === "Backspace") && selectedPoint !== null) {
+        e.preventDefault();
+        removeWaypoint(selectedPoint);
+      } else if (e.key === "Escape") setClean(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clock]);
+  }, [clock, addWaypoint, removeWaypoint, selectedPoint]);
 
   const transportProps = {
     doc,
@@ -333,6 +368,7 @@ export function MotionStudio() {
     onSpeed: setSpeed,
     onLoop: setLoop,
     onSelect: setSelectedId,
+    selectedPoint,
     onSetStart: setClipStart,
     onReorder: reorderClips,
   };
@@ -352,6 +388,8 @@ export function MotionStudio() {
       onSelect={setSelectedId}
       onMoveClip={moveClip}
       onMovePoint={movePoint}
+      selectedPoint={selectedPoint}
+      onSelectPoint={selectPoint}
       onChangeClip={updateClip}
       clean={clean}
     />
@@ -416,6 +454,7 @@ export function MotionStudio() {
               onReparent={(p) => reparent(selected.id, p)}
               focusText={freshId === selected.id}
               artwork={artwork}
+              waypoints={{ selected: selectedPoint, onSelect: selectPoint, onAdd: addWaypoint, onRemove: removeWaypoint }}
             />
             {mode === "desktop" && (
               <Button size="xs" variant="outline" className="mt-6" onClick={() => setSelectedId(null)}>

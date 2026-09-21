@@ -7,7 +7,7 @@ import { outlinedSvgSection, rasterSection, textRunsSection, type ArtworkActions
 import { buildSections } from "./sections/logo";
 import { playbackSection } from "./sections/lottie";
 import { placementSection } from "./sections/placement";
-import { flapSection, landingSection, motionSection, pathSection } from "./sections/sprite";
+import { flapSection, landingSection, motionSection, pathSection, type WaypointControls } from "./sections/sprite";
 import { containerSection, revealSection, textSection } from "./sections/text";
 
 interface Props {
@@ -20,6 +20,8 @@ interface Props {
   focusText?: boolean;
   /** Imported-artwork actions that add or remove clips, so they live with the document. */
   artwork: ArtworkActions;
+  /** Waypoint selection and add / remove, shared with the stage and the W key. */
+  waypoints: WaypointControls;
 }
 
 /**
@@ -28,7 +30,7 @@ interface Props {
  * remembered per section id, so putting Reveal first sticks for any clip
  * that has a Reveal section.
  */
-export function ClipControls({ doc, clip, onChange, onReparent, focusText = false, artwork }: Props) {
+export function ClipControls({ doc, clip, onChange, onReparent, focusText = false, artwork, waypoints }: Props) {
   const caps = capabilities(clip);
   const sections: (PanelSection | null)[] = [
     placementSection(doc, clip, onChange, onReparent),
@@ -36,7 +38,7 @@ export function ClipControls({ doc, clip, onChange, onReparent, focusText = fals
     caps.container && containerSection(caps.container, onChange),
     caps.reveal && revealSection(caps.reveal, onChange),
     caps.motion && motionSection(caps.motion, onChange),
-    caps.path && pathSection(caps.path, onChange),
+    caps.path && pathSection(caps.path, onChange, waypoints),
     caps.flap && flapSection(caps.flap, onChange),
     caps.landing && landingSection(caps.landing, onChange),
     ...(caps.build ? buildSections(caps.build, onChange) : []),

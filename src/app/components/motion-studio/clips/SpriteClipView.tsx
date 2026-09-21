@@ -17,6 +17,7 @@ import {
   CHIPPY_WING_PIVOT,
 } from "../assets/chippyPaths";
 import { clamp01, EASE_PRESETS, lerp } from "../engine/easing";
+import { spriteActiveDuration } from "../engine/spriteTiming";
 import { svgDataUrl } from "../engine/svgText";
 import { IDLE_FLAP_SECONDS } from "../engine/timing";
 import type { SpriteClip } from "../types";
@@ -34,10 +35,12 @@ function wingAngle(clip: SpriteClip, t: number): number {
   const local = t - clip.start;
   if (local < 0) return 0;
   const { hz, depth } = clip.flap;
-  if (clip.loop || local < clip.duration) {
+  // Wings keep beating through holds: the bird hovers at the waypoint.
+  const flying = spriteActiveDuration(clip);
+  if (clip.loop || local < flying) {
     return -depth * (0.5 - 0.5 * Math.cos(TWO_PI * hz * local));
   }
-  const sinceLanding = local - clip.duration;
+  const sinceLanding = local - flying;
   const settleEnd = clip.landing.settleFlaps * IDLE_FLAP_SECONDS;
   if (sinceLanding < settleEnd) {
     return -IDLE_FLAP_DEPTH * (0.5 - 0.5 * Math.cos((TWO_PI * sinceLanding) / IDLE_FLAP_SECONDS));
