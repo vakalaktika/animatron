@@ -12,6 +12,13 @@ import { Select, Slider, TextInput, Toggle } from "@/app/components/shared-compo
  *   - Labels: 12px semibold; section titles: eyebrow. Values are tabular.
  */
 
+/**
+ * Layout for a wrapping group of small buttons: 8px between buttons, 12px
+ * between wrapped rows, so each row still reads as a row. Keep a section's
+ * primary action (import, record, save) on its own line below the group.
+ */
+export const BUTTON_ROW = "flex flex-wrap gap-x-2 gap-y-3";
+
 /** Labeled slider with a typed value box on the label row. */
 export function NumField({
   label,

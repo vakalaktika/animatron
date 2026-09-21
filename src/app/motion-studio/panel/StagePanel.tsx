@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { StudioDoc } from "@/app/components/motion-studio/types";
 import { Button, FileInput, Select } from "@/app/components/shared-components";
 import { BUILT_IN_PRESETS, FRAME_SIZES, type SavedPreset } from "../presets";
-import { NumField, TextField, ToggleField } from "./fields";
+import { BUTTON_ROW, NumField, TextField, ToggleField } from "./fields";
 import { PanelGroup, type PanelSection } from "./PanelGroup";
 
 interface Props {
@@ -79,15 +79,15 @@ export function StagePanel({
     ) },
     { id: "add", title: "Add a clip", content: (
       <>
-        <div className="flex flex-wrap gap-2">
+        <div className={BUTTON_ROW}>
           <Button size="xs" variant="outline" onClick={() => onAddClip("logo")}>+ Logo build</Button>
           <Button size="xs" variant="outline" onClick={() => onAddClip("chippy")}>+ Chippy</Button>
           <Button size="xs" variant="outline" onClick={() => onAddClip("bubble")}>+ Speech bubble</Button>
           <Button size="xs" variant="outline" onClick={() => onAddClip("text")}>+ Text</Button>
-          <FileInput size="sm" accept=".json,.svg,.png,.jpg,.jpeg,.webp,.gif" onFile={onImportFile}>
-            Import Lottie, clip, or image
-          </FileInput>
         </div>
+        <FileInput size="sm" accept=".json,.svg,.png,.jpg,.jpeg,.webp,.gif" onFile={onImportFile}>
+          Import Lottie, clip, or image
+        </FileInput>
         <p className="atm-help">
           Lottie and studio JSON files add a clip. Images and SVGs become sprites that can follow a path; an SVG with live text keeps it editable. A studio document replaces the composition.
         </p>
@@ -137,10 +137,12 @@ export function StagePanel({
     ) },
     { id: "export", title: "Export and record", content: (
       <>
-        <div className="flex flex-wrap gap-2">
+        <div className={BUTTON_ROW}>
           <Button size="xs" variant="outline" onClick={onExportDocCode}>Composition code (.tsx)</Button>
           <Button size="xs" variant="outline" onClick={onExportDocJson}>Composition JSON</Button>
           <Button size="xs" variant="outline" onClick={onClean}>Clean view</Button>
+        </div>
+        <div>
           <Button size="sm" variant={recording ? "danger" : "primary"} onClick={onRecord}>
             {recording ? "Stop recording" : "Record to WebM"}
           </Button>

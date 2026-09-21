@@ -117,6 +117,8 @@
   --color-on-primary: var(--on-primary);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-highlight: var(--highlight);
+  --color-on-highlight: var(--on-highlight);
   --color-surface-inverse: var(--surface-inverse);
   --color-error: var(--error);
   --color-on-error: var(--on-error);

@@ -34,7 +34,8 @@ import {
 } from "./presets";
 import { EditorStage } from "./stage/EditorStage";
 import { loadDoc, saveDoc } from "./lib/persistence";
-import { insertWaypointAt } from "./lib/waypoints";
+import { insertWaypointAt, retimeWaypoint } from "./lib/waypoints";
+import { spriteTiming } from "@/app/components/motion-studio/engine/spriteTiming";
 import { useMediaQuery } from "./lib/useMediaQuery";
 import { ChevronLeftIcon } from "./panel/icons";
 import { DesktopShell } from "./shell/DesktopShell";
@@ -314,6 +315,18 @@ export function MotionStudio() {
     [selectedId],
   );
 
+  // While a waypoint is selected, park the playhead on it: selecting one (row,
+  // stage handle, W) or editing it shows the sprite exactly at that point, and
+  // edits that shift its timing (an earlier hold, the duration) follow it.
+  const { pause, seek } = clock;
+  useEffect(() => {
+    if (selected?.type !== "sprite" || selectedPoint === null) return;
+    const point = spriteTiming(selected).points[selectedPoint];
+    if (!point) return;
+    pause();
+    seek(selected.start + point.arrive);
+  }, [selected, selectedPoint, pause, seek]);
+
   /** Adds a waypoint where the selected sprite is at the playhead, and selects it. */
   const addWaypoint = useCallback(() => {
     if (selected?.type !== "sprite") return;
@@ -369,6 +382,14 @@ export function MotionStudio() {
     onLoop: setLoop,
     onSelect: setSelectedId,
     selectedPoint,
+    onSelectWaypoint: (clipId: string, index: number) => {
+      setSelectedId(clipId);
+      setPointSelection({ clipId, index });
+    },
+    onRetimeWaypoint: (clipId: string, index: number, travel: number) => {
+      const clip = doc.clips.find((c) => c.id === clipId);
+      if (clip?.type === "sprite") updateClip(retimeWaypoint(clip, index, travel));
+    },
     onSetStart: setClipStart,
     onReorder: reorderClips,
   };
@@ -454,7 +475,15 @@ export function MotionStudio() {
               onReparent={(p) => reparent(selected.id, p)}
               focusText={freshId === selected.id}
               artwork={artwork}
-              waypoints={{ selected: selectedPoint, onSelect: selectPoint, onAdd: addWaypoint, onRemove: removeWaypoint }}
+              waypoints={{
+                selected: selectedPoint,
+                onSelect: selectPoint,
+                onAdd: addWaypoint,
+                onRemove: removeWaypoint,
+                onRetime: (index, travel) => {
+                  if (selected.type === "sprite") updateClip(retimeWaypoint(selected, index, travel));
+                },
+              }}
             />
             {mode === "desktop" && (
               <Button size="xs" variant="outline" className="mt-6" onClick={() => setSelectedId(null)}>

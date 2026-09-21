@@ -1,9 +1,11 @@
-import { spritePath, spriteProgress, waypointValuesAt, WAYPOINT_DEFAULTS } from "@/app/components/motion-studio/engine/spriteTiming";
+import { spritePath, spriteProgress, spriteTiming, spriteTravelAt, waypointValuesAt, WAYPOINT_DEFAULTS } from "@/app/components/motion-studio/engine/spriteTiming";
 import type { PathSample } from "@/app/components/motion-studio/engine/path";
 import type { SpriteClip, Waypoint } from "@/app/components/motion-studio/types";
 
 // Closer than this to an existing waypoint (path px), a new one goes mid-segment instead.
 const MIN_GAP = 12;
+// Closest two neighbouring waypoints may be in time, in seconds of travel.
+const MIN_STEP = 0.05;
 
 const round = (v: number) => Math.round(v * 10) / 10;
 
@@ -35,8 +37,35 @@ export function insertWaypointAt(clip: SpriteClip, t: number): { clip: SpriteCli
     sample = sampler.at((from + to) / 2);
   }
   const index = Math.min(n, sample.segment + 1);
-  const path = [...clip.path.slice(0, index), waypointFrom(clip, sample), ...clip.path.slice(index)];
+  const point = waypointFrom(clip, sample);
+  // Once any waypoint has its own time, pin the new one too, at the travel it
+  // was added at (or midway between its neighbours), so the order holds.
+  const timing = spriteTiming(clip);
+  if (timing.retimed) {
+    const before = timing.points[index - 1]?.travel ?? 0;
+    const after = timing.points[index]?.travel ?? clip.duration;
+    const travel = near === -1 ? spriteTravelAt(clip, t) : (before + after) / 2;
+    point.time = round(Math.min(after - MIN_STEP, Math.max(before + MIN_STEP, travel)) * 100) / 100;
+  }
+  const path = [...clip.path.slice(0, index), point, ...clip.path.slice(index)];
   return { clip: { ...clip, path }, index };
+}
+
+
+/**
+ * Sets when the sprite reaches waypoint `index`, in seconds of travel from
+ * the clip start (holds excluded), without touching where it is or how it
+ * looks there. Clamped between its neighbours; the first point and an open
+ * path's last point stay pinned to the start and end.
+ */
+export function retimeWaypoint(clip: SpriteClip, index: number, travel: number): SpriteClip {
+  const timing = spriteTiming(clip);
+  const point = timing.points[index];
+  if (!point?.movable) return clip;
+  const before = timing.points[index - 1]?.travel ?? 0;
+  const after = timing.points[index + 1]?.travel ?? clip.duration;
+  const time = Math.round(Math.min(after - MIN_STEP, Math.max(before + MIN_STEP, travel)) * 100) / 100;
+  return { ...clip, path: clip.path.map((p, i) => (i === index ? { ...p, time } : p)) };
 }
 
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -56,6 +85,7 @@ export function sanitizePath(raw: unknown): Waypoint[] {
     if (finite(v.rotate)) point.rotate = v.rotate;
     if (finite(v.opacity)) point.opacity = Math.min(1, Math.max(0, v.opacity));
     if (finite(v.hold) && v.hold > 0) point.hold = v.hold;
+    if (finite(v.time) && v.time >= 0) point.time = v.time;
     return [point];
   });
 }

@@ -7,8 +7,12 @@ export const WAYPOINT_DEFAULTS = { scale: 1, rotate: 0, opacity: 1, hold: 0 } as
 
 /** When a sprite reaches and leaves one waypoint, in seconds from the clip start. */
 export interface WaypointTiming {
-  /** Seconds of pure travel (holds excluded) to reach this point. */
+  /** Seconds of travel (holds excluded) to reach this point: its own `time`, or `auto`. */
   travel: number;
+  /** Where the clip's easing alone would put this point. */
+  auto: number;
+  /** Whether the point's time can be changed (not pinned to the start or end). */
+  movable: boolean;
   arrive: number;
   /** arrive + this point's hold. */
   leave: number;
@@ -20,6 +24,8 @@ export interface SpriteTiming {
   totalHold: number;
   /** Travel duration plus holds: how long the sprite is moving or paused on its path. */
   active: number;
+  /** Some waypoint has its own time, so travel is remapped segment by segment. */
+  retimed: boolean;
 }
 
 const EASE_SOLVE_STEPS = 32;
@@ -54,9 +60,10 @@ function invertEase(ease: (t: number) => number, target: number): number {
 const holdOf = (p: Waypoint) => (p.hold !== undefined && p.hold > 0 ? p.hold : 0);
 
 /**
- * When the sprite reaches each waypoint. Travel is paced by the clip's easing
- * over `duration`; each hold then pauses the sprite in place and pushes
- * everything after it later.
+ * When the sprite reaches each waypoint. By default travel is paced by the
+ * clip's easing over `duration`; a waypoint with its own `time` overrides
+ * that. Each hold then pauses the sprite in place and pushes everything after
+ * it later.
  */
 export function spriteTiming(clip: SpriteClip): SpriteTiming {
   const cached = timings.get(clip);
@@ -64,15 +71,21 @@ export function spriteTiming(clip: SpriteClip): SpriteTiming {
   const duration = Math.max(0.001, clip.duration);
   const ease = resolveEase(clip.ease);
   const progress = spritePath(clip).pointProgress;
+  const last = clip.path.length - 1;
   let held = 0;
+  let retimed = false;
   const points = clip.path.map((p, i) => {
     const fraction = progress[i] ?? 0;
-    const travel = (clip.loop ? fraction : invertEase(ease, fraction)) * duration;
+    const auto = (clip.loop ? fraction : invertEase(ease, fraction)) * duration;
+    const movable = i > 0 && (clip.loop || i < last);
+    const own = movable && p.time !== undefined ? Math.min(duration, Math.max(0, p.time)) : undefined;
+    if (own !== undefined) retimed = true;
+    const travel = own ?? auto;
     const arrive = travel + held;
     held += holdOf(p);
-    return { travel, arrive, leave: arrive + holdOf(p) };
+    return { travel, auto, movable, arrive, leave: arrive + holdOf(p) };
   });
-  const timing = { points, totalHold: held, active: duration + held };
+  const timing = { points, totalHold: held, active: duration + held, retimed };
   timings.set(clip, timing);
   return timing;
 }
@@ -93,14 +106,41 @@ function travelAt(timing: SpriteTiming, local: number): number {
   return local - held;
 }
 
-/** Eased 0..1 progress along the path at clock time `t` (or the looping phase). */
-export function spriteProgress(clip: SpriteClip, t: number): number {
+/**
+ * Maps retimed travel back onto the easing's own clock, segment by segment,
+ * so each stretch between waypoints keeps the ease's shape while reaching
+ * every waypoint at its chosen time.
+ */
+function toEaseClock(timing: SpriteTiming, travel: number, duration: number): number {
+  if (!timing.retimed) return travel;
+  const points = [...timing.points, { travel: duration, auto: duration }];
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    if (travel < b.travel) {
+      const span = b.travel - a.travel;
+      return span <= 0 ? b.auto : lerp(a.auto, b.auto, (travel - a.travel) / span);
+    }
+  }
+  return travel;
+}
+
+/** Seconds of travel (holds excluded) the sprite has covered at clock time `t`. */
+export function spriteTravelAt(clip: SpriteClip, t: number): number {
   const timing = spriteTiming(clip);
   const local = t - clip.start;
   if (local <= 0) return 0;
+  return travelAt(timing, clip.loop ? local % timing.active : local);
+}
+
+/** Eased 0..1 progress along the path at clock time `t` (or the looping phase). */
+export function spriteProgress(clip: SpriteClip, t: number): number {
+  const timing = spriteTiming(clip);
+  if (t - clip.start <= 0) return 0;
   const duration = Math.max(0.001, clip.duration);
-  if (clip.loop) return (travelAt(timing, local % timing.active) / duration) % 1;
-  return resolveEase(clip.ease)(clamp01(travelAt(timing, local) / duration));
+  const eased = toEaseClock(timing, spriteTravelAt(clip, t), duration) / duration;
+  if (clip.loop) return eased % 1;
+  return resolveEase(clip.ease)(clamp01(eased));
 }
 
 export interface WaypointValues {
