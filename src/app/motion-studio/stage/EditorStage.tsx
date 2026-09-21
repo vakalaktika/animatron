@@ -45,7 +45,7 @@ export function EditorStage({
     if (!el) return;
     const fit = () => {
       const { width, height } = el.getBoundingClientRect();
-      const pad = clean ? 0 : 32;
+      const pad = clean ? 0 : width < 640 ? 16 : 32;
       setZoom(
         Math.min((width - pad) / doc.stage.width, (height - pad) / doc.stage.height),
       );
@@ -90,7 +90,7 @@ export function EditorStage({
       className={
         clean
           ? "fixed inset-0 z-50 flex items-center justify-center"
-          : "relative flex h-full w-full items-center justify-center overflow-hidden"
+          : "relative flex h-full w-full touch-none items-center justify-center overflow-hidden"
       }
       style={clean ? { backgroundColor: doc.stage.transparent ? "#000" : doc.stage.background } : undefined}
       onPointerDown={onPointerDown}
