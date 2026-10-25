@@ -45,14 +45,14 @@ export function ControlsSidebar({ squiggles, onExportStroke, onAnimateStroke, on
               key={p.name}
               type="button"
               onClick={() => applyPreset(p.colors)}
-              className="flex flex-1 cursor-pointer flex-col gap-1.5 rounded-md border border-border-control bg-surface-raised p-2 text-left transition-[background-color,box-shadow] duration-200 hover:bg-surface-sunken hover:shadow-pop"
+              className="flex flex-1 cursor-pointer flex-col justify-between gap-1.5 rounded-md border border-border-control bg-surface-raised p-2 text-left transition-[background-color,box-shadow] duration-200 hover:bg-surface-sunken hover:shadow-pop"
             >
               <span className="flex flex-col overflow-hidden rounded-sm">
                 {p.colors.map((c, i) => (
                   <span key={i} className="h-1.5" style={{ background: c }} />
                 ))}
               </span>
-              <span className="atm-button-type text-[11px]">{PRESET_LABELS[p.name] ?? p.name}</span>
+              <span className="atm-button-type truncate text-[11px]">{PRESET_LABELS[p.name] ?? p.name}</span>
             </button>
           ))}
         </div>

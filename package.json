@@ -13,6 +13,7 @@
   "dependencies": {
     "i18next": "^25.7.3",
     "lottie-web": "^5.13.0",
+    "lz-string": "^1.5.0",
     "motion": "^12.42.2",
     "next": "^16.0.8",
     "react": "^19.0.0",

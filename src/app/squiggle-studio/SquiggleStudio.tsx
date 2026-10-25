@@ -72,20 +72,20 @@ export function SquiggleStudio() {
   return (
     <div className="flex h-dvh flex-col bg-surface font-body text-ink">
       <header className="flex min-h-12 min-w-0 items-center gap-3 border-b border-border-strong bg-surface-raised py-1 pr-2 pl-1 pt-[env(safe-area-inset-top)]">
-        <IconButton label="Back to the Motion Studio" onClick={() => router.push(MOTION_STUDIO)}>
+        <IconButton label="Back to the canvas" onClick={() => router.push(MOTION_STUDIO)}>
           <ChevronLeftIcon />
         </IconButton>
         <h1 className="flex min-w-0 shrink-0 items-center gap-2 font-display text-xl font-semibold tracking-[-0.01em]">
           <AtomMark className="text-primary" />
           {wide ? "Animatron" : "Squiggle Studio"}
         </h1>
-        {wide && <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">Squiggle Studio · draw, smooth, export, or send to the studio</span>}
+        {wide && <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">Squiggle Studio</span>}
       </header>
 
       <div className={`flex min-h-0 flex-1 ${wide ? "flex-row" : "flex-col"}`}>
         <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-4">
           <div className={wide ? "flex flex-wrap items-center gap-x-2 gap-y-3" : "grid grid-cols-4 gap-2"}>
-            {wide && <p className="atm-help mr-auto">Draw squiggles and loops with your mouse.</p>}
+            {wide && <span className="mr-auto" />}
             <Button variant="outline" size="xs" onClick={undo} disabled={noStrokes}>
               Undo
             </Button>
@@ -95,8 +95,8 @@ export function SquiggleStudio() {
             <Button variant="outline" size="xs" onClick={smoothAll} disabled={noStrokes} aria-label="Smooth all">
               {wide ? "Smooth all" : "Smooth"}
             </Button>
-            <Button variant="primary" size="xs" onClick={exportAll} disabled={noStrokes} aria-label="Export all SVGs">
-              {wide ? "Export all SVGs" : "Export"}
+            <Button variant="outline" size="xs" onClick={exportAll} disabled={noStrokes} aria-label="Download all as SVG">
+              {wide ? "Download all as SVG" : "Download"}
             </Button>
           </div>
           <DrawingCanvas

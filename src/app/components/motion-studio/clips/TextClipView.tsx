@@ -18,7 +18,7 @@ const SQRT2 = Math.SQRT2;
 
 const FONT_STYLE: Record<TextClip["font"], CSSProperties> = {
   sans: { fontFamily: "var(--font-work-sans), Arial, sans-serif", fontWeight: 500, letterSpacing: "0.01em" },
-  serif: { fontFamily: "var(--font-gelasio), Georgia, serif", fontWeight: 600, letterSpacing: "-0.01em" },
+  serif: { fontFamily: "var(--font-fraunces), Georgia, serif", fontWeight: 600, letterSpacing: "-0.01em" },
 };
 
 const SHADOW: Record<TextClip["container"]["shape"], string> = {
@@ -159,7 +159,8 @@ export function TextClipView({ clip, doc, time }: Props) {
       className={`absolute flex flex-col items-center whitespace-nowrap ${boxed ? `border-solid ${SHADOW[container.shape]}` : ""}`}
       style={{ ...placement, ...boxStyle }}
     >
-      <p aria-label={clip.text} className="flex" style={{ ...FONT_STYLE[clip.font], fontSize: clip.fontSize, color: clip.color }}>
+      <p className="flex" style={{ ...FONT_STYLE[clip.font], fontSize: clip.fontSize, color: clip.color }}>
+        <span className="sr-only">{clip.text}</span>
         {clip.reveal === "letters"
           ? letters.map((letter, i) => (
               <Letter key={i} clip={clip} index={i} count={letters.length} letter={letter} accent={i >= accentStart} time={time} />

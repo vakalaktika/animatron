@@ -17,16 +17,16 @@ export function textRunsSection(clip: SpriteClip, actions: ArtworkActions): Pane
   const runs = clip.source.kind === "svg" ? clip.source.textRuns : [];
   return {
     id: "artwork",
-    title: `SVG, ${runs.length} text ${runs.length === 1 ? "run" : "runs"}, editable in place`,
+    title: `Text in the artwork (${runs.length})`,
     content: (
       <>
         {runs.map((run) => (
           <div key={run.id} className="flex items-end gap-2">
             <div className="min-w-0 flex-1">
               {run.detachedTo ? (
-                <p className="text-xs text-background-cta-60">“{run.text}” is now its own text clip.</p>
+                <p className="atm-help">“{run.text}” is now its own text clip.</p>
               ) : (
-                <TextField label={`Run ${run.id.replace("run-", "")}`} value={run.text} onChange={(v) => actions.onSetRunText(clip, run.id, v)} />
+                <TextField label={`Text ${Number(run.id.replace("run-", "")) + 1}`} value={run.text} onChange={(v) => actions.onSetRunText(clip, run.id, v)} />
               )}
             </div>
             {run.detachedTo ? (
@@ -35,7 +35,7 @@ export function textRunsSection(clip: SpriteClip, actions: ArtworkActions): Pane
               </Button>
             ) : (
               <Button size="xs" variant="outline" onClick={() => actions.onDetachRun(clip, run.id)}>
-                Detach
+                Make it a clip
               </Button>
             )}
           </div>
@@ -50,7 +50,7 @@ export function outlinedSvgSection(): PanelSection {
   return {
     id: "artwork",
     title: "SVG artwork",
-    content: <p className="text-xs text-background-cta-60">No live text found. Re-export with text as text, not outlines.</p>,
+    content: <p className="atm-help">This SVG has no editable text. To edit words here, export it with text kept as text rather than outlines.</p>,
   };
 }
 
@@ -61,9 +61,9 @@ export function rasterSection(clip: SpriteClip, actions: ArtworkActions): PanelS
     title: "Picture",
     content: (
       <>
-        <p className="text-xs text-background-cta-60">Text baked into a picture can’t be edited.</p>
+        <p className="atm-help">Words inside a picture are pixels. Add a text clip that rides along with it instead.</p>
         <Button size="xs" variant="outline" onClick={() => actions.onAddAttachedText(clip)}>
-          + Attached text
+          + Text that follows this picture
         </Button>
       </>
     ),

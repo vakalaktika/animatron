@@ -36,10 +36,11 @@ interface Props {
 export function ClipControls({ doc, clip, onChange, onReparent, focusText = false, artwork, waypoints }: Props) {
   const caps = capabilities(clip);
   const sections: (PanelSection | null)[] = [
-    placementSection(doc, clip, onChange, onReparent),
+    // What the thing says comes before where it sits.
     caps.text && textSection(caps.text, onChange, focusText),
-    caps.container && containerSection(caps.container, onChange),
+    placementSection(doc, clip, onChange, onReparent),
     caps.reveal && revealSection(caps.reveal, onChange),
+    caps.container && containerSection(caps.container, onChange),
     caps.motion && motionSection(caps.motion, onChange),
     caps.path && pathSection(caps.path, onChange, waypoints),
     caps.trail && trailSection(caps.trail, onChange),

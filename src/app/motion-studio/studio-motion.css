@@ -5,10 +5,19 @@
  * drop settles with the bounce ease so the row lands with a little weight.
  */
 :root {
+  --duration-micro: 80ms;
+  --duration-quick: 150ms;
   --duration-fast: 250ms;
+  --duration-medium: 350ms;
   --duration-slow: 400ms;
   --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: ease-out;
   --ease-bounce: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --distance-base: 8px;
+  --scale-large: 0.96;
+  --scale-medium: 0.97;
+  --scale-small: 0.98;
+  --blur-small: 2px;
 
   --drag-dur: var(--duration-fast);
   --drag-ease: var(--ease-smooth-out);
@@ -189,6 +198,101 @@
   }
 }
 
+/*
+ * Toast (transitions.dev 22): rises from below with fade, slight scale and a
+ * cross-blur on the slower open clock. It unmounts on dismiss, so the exit
+ * is a cut; the content is gone, not fading.
+ */
+.atm-toast {
+  animation: atm-toast-in var(--duration-medium) var(--ease-smooth-out) both;
+  will-change: transform, opacity, filter;
+}
+@keyframes atm-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(var(--scale-medium));
+    filter: blur(var(--blur-small));
+  }
+}
+
+/* Popover growing from its trigger (transitions.dev 05, origin top-left). */
+.atm-pop {
+  transform-origin: top left;
+  animation: atm-pop-in var(--duration-fast) var(--ease-smooth-out) both;
+}
+@keyframes atm-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(var(--scale-medium));
+  }
+}
+
+/*
+ * Tooltip (transitions.dev 17): a short intent delay, then fade + scale in
+ * on the quick clock; out is immediate so moving along the rail never
+ * leaves a trail of labels.
+ */
+.atm-tip {
+  transform: translateY(-50%) scale(var(--scale-small));
+  transition:
+    opacity var(--duration-quick) var(--ease-out) var(--duration-micro),
+    transform var(--duration-quick) var(--ease-out) var(--duration-micro);
+}
+.group:hover > .atm-tip,
+.group:focus-visible > .atm-tip {
+  transform: translateY(-50%) scale(1);
+}
+.group:not(:hover):not(:focus-visible) > .atm-tip {
+  transition-delay: 0s;
+  transition-duration: 0s;
+}
+
+/* Disclosure chevron: a quarter turn on the fast clock (transitions.dev 21). */
+.atm-chevron {
+  transition: transform var(--duration-fast) var(--ease-smooth-out);
+}
+.atm-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+/* Option chips settle into their chosen state without a hard cut. */
+.atm-chip {
+  transition:
+    background-color var(--duration-quick) var(--ease-out),
+    border-color var(--duration-quick) var(--ease-out),
+    color var(--duration-quick) var(--ease-out);
+}
+
+/*
+ * Desktop dialogs (transitions.dev 06): centred, scaling up from 0.96 on the
+ * fast clock. Below lg the same element is a sheet and keeps the rise.
+ */
+@media (min-width: 1024px) {
+  .atm-sheet[open] {
+    animation: atm-modal-in var(--duration-fast) var(--ease-smooth-out);
+  }
+  @keyframes atm-modal-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(var(--scale-large));
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+}
+
+/* A see-through canvas sits on a checkerboard so "transparent" is visible. */
+.atm-checker {
+  background-color: var(--surface-raised);
+  background-image:
+    linear-gradient(45deg, var(--surface-sunken) 25%, transparent 25%, transparent 75%, var(--surface-sunken) 75%),
+    linear-gradient(45deg, var(--surface-sunken) 25%, transparent 25%, transparent 75%, var(--surface-sunken) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .atm-drawer-left,
   .atm-drawer-right,
@@ -196,8 +300,18 @@
     animation: none;
   }
   .atm-sheet[open],
-  .atm-sheet[open]::backdrop {
+  .atm-sheet[open]::backdrop,
+  .atm-toast,
+  .atm-pop {
     animation: none;
+  }
+  .atm-tip,
+  .atm-chevron,
+  .atm-chip {
+    transition: none;
+  }
+  .atm-tip {
+    transform: translateY(-50%);
   }
   .t-drop-line,
   .t-drag-shift {

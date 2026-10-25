@@ -3,7 +3,6 @@
 import { AtomMark, CollapseIcon, ExpandIcon } from "../panel/icons";
 import { MobileTabs, panelId, tabId, type MobileTab } from "../panel/MobileTabs";
 import { IconButton } from "./IconButton";
-import { SquiggleLink } from "./SquiggleLink";
 import type { StudioSlots } from "./types";
 
 interface Props extends StudioSlots {
@@ -20,32 +19,31 @@ interface Props extends StudioSlots {
  * content (scrolling past 55dvh) and the stage absorbs the rest, so short
  * panels never leave dead space. The app bar can hide the panels entirely.
  */
-export function PortraitShell({ docName, stage, playback, tracks, clips, edit, tab, onTab, focused, onFocused }: Props) {
+export function PortraitShell({ title, phoneActions, stage, playback, tracks, clips, edit, tab, onTab, focused, onFocused }: Props) {
   const panel = (id: MobileTab) => ({ role: "tabpanel", id: panelId(id), "aria-labelledby": tabId(id) });
 
   return (
-    <div className="flex h-dvh flex-col bg-surface font-body text-ink">
-      <header className="flex min-h-12 min-w-0 items-center gap-3 border-b border-border-strong bg-surface-raised pt-[env(safe-area-inset-top)] pr-1 pl-4">
+    <div className="flex h-dvh flex-col overflow-hidden bg-surface font-body text-ink">
+      <header className="flex min-h-12 min-w-0 items-center gap-2 border-b border-border-strong bg-surface-raised pt-[env(safe-area-inset-top)] pr-1 pl-3">
         <h1 className="flex shrink-0 items-center">
           <AtomMark className="text-primary" />
           <span className="sr-only">Animatron</span>
         </h1>
-        <span className="min-w-0 flex-1 truncate font-display text-[17px] font-semibold tracking-[-0.01em]">{docName}</span>
-        <SquiggleLink />
+        <div className="min-w-0 flex-1">{title}</div>
+        {phoneActions}
         <IconButton label={focused ? "Show panels" : "Focus on the stage"} pressed={focused} onClick={() => onFocused(!focused)}>
           {focused ? <CollapseIcon /> : <ExpandIcon />}
         </IconButton>
       </header>
       {/* The stage takes whatever the panel doesn't need, canvas centered in it. */}
-      <div className="min-h-[28dvh] flex-1">{stage}</div>
-      <div className="border-b border-hairline">{playback}</div>
+      <main className="min-h-[28dvh] flex-1">{stage}</main>
+      <section aria-label="Playback" className="border-b border-hairline">{playback}</section>
       {!focused && (
-        <div className="max-h-[55dvh] shrink-0 overflow-y-auto bg-surface-raised">
+        <section aria-label="Panels" className="max-h-[55dvh] shrink-0 overflow-y-auto bg-surface-raised">
           {tab === "timeline" && <div {...panel("timeline")}>{tracks}</div>}
           {tab === "clips" && (
             <div {...panel("clips")} className="px-3 py-2">
-              <h2 className="sr-only">Clips</h2>
-              <p className="atm-help mb-1 px-2">Lower rows paint on top · drag a grip right to nest</p>
+              <h2 className="sr-only">Layers</h2>
               {clips}
             </div>
           )}
@@ -54,7 +52,7 @@ export function PortraitShell({ docName, stage, playback, tracks, clips, edit, t
               {edit}
             </div>
           )}
-        </div>
+        </section>
       )}
       <MobileTabs
         active={tab}

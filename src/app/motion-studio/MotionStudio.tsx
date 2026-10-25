@@ -1,77 +1,116 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
-import { docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
+import { clipEnd, docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
 import type { Clip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
+import { ExportDialog } from "./dialogs/ExportDialog";
+import { GalleryDialog } from "./dialogs/GalleryDialog";
+import { HelpDialog } from "./dialogs/HelpDialog";
 import { clipComponentCode, docComponentCode, HANDOFF_NOTES } from "./export/codegen";
 import { downloadBlob, downloadText, startTabRecording, type Recording } from "./export/recorder";
 import { deleteClip, deltaInParentFrame, dropClip, nudgeClip, reparentClip } from "./lib/attach";
+import { copyClip, copyOf, heldClip } from "./lib/clipboard";
 import { artworkFromSquiggle, flightFromSquiggle, ribbonFromSquiggle, takeHandoff } from "./lib/handoff";
-import { svgSpriteFrom } from "./lib/svgSprite";
+import { canRedo, canUndo, createHistory, record, redo as redoHistory, reset as resetHistory, undo as undoHistory, type History } from "./lib/history";
+import { normalizeOrder, moveAmongSiblings, type DropTarget } from "./lib/tree";
 import { reorder } from "./lib/order";
-import { attachedTextFor, detachRun, restoreRun, setRunText } from "./lib/textRuns";
-import { moveAmongSiblings, normalizeOrder, type DropTarget } from "./lib/tree";
-import { ClipControls } from "./panel/ClipControls";
-import { ClipTree } from "./panel/ClipTree";
-import type { MobileTab } from "./panel/MobileTabs";
-import { StagePanel } from "./panel/StagePanel";
-import { Transport } from "./panel/Transport";
 import {
-  welcomePreset,
-  loadSavedPresets,
-  makeChippy,
-  makeImageSprite,
-  makeLogo,
-  makeLottie,
-  makeRibbon,
-  makeSpeechText,
-  makeText,
-  newId,
-  parseImport,
-  savePresets,
-  type SavedPreset,
-} from "./presets";
-import { EditorStage } from "./stage/EditorStage";
-import { loadDoc, saveDoc } from "./lib/persistence";
+  addProject,
+  duplicateProject,
+  loadProjects,
+  removeProject,
+  renameProject,
+  saveProjects,
+  upsertCurrent,
+  type ProjectStore,
+} from "./lib/projects";
+import { docFromHash, shareUrl } from "./lib/share";
+import { makeShape, type ShapeKind } from "./lib/shapes";
+import { svgSpriteFrom } from "./lib/svgSprite";
+import { attachedTextFor, detachRun, restoreRun, setRunText } from "./lib/textRuns";
 import { insertWaypointAt, retimeWaypoint } from "./lib/waypoints";
 import { spriteTiming } from "@/app/components/motion-studio/engine/spriteTiming";
 import { useMediaQuery } from "./lib/useMediaQuery";
-import { ChevronLeftIcon } from "./panel/icons";
+import { AddToolbar, type AddKind } from "./panel/AddToolbar";
+import { CanvasPanel } from "./panel/CanvasPanel";
+import { ClipControls } from "./panel/ClipControls";
+import { ClipTree, clipIcon } from "./panel/ClipTree";
+import { ChevronLeftIcon, CollapseIcon, GridIcon, HelpIcon, RedoIcon, ShareIcon, SquiggleIcon, UndoIcon } from "./panel/icons";
+import type { MobileTab } from "./panel/MobileTabs";
+import { Toast, type ToastMessage } from "./panel/Toast";
+import { Transport } from "./panel/Transport";
+import { makeChippy, makeImageSprite, makeLogo, makeLottie, makeRibbon, makeSpeechText, makeText, parseImport, welcomePreset } from "./presets";
 import { DesktopShell } from "./shell/DesktopShell";
+import { IconButton } from "./shell/IconButton";
 import { LandscapeShell } from "./shell/LandscapeShell";
 import { PortraitShell } from "./shell/PortraitShell";
+import { TitleField } from "./shell/TitleField";
 import type { StudioSlots } from "./shell/types";
+import { EditorStage } from "./stage/EditorStage";
 
-/** Parses SVG markup into a sprite centred on the stage, or null when it isn't SVG. */
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "animation";
+const SAVE_DEBOUNCE_MS = 500;
+
+/** A fresh, empty canvas in the given frame. */
+function blankDoc(width: number, height: number): StudioDoc {
+  const base = welcomePreset();
+  return { ...base, name: "Untitled", stage: { ...base.stage, width, height }, clips: [] };
+}
+
+/** Where the studio starts: the current project, else the Welcome composition. */
+function initialState(): { store: ProjectStore; doc: StudioDoc } {
+  const store = loadProjects();
+  const current = store.projects.find((p) => p.id === store.currentId);
+  if (current) return { store, doc: current.doc };
+  const doc = welcomePreset();
+  return { store: addProject(store, doc), doc };
+}
 
 export function MotionStudio() {
-  // Restore the autosaved working document on load, falling back to the default
-  // preset. Lazy initializer so localStorage is only read on the client.
-  const [doc, setRawDoc] = useState<StudioDoc>(() => loadDoc() ?? welcomePreset());
-  // Every write keeps the clip list in tree order (each clip followed by its
-  // descendants), which is what the layer tree and the paint order both read.
-  const setDoc = useCallback((next: StudioDoc | ((d: StudioDoc) => StudioDoc)) => {
-    setRawDoc((d) => {
-      const resolved = typeof next === "function" ? next(d) : next;
+  const [initial] = useState(initialState);
+  const [store, setStore] = useState<ProjectStore>(initial.store);
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
+  // The working document lives inside an undo history. Every write keeps the
+  // clip list in tree order (each clip followed by its descendants), which is
+  // what the layer tree and the paint order both read.
+  const [history, setHistory] = useState<History<StudioDoc>>(() => createHistory(initial.doc));
+  const doc = history.present;
+  /**
+   * @param key names a gesture; changes with the same key a moment apart
+   * coalesce into one undo step (a drag, a slider, typing).
+   */
+  const setDoc = useCallback((next: StudioDoc | ((d: StudioDoc) => StudioDoc), key?: string) => {
+    setHistory((h) => {
+      const resolved = typeof next === "function" ? next(h.present) : next;
       const clips = normalizeOrder(resolved.clips);
-      return clips === resolved.clips ? resolved : { ...resolved, clips };
+      return record(h, clips === resolved.clips ? resolved : { ...resolved, clips }, { key });
     });
   }, []);
+  /** Opens a different document with a clean history (a project, a template, a link). */
+  const replaceDoc = useCallback((next: StudioDoc) => setHistory((h) => resetHistory(h, next)), []);
+  const undo = useCallback(() => setHistory(undoHistory), []);
+  const redo = useCallback(() => setHistory(redoHistory), []);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // The clip just added by a "+" button: its text field gets focus once.
   const [freshId, setFreshId] = useState<string | null>(null);
   const [speed, setSpeed] = useState(1);
   const [loop, setLoop] = useState(false);
   const [clean, setClean] = useState(false);
-  // Lazy initializer: localStorage is only read on the client, after mount
-  // is not required since this component is never server-rendered with data.
-  const [saved, setSaved] = useState<SavedPreset[]>(() =>
-    typeof window === "undefined" ? [] : loadSavedPresets(),
-  );
-  const [notice, setNotice] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const toastSeq = useRef(0);
+  const notify = useCallback((text: string, extra: Partial<Omit<ToastMessage, "id" | "text">> = {}) => {
+    toastSeq.current += 1;
+    setToast({ id: toastSeq.current, text, ...extra });
+  }, []);
+  const dismissToast = useCallback((id: number) => setToast((t) => (t?.id === id ? null : t)), []);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "failed">("saved");
+  const [dialog, setDialog] = useState<"gallery" | "export" | "help" | null>(null);
   // Phone portrait: which panel the bottom tab bar shows under the stage.
   const [mobileTab, setMobileTab] = useState<MobileTab>("timeline");
   // Portrait: panels hidden so the stage fills the screen.
@@ -81,14 +120,23 @@ export function MotionStudio() {
   const isDesktop = useMediaQuery("(min-width: 1024px) and (min-height: 501px)");
   const isLandscapePhone = useMediaQuery("(orientation: landscape) and (max-height: 500px)");
   const mode: "desktop" | "landscape" | "portrait" = isDesktop ? "desktop" : isLandscapePhone ? "landscape" : "portrait";
+  const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+  const canRecord = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
   const [recording, setRecording] = useState<Recording | null>(null);
   const [codePreview, setCodePreview] = useState<{ title: string; code: string } | null>(null);
   const stopTimer = useRef<number | null>(null);
 
-  // Autosave the working document to localStorage (debounced inside saveDoc)
-  // so the composition survives a page refresh.
+  // Autosave the working document into its project slot, debounced, and
+  // keep the gallery's copy in step.
   useEffect(() => {
-    saveDoc(doc);
+    setSaveStatus("saving");
+    const timer = window.setTimeout(() => {
+      const next = upsertCurrent(storeRef.current, doc);
+      const err = saveProjects(next);
+      setStore(next);
+      setSaveStatus(err ? "failed" : "saved");
+    }, SAVE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
   }, [doc]);
 
   const duration = useMemo(() => docDuration(doc), [doc]);
@@ -105,11 +153,11 @@ export function MotionStudio() {
       : null;
 
   const updateClip = useCallback((next: Clip) => {
-    setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === next.id ? next : c)) }));
+    setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === next.id ? next : c)) }), `clip:${next.id}`);
   }, [setDoc]);
 
   const setClipStart = useCallback((id: string, start: number) => {
-    setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === id ? { ...c, start } : c)) }));
+    setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === id ? { ...c, start } : c)) }), `start:${id}`);
   }, [setDoc]);
 
   // Clip order is stacking order on the stage: later clips render on top.
@@ -128,7 +176,7 @@ export function MotionStudio() {
   // its parent's frame, so the delta is mapped through the parent's transform
   // at the current clock time before it is applied.
   const moveClip = useCallback(
-    (id: string, delta: Vec2) => setDoc((d) => nudgeClip(d, id, delta, clock.time.get())),
+    (id: string, delta: Vec2) => setDoc((d) => nudgeClip(d, id, delta, clock.time.get()), `move:${id}`),
     [clock.time, setDoc],
   );
 
@@ -137,10 +185,16 @@ export function MotionStudio() {
     [setDoc],
   );
 
-  const removeClip = (id: string) => {
-    setDoc((d) => deleteClip(d, id));
-    if (selectedId === id) setSelectedId(null);
-  };
+  const removeClip = useCallback(
+    (id: string) => {
+      const clip = doc.clips.find((c) => c.id === id);
+      if (!clip) return;
+      setDoc((d) => deleteClip(d, id));
+      if (selectedId === id) setSelectedId(null);
+      notify(`Deleted “${clip.name}”`, { action: { label: "Undo", run: undo } });
+    },
+    [doc.clips, selectedId, setDoc, notify, undo],
+  );
 
   const movePoint = useCallback((clipId: string, index: number, stageDelta: Vec2) => {
     setDoc((d) => ({
@@ -169,13 +223,18 @@ export function MotionStudio() {
           path: c.path.map((p, i) => (i === index ? { ...p, x: p.x + delta.x, y: p.y + delta.y } : p)),
         };
       }),
-    }));
+    }), `point:${clipId}:${index}`);
   }, [clock.time, setDoc]);
 
-  const addClip = (clip: Clip) => {
+  const addClip = useCallback((clip: Clip) => {
     setDoc((d) => ({ ...d, clips: [...d.clips, clip] }));
     setSelectedId(clip.id);
-  };
+  }, [setDoc]);
+
+  const duplicateClip = useCallback(
+    (clip: Clip) => addClip(copyOf(clip, doc)),
+    [addClip, doc],
+  );
 
   /** An SVG document becomes a sprite; returns false when it can't be read as SVG. */
   const addSvgMarkup = (text: string, label: string): boolean => {
@@ -185,17 +244,29 @@ export function MotionStudio() {
     return true;
   };
 
-  // A squiggle sent over from the Squiggle Studio is waiting in
-  // sessionStorage. Taken once on mount and added to the composition that was
-  // open (the autosaved document is the user's work, so it is never replaced),
-  // with the new clip selected so its controls show: Chippy flies it with the
-  // rainbow trail, it paints in as a ribbon, or it lands as a still picture.
-  // This has to be an effect, not a lazy state initializer: the server
-  // renders the preset and the client must hydrate to the same DOM first.
-  const handoffTaken = useRef(false);
+  // Something arriving from outside on mount: a squiggle sent over from the
+  // Squiggle Studio (sessionStorage), or a composition carried in the URL.
+  // The squiggle is added to the open composition; the shared composition
+  // opens as a new project so the current work stays in the gallery. This
+  // has to be an effect, not a lazy state initializer: it changes state the
+  // first render already committed.
+  const arrivalsTaken = useRef(false);
   useEffect(() => {
-    if (handoffTaken.current) return;
-    handoffTaken.current = true;
+    if (arrivalsTaken.current) return;
+    arrivalsTaken.current = true;
+    /* eslint-disable react-hooks/set-state-in-effect -- one-time reads of external stores on mount */
+    const shared = typeof window !== "undefined" ? docFromHash(window.location.hash) : null;
+    if (shared) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      const next = addProject(storeRef.current, shared);
+      saveProjects(next);
+      setStore(next);
+      replaceDoc(shared);
+      setSelectedId(null);
+      notify(`Opened “${shared.name}” from a link. It is now one of your compositions.`);
+      clock.replay();
+      return;
+    }
     const handoff = takeHandoff();
     if (!handoff) return;
     const stage = doc.stage;
@@ -206,14 +277,13 @@ export function MotionStudio() {
           ? ribbonFromSquiggle(handoff.points, handoff.colors, handoff.band, stage)
           : artworkFromSquiggle(handoff.svg, handoff.label, stage);
     if (!clip) return;
-    /* eslint-disable react-hooks/set-state-in-effect -- a one-time read of an external store on mount */
     setDoc((d) => ({ ...d, clips: [...d.clips, clip] }));
     setSelectedId(clip.id);
     /* eslint-enable react-hooks/set-state-in-effect */
     clock.replay();
-  }, [clock, doc.stage, setDoc]);
+  }, [clock, doc.stage, setDoc, replaceDoc, notify]);
 
-  const addByType = (type: "logo" | "chippy" | "bubble" | "text" | "ribbon") => {
+  const addByType = (type: AddKind) => {
     const cx = doc.stage.width / 2;
     const cy = doc.stage.height / 2;
     if (type === "logo") addClip(makeLogo({ x: cx, y: cy, start: 0 }));
@@ -233,6 +303,18 @@ export function MotionStudio() {
       addClip(clip);
       setFreshId(clip.id);
     }
+    if (mode !== "desktop") {
+      setMobileTab("edit");
+      setLandscapeDrawer("edit");
+    }
+  };
+
+  const addShape = (kind: ShapeKind, fill: string) => {
+    addClip(makeShape(kind, fill, doc.stage));
+    if (mode !== "desktop") {
+      setMobileTab("edit");
+      setLandscapeDrawer("edit");
+    }
   };
 
   const importFile = async (file: File) => {
@@ -246,16 +328,16 @@ export function MotionStudio() {
         }
         const result = parseImport(parsed);
         if (result.kind === "doc") {
-          setDoc(result.doc);
-          setSelectedId(null);
-          if (result.warnings.length) setNotice(result.warnings.join(" "));
+          // A whole composition opens as its own project; nothing is overwritten.
+          openDoc(result.doc);
+          notify(result.warnings.length ? `Opened “${result.doc.name}”. ${result.warnings.join(" ")}` : `Opened “${result.doc.name}” as a new composition.`);
         } else if (result.kind === "clip") addClip(result.clip);
-        else setNotice(result.message);
+        else notify(result.message, { sticky: true });
         return;
       }
       if (/\.svg$/i.test(file.name)) {
         if (addSvgMarkup(await file.text(), file.name)) return;
-        setNotice(`Couldn't read ${file.name} as SVG, so it was imported as a picture.`);
+        notify(`Couldn't read ${file.name} as SVG, so it was imported as a picture.`);
       }
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -271,12 +353,12 @@ export function MotionStudio() {
       });
       addClip(makeImageSprite(dataUrl, file.name, aspect, { x: doc.stage.width / 2, y: doc.stage.height / 2 }));
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : "Import failed");
+      notify(err instanceof Error ? err.message : "Import failed", { sticky: true });
     }
   };
 
   const artwork = {
-    onSetRunText: (clip: SpriteClip, runId: string, text: string) => setDoc((d) => setRunText(d, clip, runId, text)),
+    onSetRunText: (clip: SpriteClip, runId: string, text: string) => setDoc((d) => setRunText(d, clip, runId, text), `run:${clip.id}:${runId}`),
     onDetachRun: (clip: SpriteClip, runId: string) => {
       const result = detachRun(doc, clip, runId);
       if (!result) return;
@@ -291,23 +373,54 @@ export function MotionStudio() {
     },
   };
 
-  const savePreset = () => {
-    const name = window.prompt("Preset name", doc.name);
-    if (!name) return;
-    const next = [...saved.filter((p) => p.name !== name), { name, savedAt: new Date().toISOString(), doc: { ...doc, name } }];
-    const err = savePresets(next);
-    if (err) setNotice(`Could not save: ${err}. Export JSON instead for large Lottie files.`);
-    else {
-      setSaved(next);
-      setNotice(`Saved "${name}"`);
-    }
+  // ----- Projects -----------------------------------------------------------
+
+  /** Flushes the current document into its slot, then applies `change` to the store. */
+  const changeStore = useCallback((change: (s: ProjectStore) => ProjectStore) => {
+    const next = change(upsertCurrent(storeRef.current, doc));
+    const err = saveProjects(next);
+    setStore(next);
+    if (err) notify(`Couldn't save to this browser: ${err}. Download a JSON file to keep your work.`, { sticky: true });
+    return next;
+  }, [doc, notify]);
+
+  /** Opens a document as a brand-new project. */
+  const openDoc = useCallback((next: StudioDoc) => {
+    changeStore((s) => addProject(s, next));
+    replaceDoc(next);
+    setSelectedId(null);
+    setDialog(null);
+    clock.replay();
+  }, [changeStore, replaceDoc, clock]);
+
+  const openProject = (id: string) => {
+    const next = changeStore((s) => ({ ...s, currentId: id }));
+    const project = next.projects.find((p) => p.id === id);
+    if (!project) return;
+    replaceDoc(project.doc);
+    setSelectedId(null);
+    setDialog(null);
+    clock.replay();
   };
 
-  const deletePreset = (name: string) => {
-    const next = saved.filter((p) => p.name !== name);
-    savePresets(next);
-    setSaved(next);
+  const deleteProject = (id: string) => {
+    const wasCurrent = id === storeRef.current.currentId;
+    const next = changeStore((s) => removeProject(s, id));
+    if (!wasCurrent) return;
+    // The open composition was deleted: fall back to the latest, or a fresh Welcome.
+    const fallback = next.projects.find((p) => p.id === next.currentId);
+    if (fallback) replaceDoc(fallback.doc);
+    else {
+      const fresh = welcomePreset();
+      const withFresh = addProject(next, fresh);
+      saveProjects(withFresh);
+      setStore(withFresh);
+      replaceDoc(fresh);
+    }
+    setSelectedId(null);
   };
+
+  // ----- Export -------------------------------------------------------------
 
   const stopRecording = useCallback(async () => {
     if (!recording) return;
@@ -318,12 +431,13 @@ export function MotionStudio() {
     downloadBlob(blob, `${slug(doc.name)}.webm`);
   }, [recording, doc.name]);
 
-  const record = async () => {
+  const record_ = async () => {
     if (recording) {
       void stopRecording();
       return;
     }
     try {
+      setDialog(null);
       setClean(true);
       clock.pause();
       clock.seek(0);
@@ -337,14 +451,23 @@ export function MotionStudio() {
           setRecording(null);
           setClean(false);
           downloadBlob(blob, `${slug(doc.name)}.webm`);
+          notify("Saved the recording to your downloads.");
         },
         400 + (duration / speed) * 1000 + 500,
       );
     } catch (err) {
       setClean(false);
-      setNotice(err instanceof Error ? err.message : "Recording failed");
+      notify(err instanceof Error ? err.message : "Recording failed", { sticky: true });
     }
   };
+
+  const makeShareLink = () => {
+    const result = shareUrl(doc, window.location);
+    if (result.ok) return result;
+    return { ok: false as const, reason: "This composition has pictures in it, which are too big for a link. Download it as a JSON file instead." };
+  };
+
+  // ----- Selection, waypoints and keys -------------------------------------
 
   const selectPoint = useCallback(
     (index: number | null) => setPointSelection(index === null || !selectedId ? null : { clipId: selectedId, index }),
@@ -384,22 +507,79 @@ export function MotionStudio() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+      if (dialog !== null || codePreview) return;
+      const mod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      if (mod && !e.altKey) {
+        if (key === "z") {
+          e.preventDefault();
+          if (e.shiftKey) redo();
+          else undo();
+        } else if (key === "y") {
+          e.preventDefault();
+          redo();
+        } else if (key === "d" && selected) {
+          e.preventDefault();
+          duplicateClip(selected);
+        } else if (key === "c" && selected) {
+          e.preventDefault();
+          copyClip(selected);
+          notify(`Copied “${selected.name}”`);
+        } else if (key === "v") {
+          const held = heldClip();
+          if (!held) return;
+          e.preventDefault();
+          addClip(copyOf(held, doc));
+        }
+        return;
+      }
+      if (e.altKey) return;
       if (e.key === " ") {
         e.preventDefault();
         clock.toggle();
-      } else if (e.key === "r" || e.key === "R") clock.replay();
-      else if (e.key === "w" || e.key === "W") addWaypoint();
-      else if ((e.key === "Delete" || e.key === "Backspace") && selectedPoint !== null) {
+      } else if (key === "r") clock.replay();
+      else if (key === "w") addWaypoint();
+      else if (key === "?") setDialog("help");
+      else if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedPoint !== null) {
+          e.preventDefault();
+          removeWaypoint(selectedPoint);
+        } else if (selected) {
+          e.preventDefault();
+          removeClip(selected.id);
+        }
+      } else if (e.key.startsWith("Arrow") && selected) {
         e.preventDefault();
-        removeWaypoint(selectedPoint);
-      } else if (e.key === "Escape") setClean(false);
+        const step = e.shiftKey ? 10 : 1;
+        const delta = e.key === "ArrowLeft" ? { x: -step, y: 0 } : e.key === "ArrowRight" ? { x: step, y: 0 } : e.key === "ArrowUp" ? { x: 0, y: -step } : { x: 0, y: step };
+        moveClip(selected.id, delta);
+      } else if (e.key === "Escape") {
+        if (clean) setClean(false);
+        else if (selectedPoint !== null) setPointSelection(null);
+        else setSelectedId(null);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clock, addWaypoint, removeWaypoint, selectedPoint]);
+  }, [clock, addWaypoint, removeWaypoint, selectedPoint, selected, undo, redo, duplicateClip, addClip, doc, removeClip, moveClip, clean, dialog, codePreview, notify]);
 
+  // Choosing a clip from the list or the stage shows it: if the playhead is
+  // outside its time range it would be invisible, so park the clock where it
+  // appears before anything can be dragged blind.
+  const revealClip = useCallback(
+    (id: string | null) => {
+      setSelectedId(id);
+      const clip = id ? doc.clips.find((c) => c.id === id) : null;
+      if (!clip) return;
+      const t = clock.time.get();
+      if (t < clip.start || t > clipEnd(clip)) {
+        clock.pause();
+        clock.seek(Math.min(clipEnd(clip), clip.start + 0.3));
+      }
+    },
+    [doc.clips, clock],
+  );
   const transportProps = {
     doc,
     time: clock.time,
@@ -416,7 +596,7 @@ export function MotionStudio() {
     },
     onSpeed: setSpeed,
     onLoop: setLoop,
-    onSelect: setSelectedId,
+    onSelect: revealClip,
     selectedPoint,
     onSelectWaypoint: (clipId: string, index: number) => {
       setSelectedId(clipId);
@@ -431,123 +611,191 @@ export function MotionStudio() {
   };
 
   // Choosing a clip from the list opens its settings wherever they live.
-  const pickClip = (id: string) => {
-    setSelectedId(id);
+  const pickClip = (id: string | null) => {
+    revealClip(id);
     setMobileTab("edit");
     setLandscapeDrawer((open) => (open ? "edit" : open));
   };
+
+  const addToolbar = (layout: "rail" | "sheet") => (
+    <AddToolbar layout={layout} onAdd={addByType} onAddShape={addShape} onImport={(f) => void importFile(f)} />
+  );
 
   const stage = (
     <EditorStage
       doc={doc}
       time={clock.time}
       selectedId={selectedId}
-      onSelect={setSelectedId}
+      onSelect={revealClip}
       onMoveClip={moveClip}
       onMovePoint={movePoint}
       selectedPoint={selectedPoint}
       onSelectPoint={selectPoint}
       onChangeClip={updateClip}
       clean={clean}
+      overlay={
+        clean ? (
+          !recording && (
+            <div data-stage-overlay className="fixed top-4 right-4 z-[60]">
+              <Button size="sm" variant="outline" className="bg-surface-raised" icon={<CollapseIcon width={16} height={16} />} onClick={() => setClean(false)}>
+                Exit preview
+              </Button>
+            </div>
+          )
+        ) : (
+          <>
+            {doc.clips.length === 0 && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-8">
+                <p className="max-w-xs text-center text-base leading-6 text-ink-secondary">
+                  An empty canvas. Add text, a shape, a picture or a ribbon with <strong className="font-semibold text-ink">+</strong>
+                  {mode === "desktop" ? " on the left" : " below"}, or open <strong className="font-semibold text-ink">Compositions</strong> for a ready-made start.
+                </p>
+              </div>
+            )}
+            {mode === "desktop" ? (
+              <div data-stage-overlay className="absolute top-4 left-4 z-10">
+                {addToolbar("rail")}
+              </div>
+            ) : (
+              <div data-stage-overlay className="absolute right-3 bottom-3 z-10">
+                {addToolbar("sheet")}
+              </div>
+            )}
+          </>
+        )
+      }
     />
   );
 
+  const undoRedo = (
+    <>
+      <IconButton label={`Undo (${mac ? "⌘" : "Ctrl+"}Z)`} disabled={!canUndo(history)} className="disabled:opacity-[0.42]" onClick={undo}>
+        <UndoIcon />
+      </IconButton>
+      <IconButton label={`Redo (${mac ? "⌘⇧" : "Ctrl+Shift+"}Z)`} disabled={!canRedo(history)} className="disabled:opacity-[0.42]" onClick={redo}>
+        <RedoIcon />
+      </IconButton>
+    </>
+  );
+
+  const saveLabel = saveStatus === "saving" ? "Saving…" : saveStatus === "failed" ? "Not saved" : "Saved";
+
   const slots: StudioSlots = {
-    docName: doc.name,
+    title: <TitleField value={doc.name} onChange={(name) => setDoc((d) => ({ ...d, name }), "name")} status={saveLabel} compact={mode !== "desktop"} />,
+    actions: (
+      <div className="flex items-center gap-1">
+        {undoRedo}
+        <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-border-strong" />
+        <Button size="sm" variant="outline" icon={<GridIcon width={18} height={18} />} onClick={() => setDialog("gallery")}>
+          Compositions
+        </Button>
+        <Link
+          href="/squiggle"
+          className="atm-button-type inline-flex min-h-10 items-center gap-2 rounded-md border border-border-control px-3 text-[12.5px] leading-none text-ink transition-[background-color,box-shadow] duration-200 hover:bg-surface-raised hover:shadow-pop"
+        >
+          <SquiggleIcon width={18} height={18} />
+          Draw
+        </Link>
+        <Button size="sm" icon={<ShareIcon width={18} height={18} />} onClick={() => setDialog("export")}>
+          Share
+        </Button>
+        <IconButton label="Help and shortcuts (?)" onClick={() => setDialog("help")}>
+          <HelpIcon />
+        </IconButton>
+      </div>
+    ),
+    phoneActions: (
+      <>
+        {undoRedo}
+        <IconButton label="Compositions" onClick={() => setDialog("gallery")}>
+          <GridIcon />
+        </IconButton>
+        <IconButton label="Share and export" onClick={() => setDialog("export")}>
+          <ShareIcon />
+        </IconButton>
+      </>
+    ),
     stage,
     playback: <Transport {...transportProps} layout="bar" />,
     timeline: <Transport {...transportProps} layout="full" />,
     tracks: <Transport {...transportProps} layout="tracks" />,
     clips: (
+      <ClipTree
+        doc={doc}
+        selectedId={selectedId}
+        onSelect={pickClip}
+        onSelectCanvas={() => pickClip(null)}
+        onRename={(clip, name) => updateClip({ ...clip, name })}
+        onToggleEnabled={(clip, enabled) => updateClip({ ...clip, enabled })}
+        onSolo={(id) => setDoc((d) => ({ ...d, clips: d.clips.map((c) => ({ ...c, enabled: c.id === id })) }))}
+        onDuplicate={duplicateClip}
+        onDelete={removeClip}
+        onDrop={dropInTree}
+        onMoveSibling={moveSibling}
+      />
+    ),
+    edit: selected ? (
       <>
-        <ClipTree
+        <div className="mb-4 flex items-center gap-2">
+          {mode !== "desktop" && (
+            <button
+              type="button"
+              className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-sunken"
+              aria-label="Back to the canvas settings"
+              onClick={() => setSelectedId(null)}
+            >
+              <ChevronLeftIcon />
+            </button>
+          )}
+          {(() => {
+            const Glyph = clipIcon(selected);
+            return <Glyph width={20} height={20} className="shrink-0 text-primary" />;
+          })()}
+          <h2 className="min-w-0 flex-1 truncate font-display text-lg font-semibold">{selected.name}</h2>
+        </div>
+        <ClipControls
+          key={selected.id}
           doc={doc}
-          selectedId={selectedId}
-          onSelect={pickClip}
-          onToggleEnabled={(clip, enabled) => updateClip({ ...clip, enabled })}
-          onSolo={(id) => setDoc((d) => ({ ...d, clips: d.clips.map((c) => ({ ...c, enabled: c.id === id })) }))}
-          onDuplicate={(clip) => addClip({ ...clip, id: newId(), name: `${clip.name} copy` })}
-          onDelete={removeClip}
-          onDrop={dropInTree}
-          onMoveSibling={moveSibling}
+          clip={selected}
+          onChange={updateClip}
+          onReparent={(p) => reparent(selected.id, p)}
+          focusText={freshId === selected.id}
+          artwork={artwork}
+          waypoints={{
+            selected: selectedPoint,
+            onSelect: selectPoint,
+            onAdd: addWaypoint,
+            onRemove: removeWaypoint,
+            onRetime: (index, travel) => {
+              if (selected.type === "sprite") updateClip(retimeWaypoint(selected, index, travel));
+            },
+          }}
         />
-        <div className="mt-3 flex gap-2">
-          <Button size="xs" variant="outline" onClick={() => setDoc((d) => ({ ...d, clips: d.clips.map((c) => ({ ...c, enabled: true })) }))}>
-            Show all
+        <div className="mt-6 flex flex-wrap gap-2 border-t border-hairline pt-4">
+          <Button size="xs" variant="outline" onClick={() => duplicateClip(selected)}>
+            Duplicate
+          </Button>
+          <Button size="xs" variant="outline" onClick={() => downloadText(JSON.stringify(selected, null, 2), `${slug(selected.name)}.clip.json`, "application/json")}>
+            Save layer as JSON
+          </Button>
+          <Button size="xs" variant="danger" onClick={() => removeClip(selected.id)}>
+            Delete
           </Button>
         </div>
       </>
-    ),
-    edit: (
+    ) : (
       <>
-        {selected ? (
-          <>
-            <div className="mb-4 flex items-center justify-between gap-2">
-              {mode !== "desktop" && (
-                <button
-                  type="button"
-                  className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-sunken"
-                  aria-label="Back to stage settings"
-                  onClick={() => setSelectedId(null)}
-                >
-                  <ChevronLeftIcon />
-                </button>
-              )}
-              <h2 className="min-w-0 flex-1 truncate font-display text-lg font-semibold">{selected.name}</h2>
-              <div className="flex gap-2">
-                <Button size="xs" variant="outline" onClick={() => setCodePreview({ title: `${selected.name}.tsx`, code: clipComponentCode(doc, selected) })}>
-                  Code
-                </Button>
-                <Button size="xs" variant="outline" onClick={() => downloadText(JSON.stringify(selected, null, 2), `${slug(selected.name)}.clip.json`, "application/json")}>
-                  JSON
-                </Button>
-              </div>
-            </div>
-            <ClipControls
-              key={selected.id}
-              doc={doc}
-              clip={selected}
-              onChange={updateClip}
-              onReparent={(p) => reparent(selected.id, p)}
-              focusText={freshId === selected.id}
-              artwork={artwork}
-              waypoints={{
-                selected: selectedPoint,
-                onSelect: selectPoint,
-                onAdd: addWaypoint,
-                onRemove: removeWaypoint,
-                onRetime: (index, travel) => {
-                  if (selected.type === "sprite") updateClip(retimeWaypoint(selected, index, travel));
-                },
-              }}
-            />
-            {mode === "desktop" && (
-              <Button size="xs" variant="outline" className="mt-6" onClick={() => setSelectedId(null)}>
-                Back to stage settings
-              </Button>
-            )}
-          </>
-        ) : (
-          <StagePanel
-            doc={doc}
-            onChangeDoc={setDoc}
-            saved={saved}
-            onSavePreset={savePreset}
-            onLoadPreset={(d) => {
-              setDoc(d);
-              setSelectedId(null);
-              clock.replay();
-            }}
-            onDeletePreset={deletePreset}
-            onImportFile={(f) => void importFile(f)}
-            onAddClip={addByType}
-            onExportDocCode={() => setCodePreview({ title: `${slug(doc.name)}.tsx`, code: docComponentCode(doc) })}
-            onExportDocJson={() => downloadText(JSON.stringify(doc, null, 2), `${slug(doc.name)}.studio.json`, "application/json")}
-            onRecord={() => void record()}
-            recording={recording !== null}
-            onClean={() => setClean(true)}
-            notice={notice}
-          />
+        <CanvasPanel doc={doc} onChangeDoc={(next) => setDoc(next, "canvas")} />
+        {mode !== "desktop" && (
+          <div className="mt-6 flex flex-wrap gap-2 border-t border-hairline pt-4">
+            <Link href="/squiggle" className="atm-button-type inline-flex min-h-11 items-center gap-2 rounded-md border border-border-control px-3 text-[12.5px] leading-none text-ink">
+              <SquiggleIcon width={18} height={18} />
+              Draw a squiggle
+            </Link>
+            <Button size="sm" variant="outline" icon={<HelpIcon width={18} height={18} />} onClick={() => setDialog("help")}>
+              Help
+            </Button>
+          </div>
         )}
       </>
     ),
@@ -572,12 +820,53 @@ export function MotionStudio() {
     <>
       <style>{"nextjs-portal { display: none; }"}</style>
       {clean ? <div className="h-dvh">{stage}</div> : shell}
+      <Toast toast={toast} onDismiss={dismissToast} />
+      <GalleryDialog
+        open={dialog === "gallery"}
+        onClose={() => setDialog(null)}
+        projects={store.projects}
+        currentId={store.currentId}
+        onOpenProject={openProject}
+        onNewFromTemplate={openDoc}
+        onNewBlank={(w, h) => openDoc(blankDoc(w, h))}
+        onDuplicateProject={(id) => changeStore((s) => duplicateProject(s, id))}
+        onDeleteProject={deleteProject}
+        onRenameProject={(id, name) => {
+          if (id === store.currentId) setDoc((d) => ({ ...d, name }), "name");
+          else changeStore((s) => renameProject(s, id, name));
+        }}
+      />
+      <ExportDialog
+        open={dialog === "export"}
+        onClose={() => setDialog(null)}
+        docName={doc.name}
+        duration={duration / speed}
+        canRecord={canRecord}
+        onRecord={() => void record_()}
+        onShareLink={makeShareLink}
+        onDownloadJson={() => downloadText(JSON.stringify(doc, null, 2), `${slug(doc.name)}.studio.json`, "application/json")}
+        onShowCode={() => {
+          setDialog(null);
+          setCodePreview({ title: `${slug(doc.name)}.tsx`, code: docComponentCode(doc) });
+        }}
+        onPreview={() => {
+          setDialog(null);
+          setClean(true);
+          clock.replay();
+        }}
+      />
+      <HelpDialog open={dialog === "help"} onClose={() => setDialog(null)} mac={mac} />
       {codePreview && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-surface-inverse/60 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={codePreview.title}>
           <div className="flex max-h-full w-full max-w-4xl flex-col rounded-lg border border-border-strong bg-surface-raised shadow-lg">
-            <div className="flex flex-wrap items-center gap-2 border-b border-background-cta-10 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2 border-b border-hairline px-4 py-3">
               <h2 className="min-w-0 flex-1 truncate font-display text-xl font-semibold">{codePreview.title}</h2>
-              <Button size="xs" variant="outline" onClick={() => void navigator.clipboard.writeText(codePreview.code).then(() => setNotice("Copied"))}>
+              {selected && (
+                <Button size="xs" variant="outline" onClick={() => setCodePreview({ title: `${slug(selected.name)}.tsx`, code: clipComponentCode(doc, selected) })}>
+                  Just “{selected.name}”
+                </Button>
+              )}
+              <Button size="xs" variant="outline" onClick={() => void navigator.clipboard.writeText(codePreview.code).then(() => notify("Copied the code"))}>
                 Copy
               </Button>
               <Button size="xs" variant="outline" onClick={() => downloadText(codePreview.code, codePreview.title, "text/plain")}>
@@ -588,7 +877,7 @@ export function MotionStudio() {
               </Button>
             </div>
             <pre className="min-h-0 flex-1 overflow-auto bg-surface-sunken p-4 text-xs leading-relaxed">{codePreview.code}</pre>
-            <pre className="border-t border-background-cta-10 p-4 text-xs leading-relaxed whitespace-pre-wrap text-ink-secondary">{HANDOFF_NOTES}</pre>
+            <pre className="border-t border-hairline p-4 text-xs leading-relaxed whitespace-pre-wrap text-ink-secondary">{HANDOFF_NOTES}</pre>
           </div>
         </div>
       )}

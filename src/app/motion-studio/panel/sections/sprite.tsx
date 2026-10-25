@@ -4,11 +4,12 @@ import { EASE_LABELS } from "@/app/components/motion-studio/engine/easing";
 import { spriteTiming, WAYPOINT_DEFAULTS } from "@/app/components/motion-studio/engine/spriteTiming";
 import type { Ease, SpriteClip, Waypoint } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
-import { BUTTON_ROW, NumField, SelectField, ToggleField } from "../fields";
+import { BUTTON_ROW, ChipField, MoreFields, NumField, ToggleField } from "../fields";
 import type { PanelSection } from "../PanelGroup";
 import { setter } from "./setter";
 
-const EASE_OPTIONS = (Object.keys(EASE_LABELS) as Ease["name"][]).map((value) => ({
+/** The easings in the order a person reaches for them; "custom" lives under fine-tune. */
+const EASE_CHIPS = (["smoothOut", "inOut", "flight", "backOut", "linear"] as Ease["name"][]).map((value) => ({
   value,
   label: EASE_LABELS[value],
 }));
@@ -17,42 +18,53 @@ const DEFAULT_BEZIER: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
 /** Size, timing, easing, bank, flip, fade, loop. */
 export function motionSection(clip: SpriteClip, onChange: (c: SpriteClip) => void): PanelSection {
   const set = setter(clip, onChange);
+  const custom = clip.ease.name === "custom";
   return {
     id: "motion",
     title: "Motion",
     content: (
       <>
-        <NumField label="Width (px)" value={clip.width} min={40} max={1200} step={1} onChange={(v) => set("width", v)} />
-        <NumField label="Duration (s)" value={clip.duration} min={0.2} max={12} onChange={(v) => set("duration", v)} />
-        <ToggleField label="Loop the path" value={clip.loop} onChange={(v) => set("loop", v)} />
+        <NumField label="Width" unit="px" value={clip.width} min={40} max={1200} step={1} onChange={(v) => set("width", v)} />
+        <NumField label="Travel time" unit="s" value={clip.duration} min={0.2} max={12} onChange={(v) => set("duration", v)} />
+        <ToggleField label="Loop around the path forever" value={clip.loop} onChange={(v) => set("loop", v)} />
         {!clip.loop && (
-          <>
-            <SelectField label="Easing" value={clip.ease.name} options={EASE_OPTIONS} onChange={(name) => set("ease", { ...clip.ease, name })} />
-            {clip.ease.name === "custom" && (
-              <div className="grid grid-cols-4 gap-2">
-                {(clip.ease.custom ?? DEFAULT_BEZIER).map((v, i) => (
-                  <input
-                    key={i}
-                    type="number"
-                    step={0.01}
-                    aria-label={`Bezier ${["x1", "y1", "x2", "y2"][i]}`}
-                    className="rounded border border-background-cta-20 px-1.5 py-1 text-xs tabular-nums"
-                    value={v}
-                    onChange={(e) => {
-                      const next = [...(clip.ease.custom ?? DEFAULT_BEZIER)] as [number, number, number, number];
-                      next[i] = Number(e.target.value);
-                      set("ease", { name: "custom", custom: next });
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-            <NumField label="Scale at takeoff" value={clip.scaleFrom} min={0.1} max={2} onChange={(v) => set("scaleFrom", v)} />
-          </>
+          <ChipField
+            label="Pace"
+            value={custom ? "smoothOut" : clip.ease.name}
+            options={EASE_CHIPS}
+            onChange={(name) => set("ease", { ...clip.ease, name })}
+          />
         )}
-        <NumField label="Bank into turns" value={clip.bank} min={0} max={1} onChange={(v) => set("bank", v)} />
-        <ToggleField label="Flip when moving left" value={clip.autoFlip} onChange={(v) => set("autoFlip", v)} />
-        <NumField label="Fade in (s)" value={clip.fadeIn} min={0} max={2} onChange={(v) => set("fadeIn", v)} />
+        <MoreFields>
+          {!clip.loop && (
+            <>
+              <NumField label="Size at takeoff" unit="×" value={clip.scaleFrom} min={0.1} max={2} onChange={(v) => set("scaleFrom", v)} />
+              <ToggleField label="Custom pace curve" value={custom} onChange={(v) => set("ease", v ? { name: "custom", custom: clip.ease.custom ?? DEFAULT_BEZIER } : { name: "smoothOut" })} />
+              {custom && (
+                <div className="grid grid-cols-4 gap-2">
+                  {(clip.ease.custom ?? DEFAULT_BEZIER).map((v, i) => (
+                    <input
+                      key={i}
+                      type="number"
+                      step={0.01}
+                      aria-label={`Curve ${["x1", "y1", "x2", "y2"][i]}`}
+                      className="rounded-sm border border-border-control bg-surface-raised px-1.5 py-1 text-xs tabular-nums focus:outline-none focus:border-primary"
+                      value={v}
+                      onChange={(e) => {
+                        const next = [...(clip.ease.custom ?? DEFAULT_BEZIER)] as [number, number, number, number];
+                        next[i] = Number(e.target.value);
+                        set("ease", { name: "custom", custom: next });
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          <NumField label="Lean into turns" value={clip.bank} min={0} max={1} onChange={(v) => set("bank", v)} />
+          <ToggleField label="Face the way it travels" value={clip.autoFlip} onChange={(v) => set("autoFlip", v)} />
+          <NumField label="Fade in over" unit="s" value={clip.fadeIn} min={0} max={2} onChange={(v) => set("fadeIn", v)} />
+        </MoreFields>
       </>
     ),
   };
@@ -74,10 +86,10 @@ const pointValue = (p: Waypoint, key: keyof typeof WAYPOINT_DEFAULTS) => p[key] 
 /** Short summary of what a waypoint changes, for its collapsed row. */
 function pointSummary(p: Waypoint): string {
   const parts: string[] = [];
-  if (pointValue(p, "scale") !== 1) parts.push(`${pointValue(p, "scale")}x`);
+  if (pointValue(p, "scale") !== 1) parts.push(`${pointValue(p, "scale")}×`);
   if (pointValue(p, "rotate") !== 0) parts.push(`${pointValue(p, "rotate")}°`);
   if (pointValue(p, "opacity") !== 1) parts.push(`${Math.round(pointValue(p, "opacity") * 100)}%`);
-  if (pointValue(p, "hold") > 0) parts.push(`hold ${pointValue(p, "hold")}s`);
+  if (pointValue(p, "hold") > 0) parts.push(`pause ${pointValue(p, "hold")}s`);
   return parts.join(" · ");
 }
 
@@ -94,15 +106,15 @@ export function pathSection(clip: SpriteClip, onChange: (c: SpriteClip) => void,
   const timing = spriteTiming(clip);
   return {
     id: "path",
-    title: "Path and waypoints",
+    title: "Path",
     content: (
       <>
-        <p className="atm-help">Drag the dots on stage to move waypoints. Press W to add one where the sprite is at the playhead.</p>
+        <p className="atm-help">Drag the numbered dots on the canvas to shape the path. Pick one here to pause, turn or resize the picture as it passes.</p>
         <ol className="flex flex-col gap-1">
           {clip.path.map((p, i) => {
             const open = waypoints.selected === i;
             const summary = pointSummary(p);
-            const name = !clip.loop && i === last ? "Landing point" : `Waypoint ${i + 1}`;
+            const name = !clip.loop && i === last ? "Landing point" : `Point ${i + 1}`;
             return (
               <li key={i} className={`rounded-md border ${open ? "border-primary bg-primary-soft/40" : "border-transparent"}`}>
                 <button
@@ -125,26 +137,29 @@ export function pathSection(clip: SpriteClip, onChange: (c: SpriteClip) => void,
                 {open && (
                   <div className="flex flex-col gap-4 px-2 pt-2 pb-3">
                     <div className="grid grid-cols-2 gap-4">
-                      <NumField label="X" value={p.x} min={-2500} max={2500} step={1} onChange={(v) => setPoint(i, { x: v })} />
-                      <NumField label="Y" value={p.y} min={-2500} max={2500} step={1} onChange={(v) => setPoint(i, { y: v })} />
+                      <NumField label="Pause here" unit="s" value={pointValue(p, "hold")} min={0} max={5} onChange={(v) => setPoint(i, { hold: v })} />
+                      <NumField label="Size here" unit="×" value={pointValue(p, "scale")} min={0} max={4} onChange={(v) => setPoint(i, { scale: v })} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <NumField label="Scale" value={pointValue(p, "scale")} min={0} max={4} onChange={(v) => setPoint(i, { scale: v })} />
-                      <NumField label="Rotation (deg)" value={pointValue(p, "rotate")} min={-360} max={360} step={1} onChange={(v) => setPoint(i, { rotate: v })} />
+                      <NumField label="Turn" unit="°" value={pointValue(p, "rotate")} min={-360} max={360} step={1} onChange={(v) => setPoint(i, { rotate: v })} />
+                      <NumField label="Opacity" value={pointValue(p, "opacity")} min={0} max={1} onChange={(v) => setPoint(i, { opacity: v })} />
                     </div>
                     {timing.points[i]?.movable && (
                       <NumField
-                        label="Arrives at (s)"
+                        label="Arrives at"
+                        unit="s"
                         value={clip.start + timing.points[i].arrive}
                         min={clip.start}
                         max={clip.start + timing.active}
                         onChange={(v) => waypoints.onRetime(i, v - clip.start - (timing.points[i].arrive - timing.points[i].travel))}
                       />
                     )}
-                    <div className="grid grid-cols-2 gap-4">
-                      <NumField label="Opacity" value={pointValue(p, "opacity")} min={0} max={1} onChange={(v) => setPoint(i, { opacity: v })} />
-                      <NumField label="Hold (s)" value={pointValue(p, "hold")} min={0} max={5} onChange={(v) => setPoint(i, { hold: v })} />
-                    </div>
+                    <MoreFields label="Exact position">
+                      <div className="grid grid-cols-2 gap-4">
+                        <NumField label="X" unit="px" value={p.x} min={-2500} max={2500} step={1} onChange={(v) => setPoint(i, { x: v })} />
+                        <NumField label="Y" unit="px" value={p.y} min={-2500} max={2500} step={1} onChange={(v) => setPoint(i, { y: v })} />
+                      </div>
+                    </MoreFields>
                     <div className={BUTTON_ROW}>
                       <Button
                         variant="outline"
@@ -152,10 +167,10 @@ export function pathSection(clip: SpriteClip, onChange: (c: SpriteClip) => void,
                         onClick={() => setPoint(i, { scale: undefined, rotate: undefined, opacity: undefined, hold: undefined, time: undefined })}
                         disabled={!summary && p.time === undefined}
                       >
-                        Reset values
+                        Reset
                       </Button>
                       <Button variant="danger" size="xs" onClick={() => waypoints.onRemove(i)} disabled={clip.path.length <= 2}>
-                        Remove waypoint
+                        Remove point
                       </Button>
                     </div>
                   </div>
@@ -165,7 +180,7 @@ export function pathSection(clip: SpriteClip, onChange: (c: SpriteClip) => void,
           })}
         </ol>
         <Button variant="outline" size="xs" onClick={waypoints.onAdd}>
-          + Add waypoint at playhead
+          + Add a point here
         </Button>
       </>
     ),
@@ -177,11 +192,12 @@ export function flapSection(clip: SpriteClip, onChange: (c: SpriteClip) => void)
   const set = setter(clip, onChange);
   return {
     id: "wings",
-    title: "Wings in flight",
+    title: "Wings",
+    defaultCollapsed: true,
     content: (
       <>
         <NumField label="Flaps per second" value={clip.flap.hz} min={0} max={10} step={0.1} onChange={(v) => set("flap", { ...clip.flap, hz: v })} />
-        <NumField label="Flap depth (deg)" value={clip.flap.depth} min={0} max={60} step={1} onChange={(v) => set("flap", { ...clip.flap, depth: v })} />
+        <NumField label="Flap depth" unit="°" value={clip.flap.depth} min={0} max={60} step={1} onChange={(v) => set("flap", { ...clip.flap, depth: v })} />
       </>
     ),
   };
@@ -194,12 +210,13 @@ export function landingSection(clip: SpriteClip, onChange: (c: SpriteClip) => vo
   return {
     id: "landing",
     title: "Landing",
+    defaultCollapsed: true,
     content: (
       <>
-        <NumField label="Squash" value={clip.landing.squash} min={0} max={0.4} onChange={(v) => landing({ squash: v })} />
-        <NumField label="Settle flaps" value={clip.landing.settleFlaps} min={0} max={6} step={1} onChange={(v) => landing({ settleFlaps: v })} />
-        <NumField label="Fold angle (deg)" value={clip.landing.foldAngle} min={-110} max={0} step={1} onChange={(v) => landing({ foldAngle: v })} />
-        <NumField label="Fold duration (s)" value={clip.landing.foldDuration} min={0} max={2} onChange={(v) => landing({ foldDuration: v })} />
+        <NumField label="Squash on landing" value={clip.landing.squash} min={0} max={0.4} onChange={(v) => landing({ squash: v })} />
+        <NumField label="Settling flaps" value={clip.landing.settleFlaps} min={0} max={6} step={1} onChange={(v) => landing({ settleFlaps: v })} />
+        <NumField label="Wing fold" unit="°" value={clip.landing.foldAngle} min={-110} max={0} step={1} onChange={(v) => landing({ foldAngle: v })} />
+        <NumField label="Fold takes" unit="s" value={clip.landing.foldDuration} min={0} max={2} onChange={(v) => landing({ foldDuration: v })} />
       </>
     ),
   };

@@ -81,13 +81,13 @@ export function StrokeList({ strokes, colors, band, onHover, onSmooth, onExport,
             <div className="flex flex-col gap-1.5 border-t border-hairline pt-2">
               <span className="atm-section-label">Send to the studio</span>
               <Button variant="primary" size="xs" fullWidth icon={<SquiggleIcon className={ICON} />} onClick={() => onAnimate(s)}>
-                Animate it
+                Send as a ribbon
               </Button>
               <Button variant="outline" size="xs" fullWidth icon={<WingIcon className={ICON} />} onClick={() => onFly(s)}>
-                Fly Chippy on it
+                Fly Chippy along it
               </Button>
               <Button variant="outline" size="xs" fullWidth icon={<ImageIcon className={ICON} />} onClick={() => onArtwork(s, i)}>
-                Add as artwork
+                Send as a picture
               </Button>
             </div>
           </li>

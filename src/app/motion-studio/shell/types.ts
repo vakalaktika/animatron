@@ -5,7 +5,12 @@ import type { ReactNode } from "react";
  * shell fits the screen (desktop, phone portrait, phone landscape).
  */
 export interface StudioSlots {
-  docName: string;
+  /** The composition's name, editable in place. */
+  title: ReactNode;
+  /** App-bar actions for a wide screen: undo / redo, compositions, share, help. */
+  actions: ReactNode;
+  /** The few actions that fit a phone app bar. */
+  phoneActions: ReactNode;
   stage: ReactNode;
   /** Compact play / replay / scrub strip. */
   playback: ReactNode;
@@ -13,8 +18,8 @@ export interface StudioSlots {
   timeline: ReactNode;
   /** Speed, loop and tracks, for when playback lives in its own strip. */
   tracks: ReactNode;
-  /** The clip tree and its actions, without a heading. */
+  /** The layer list, without a heading. */
   clips: ReactNode;
-  /** Stage settings, or the selected clip's settings. */
+  /** Canvas settings, or the selected clip's settings. */
   edit: ReactNode;
 }
