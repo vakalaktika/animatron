@@ -123,7 +123,9 @@
   --color-on-highlight: var(--on-highlight);
   --color-surface-inverse: var(--surface-inverse);
   --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
   --color-on-error: var(--on-error);
+  --color-ink-on-inverse: var(--ink-on-inverse);
   --color-focus: var(--focus);
   --color-info: var(--info);
 

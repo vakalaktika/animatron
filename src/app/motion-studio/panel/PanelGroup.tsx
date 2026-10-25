@@ -1,125 +1,93 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { applySavedOrder, mergeOrder, reorder } from "../lib/order";
-import { DragHandle, MoveButtons } from "./reorderChrome";
-import { rowMotion, useReorderDrag } from "./useReorderDrag";
+import { ChevronIcon } from "./icons";
 
 export interface PanelSection {
   id: string;
   title: string;
   content: ReactNode;
+  /** Start folded: tuning few people reach for (wings, landing, point lists). */
+  defaultCollapsed?: boolean;
 }
 
 interface Props {
-  /** localStorage key; each group remembers its own order and collapsed set. */
+  /** localStorage key; each group remembers which sections are folded. */
   storageKey: string;
   sections: PanelSection[];
 }
 
-interface Layout {
-  order: string[];
-  collapsed: string[];
-}
-
 const PREFIX = "motion-studio.panels.";
 
-function readLayout(key: string): Layout {
+interface Folded {
+  /** Sections the user folded themselves. */
+  closed: string[];
+  /** Sections that start folded but the user opened. */
+  opened: string[];
+}
+
+function readFolded(key: string): Folded {
   try {
     const raw = window.localStorage.getItem(PREFIX + key);
-    if (!raw) return { order: [], collapsed: [] };
-    const parsed: unknown = JSON.parse(raw);
-    const obj = parsed as Partial<Layout>;
+    if (!raw) return { closed: [], opened: [] };
+    const parsed = JSON.parse(raw) as Partial<Folded> & { collapsed?: unknown };
     const strings = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : []);
-    return { order: strings(obj.order), collapsed: strings(obj.collapsed) };
+    // Earlier builds stored only `collapsed`; carry it over as `closed`.
+    return { closed: strings(parsed.closed ?? parsed.collapsed), opened: strings(parsed.opened) };
   } catch {
-    return { order: [], collapsed: [] };
+    return { closed: [], opened: [] };
   }
 }
 
-function writeLayout(key: string, layout: Layout) {
+function writeFolded(key: string, folded: Folded) {
   try {
-    window.localStorage.setItem(PREFIX + key, JSON.stringify(layout));
+    window.localStorage.setItem(PREFIX + key, JSON.stringify(folded));
   } catch {
     // Storage full or unavailable: the layout just doesn't persist this time.
   }
 }
 
 /**
- * A stack of collapsible, reorderable sections. Collapse state and order are
- * remembered per storageKey and keyed by section id, so a preference like
- * "Reveal on top" follows the section onto any clip that has it. Sections
- * not yet in the saved order are appended.
+ * A stack of collapsible sections. Which ones are folded is remembered per
+ * storageKey and keyed by section id, so folding "Landing" on one sprite
+ * folds it on every sprite. Sections are in a fixed, considered order:
+ * what a person reaches for first is first.
  */
 export function PanelGroup({ storageKey, sections }: Props) {
   // Start from the default layout so the server and client render the same
   // tree, then adopt the saved layout after mount.
-  const [layout, setLayout] = useState<Layout>({ order: [], collapsed: [] });
+  const [folded, setFolded] = useState<Folded>({ closed: [], opened: [] });
 
   useEffect(() => {
-    setLayout(readLayout(storageKey));
+    setFolded(readFolded(storageKey));
   }, [storageKey]);
 
-  const update = (next: Layout) => {
-    setLayout(next);
-    writeLayout(storageKey, next);
+  const isOpen = (s: PanelSection) => (s.defaultCollapsed ? folded.opened.includes(s.id) : !folded.closed.includes(s.id));
+  const toggle = (s: PanelSection) => {
+    const list = s.defaultCollapsed ? "opened" : "closed";
+    const has = folded[list].includes(s.id);
+    const next = { ...folded, [list]: has ? folded[list].filter((id) => id !== s.id) : [...folded[list], s.id] };
+    setFolded(next);
+    writeFolded(storageKey, next);
   };
 
-  const orderedIds = applySavedOrder(
-    sections.map((s) => s.id),
-    layout.order,
-  );
-  const ordered = orderedIds
-    .map((id) => sections.find((s) => s.id === id))
-    .filter((s): s is PanelSection => s !== undefined);
-
-  // Fold the new arrangement into the saved ranking rather than replacing it,
-  // so sections that are hidden right now keep their place for later.
-  const move = (from: number, to: number) =>
-    update({ ...layout, order: mergeOrder(layout.order, reorder(orderedIds, from, to)) });
-  const toggle = (id: string) =>
-    update({
-      ...layout,
-      collapsed: layout.collapsed.includes(id)
-        ? layout.collapsed.filter((c) => c !== id)
-        : [...layout.collapsed, id],
-    });
-
-  const drag = useReorderDrag(move);
-
   return (
-    <div ref={(el) => drag.attachContainer(el)} className="flex flex-col">
-      {ordered.map((section, i) => {
-        const open = !layout.collapsed.includes(section.id);
-        const motion = rowMotion(i, drag.state);
+    <div className="flex flex-col">
+      {sections.map((section) => {
+        const open = isOpen(section);
         return (
-          <section
-            key={section.id}
-            data-reorder-row
-            className={`border-t border-hairline py-4 first:border-t-0 first:pt-0 ${motion.className}`}
-            style={motion.style}
-          >
-            <div className="group flex items-center gap-1">
-              <DragHandle label={`Drag to move ${section.title}`} index={i} {...drag.handleProps} />
+          <section key={section.id} className="border-t border-hairline py-3 first:border-t-0 first:pt-0">
+            <h3 className="m-0">
               <button
                 type="button"
-                className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
+                className="-mx-2 flex min-h-9 w-[calc(100%+1rem)] items-center gap-1.5 rounded-md px-2 text-left hover:bg-surface-sunken"
                 aria-expanded={open}
-                onClick={() => toggle(section.id)}
+                onClick={() => toggle(section)}
               >
-                <span aria-hidden="true" className={`inline-block text-[10px] text-background-cta-60 transition-transform ${open ? "rotate-90" : ""}`}>
-                  ▶
-                </span>
+                <ChevronIcon width={14} height={14} className={`atm-chevron shrink-0 text-ink-muted ${open ? "is-open" : ""}`} />
                 <span className="atm-section-label truncate text-ink-secondary">{section.title}</span>
               </button>
-              <MoveButtons
-                label={section.title}
-                canUp={i > 0}
-                canDown={i < ordered.length - 1}
-                onUp={() => move(i, i - 1)}
-                onDown={() => move(i, i + 1)}
-              />
-            </div>
+            </h3>
             {open && <div className="flex flex-col gap-4 pt-3">{section.content}</div>}
           </section>
         );

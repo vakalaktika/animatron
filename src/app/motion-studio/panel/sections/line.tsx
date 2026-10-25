@@ -1,10 +1,10 @@
 "use client";
 
 import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
-import { RAINBOW_PRESETS } from "@/app/components/motion-studio/engine/rainbow";
 import type { Clip, LineColour, LineMotion, LineStyle, RibbonClip, SpriteClip } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
-import { NumField, SelectField, ToggleField } from "../fields";
+import { MoreFields, NumField, SelectField, ToggleField } from "../fields";
+import { PaletteField } from "./palette";
 import type { PanelSection } from "../PanelGroup";
 
 /**
@@ -54,33 +54,33 @@ const LABELS: Record<string, string> = {
   "motions.pingpong": "Ping-pong end to end",
   "motions.dash": "Dashes march along it",
   "motions.unfold": "Unfold from the middle",
-  "tail.comet": "Tail (s of travel)",
-  "tail.pulse": "Pulse length (fraction of the line)",
-  "tail.pingpong": "Lit length (fraction of the line)",
-  "tail.dash": "Dash length (fraction of the line)",
-  "hold.erase": "Hold before erasing (s)",
-  "hold.pulse": "Seconds between pulses",
+  "tail.comet": "Tail length",
+  "tail.pulse": "Pulse length",
+  "tail.pingpong": "Lit length",
+  "tail.dash": "Dash length",
+  "hold.erase": "Hold before erasing",
+  "hold.pulse": "Time between pulses",
   taper: "Taper the trailing end",
   fade: "Fade the trailing end",
-  headSprite: "Width where it meets the sprite (1 = full)",
-  headRibbon: "Width at the head (1 = full)",
-  nib: "Nib: thick and thin by direction",
+  headSprite: "Width at the picture",
+  headRibbon: "Width at the tip",
+  nib: "Pen nib (thick and thin)",
   core: "Bright core line",
   glow: "Glow",
-  wiggle: "Braid: sideways weave (px)",
+  wiggle: "Braid",
   echo: "Echo copies",
   colour: "Colour",
   "colours.fixed": "Own colours",
-  "colours.along": "Blend to the accent toward the tail",
+  "colours.along": "Blend into the second palette",
   "colours.cycle": "Hue drifts over time",
   "colours.chase": "Bands slide along the line",
   colourSpeed: "Colour speed",
-  accent: "Accent colours",
+  accent: "Second palette",
   "accents.cool": "Cool",
   "accents.warm": "Warm",
   "accents.full": "Full rainbow",
   "accents.custom": "Custom",
-  reset: "Reset to plain paint",
+  reset: "Back to plain paint",
 };
 const label = (key: string) => LABELS[key] ?? key;
 
@@ -119,11 +119,6 @@ export function lineSection(clip: RibbonClip | SpriteClip, onChange: (c: Clip) =
   const shaped = style.motion !== "paint" && style.motion !== "unfold";
   const tailLabel = HAS_TAIL.includes(style.motion) ? label(`tail.${style.motion}`) : null;
   const holdLabel = HAS_HOLD.includes(style.motion) ? label(`hold.${style.motion}`) : null;
-  const accent = RAINBOW_PRESETS.find((p) => p.colors.join() === style.accent.join())?.name ?? "custom";
-  const accentOptions = [...RAINBOW_PRESETS.map((p) => p.name), ...(accent === "custom" ? ["custom"] : [])].map((name) => ({
-    value: name,
-    label: label(`accents.${name}`),
-  }));
   const needsAccent = style.motion === "pulse" || style.colour === "along";
   return {
     id: "line",
@@ -139,69 +134,62 @@ export function lineSection(clip: RibbonClip | SpriteClip, onChange: (c: Clip) =
             if (next) set(next.patch);
           }}
         />
-        <SelectField
-          label={label("motion")}
-          value={style.motion}
-          options={MOTIONS.map((m) => ({ value: m, label: label(`motions.${m}`) }))}
-          onChange={(motion) => set({ motion })}
-        />
-        {tailLabel && (
-          <NumField
-            label={tailLabel}
-            value={style.tail}
-            min={style.motion === "comet" ? 0.1 : 0.02}
-            max={style.motion === "comet" ? 5 : style.motion === "dash" ? 0.5 : 1}
-            step={style.motion === "comet" ? 0.1 : 0.01}
-            onChange={(v) => set({ tail: v })}
-          />
-        )}
-        {holdLabel && <NumField label={holdLabel} value={style.hold} min={0.1} max={30} step={0.1} onChange={(v) => set({ hold: v })} />}
-        {shaped && (
-          <>
-            <NumField label={label("taper")} value={style.taper} min={0} max={1} step={0.05} onChange={(v) => set({ taper: v })} />
-            <NumField label={label("fade")} value={style.fade} min={0} max={1} step={0.05} onChange={(v) => set({ fade: v })} />
-          </>
-        )}
-        {style.motion !== "unfold" && (
-          <NumField
-            label={label(clip.type === "sprite" ? "headSprite" : "headRibbon")}
-            value={style.head}
-            min={0.05}
-            max={1}
-            step={0.05}
-            onChange={(v) => set({ head: v })}
-          />
-        )}
-        <NumField label={label("nib")} value={style.nib} min={0} max={1} step={0.05} onChange={(v) => set({ nib: v })} />
-        <ToggleField label={label("core")} value={style.core} onChange={(v) => set({ core: v })} />
-        <NumField label={label("glow")} value={style.glow} min={0} max={1} step={0.05} onChange={(v) => set({ glow: v })} />
-        <NumField label={label("wiggle")} value={style.wiggle} min={0} max={60} step={1} onChange={(v) => set({ wiggle: v })} />
-        <NumField label={label("echo")} value={style.echo} min={0} max={3} step={1} onChange={(v) => set({ echo: v })} />
-        <SelectField
-          label={label("colour")}
-          value={style.colour}
-          options={COLOURS.map((c) => ({ value: c, label: label(`colours.${c}`) }))}
-          onChange={(colour) => set({ colour })}
-        />
-        {(style.colour === "cycle" || style.colour === "chase") && (
-          <NumField label={label("colourSpeed")} value={style.colourSpeed} min={0.1} max={5} step={0.1} onChange={(v) => set({ colourSpeed: v })} />
-        )}
-        {needsAccent && (
+        <MoreFields>
           <SelectField
-            label={label("accent")}
-            value={accent}
-            options={accentOptions}
-            onChange={(name) => {
-              const next = RAINBOW_PRESETS.find((p) => p.name === name);
-              if (next) set({ accent: next.colors.slice() });
-            }}
+            label={label("motion")}
+            value={style.motion}
+            options={MOTIONS.map((m) => ({ value: m, label: label(`motions.${m}`) }))}
+            onChange={(motion) => set({ motion })}
           />
-        )}
-        {look === "custom" && (
-          <Button variant="outline" size="xs" onClick={() => set({ ...DEFAULT_LINE_STYLE, accent: style.accent })}>
-            {label("reset")}
-          </Button>
-        )}
+          {tailLabel && (
+            <NumField
+              label={tailLabel}
+              value={style.tail}
+              min={style.motion === "comet" ? 0.1 : 0.02}
+              max={style.motion === "comet" ? 5 : style.motion === "dash" ? 0.5 : 1}
+              step={style.motion === "comet" ? 0.1 : 0.01}
+              onChange={(v) => set({ tail: v })}
+              unit={style.motion === "comet" ? "s" : undefined}
+            />
+          )}
+          {holdLabel && <NumField label={holdLabel} unit="s" value={style.hold} min={0.1} max={30} step={0.1} onChange={(v) => set({ hold: v })} />}
+          {shaped && (
+            <>
+              <NumField label={label("taper")} value={style.taper} min={0} max={1} step={0.05} onChange={(v) => set({ taper: v })} />
+              <NumField label={label("fade")} value={style.fade} min={0} max={1} step={0.05} onChange={(v) => set({ fade: v })} />
+            </>
+          )}
+          {style.motion !== "unfold" && (
+            <NumField
+              label={label(clip.type === "sprite" ? "headSprite" : "headRibbon")}
+              value={style.head}
+              min={0.05}
+              max={1}
+              step={0.05}
+              onChange={(v) => set({ head: v })}
+            />
+          )}
+          <NumField label={label("nib")} value={style.nib} min={0} max={1} step={0.05} onChange={(v) => set({ nib: v })} />
+          <ToggleField label={label("core")} value={style.core} onChange={(v) => set({ core: v })} />
+          <NumField label={label("glow")} value={style.glow} min={0} max={1} step={0.05} onChange={(v) => set({ glow: v })} />
+          <NumField label={label("wiggle")} unit="px" value={style.wiggle} min={0} max={60} step={1} onChange={(v) => set({ wiggle: v })} />
+          <NumField label={label("echo")} value={style.echo} min={0} max={3} step={1} onChange={(v) => set({ echo: v })} />
+          <SelectField
+            label={label("colour")}
+            value={style.colour}
+            options={COLOURS.map((c) => ({ value: c, label: label(`colours.${c}`) }))}
+            onChange={(colour) => set({ colour })}
+          />
+          {(style.colour === "cycle" || style.colour === "chase") && (
+            <NumField label={label("colourSpeed")} value={style.colourSpeed} min={0.1} max={5} step={0.1} onChange={(v) => set({ colourSpeed: v })} />
+          )}
+          {needsAccent && <PaletteField label={label("accent")} colors={style.accent} onChange={(accent) => set({ accent })} />}
+          {look === "custom" && (
+            <Button variant="outline" size="xs" onClick={() => set({ ...DEFAULT_LINE_STYLE, accent: style.accent })}>
+              {label("reset")}
+            </Button>
+          )}
+        </MoreFields>
       </>
     ),
   };

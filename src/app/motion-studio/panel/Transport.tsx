@@ -65,6 +65,43 @@ export function barSpan(clip: Clip, duration: number): { left: number; width: nu
   return { left, width: Math.max(0.5, end - left), clipped: rawEnd > 100 };
 }
 
+/** Tick spacing that keeps labels legible for the composition's length. */
+function tickStep(duration: number): number {
+  if (duration <= 4) return 0.5;
+  if (duration <= 12) return 1;
+  if (duration <= 30) return 2;
+  return 5;
+}
+
+/** Seconds along the top of the tracks; click anywhere on it to jump there. */
+function Ruler({ duration, onSeek }: { duration: number; onSeek: (s: number) => void }) {
+  const step = tickStep(duration);
+  const ticks: number[] = [];
+  for (let t = 0; t <= duration + 1e-6; t += step) ticks.push(Number(t.toFixed(2)));
+  return (
+    <div
+      role="presentation"
+      className="relative h-4 min-w-0 flex-1 cursor-pointer select-none border-b border-hairline"
+      onPointerDown={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        onSeek(Math.max(0, Math.min(duration, ((e.clientX - r.left) / r.width) * duration)));
+      }}
+    >
+      {ticks.map((t) => (
+        <span
+          key={t}
+          aria-hidden="true"
+          className="absolute bottom-0 flex flex-col items-start"
+          style={{ left: `${(t / duration) * 100}%` }}
+        >
+          <span className="ml-1 -mt-px font-sans text-[10px] leading-3 tabular-nums tracking-[0.04em] text-ink-muted">{Number.isInteger(t) ? `${t}s` : t.toFixed(1)}</span>
+          <span className="h-1 w-px bg-border-strong" />
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /** Play controls, scrubber, and a timeline showing when each clip runs. */
 export function Transport({
   doc,
@@ -317,7 +354,6 @@ export function Transport({
       <div className="space-y-2 bg-surface-raised px-3 py-2 [--label-w:22px]">
         <div className="flex items-center justify-between gap-4 px-1">{speedAndLoop}</div>
         {tracks}
-        <p className="atm-help px-1">Drag a bar to change when a clip starts. Drag the grip to restack.</p>
       </div>
     );
   }
@@ -329,13 +365,14 @@ export function Transport({
         {replayButton}
         <span className="w-28">{readout}</span>
         {speedAndLoop}
-        <span className="ml-auto text-xs text-ink-muted">
-          Drag a bar to change its start · drag ⋮⋮ to restack · Space: play/pause · R: replay · W: add waypoint · Esc: exit clean mode
-        </span>
       </div>
       <div className="flex items-center gap-2">
         <span style={{ width: `calc(${LABEL_W} - 8px)` }} className="shrink-0" aria-hidden="true" />
         {scrubber}
+      </div>
+      <div className="flex">
+        <span style={{ width: LABEL_W }} className="shrink-0" aria-hidden="true" />
+        <Ruler duration={duration} onSeek={onSeek} />
       </div>
       {tracks}
     </div>

@@ -10,11 +10,11 @@ export function playbackSection(clip: LottieClip, onChange: (c: LottieClip) => v
   const set = setter(clip, onChange);
   return {
     id: "playback",
-    title: `Lottie: ${clip.label}`,
+    title: "Animation",
     content: (
       <>
-        <NumField label="Width (px)" value={clip.width} min={40} max={2000} step={1} onChange={(v) => set("width", v)} />
-        <NumField label="Speed" value={clip.speed} min={0.1} max={4} onChange={(v) => set("speed", v)} />
+        <NumField label="Width" unit="px" value={clip.width} min={40} max={2000} step={1} onChange={(v) => set("width", v)} />
+        <NumField label="Speed" unit="×" value={clip.speed} min={0.1} max={4} onChange={(v) => set("speed", v)} />
         <ToggleField label="Loop" value={clip.loop} onChange={(v) => set("loop", v)} />
       </>
     ),

@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { CloseIcon, LayersIcon, SlidersIcon, TimelineIcon } from "../panel/icons";
 import type { MobileTab } from "../panel/MobileTabs";
 import { IconButton } from "./IconButton";
-import { SquiggleLink } from "./SquiggleLink";
 import type { StudioSlots } from "./types";
 
 interface Props extends StudioSlots {
@@ -16,7 +15,7 @@ interface Props extends StudioSlots {
 const drawerId = (id: MobileTab) => `studio-drawer-${id}`;
 
 const SIDE: Record<MobileTab, { title: string; className: string }> = {
-  clips: { title: "Clips", className: "atm-drawer-left w-[min(340px,44vw)] border-r" },
+  clips: { title: "Layers", className: "atm-drawer-left w-[min(340px,44vw)] border-r" },
   edit: { title: "Edit", className: "atm-drawer-right w-[min(340px,44vw)] border-l" },
   timeline: { title: "Timeline", className: "atm-drawer-up h-[48dvh] border-t" },
 };
@@ -49,7 +48,7 @@ function Drawer({ id, onClose, children }: { id: MobileTab; onClose: () => void;
  * the Timeline rises from the bottom; the stage refits beside whichever is
  * open so you can watch the edit land. One drawer at a time.
  */
-export function LandscapeShell({ stage, playback, tracks, clips, edit, drawer, onDrawer }: Props) {
+export function LandscapeShell({ phoneActions, stage, playback, tracks, clips, edit, drawer, onDrawer }: Props) {
   const toggle = (id: MobileTab) => onDrawer(drawer === id ? null : id);
   const close = () => onDrawer(null);
   const drawerButton = (id: MobileTab, icon: ReactNode) => (
@@ -70,13 +69,10 @@ export function LandscapeShell({ stage, playback, tracks, clips, edit, drawer, o
       <div className="flex min-h-0 flex-1">
         {drawer === "clips" && (
           <Drawer id="clips" onClose={close}>
-            <div className="px-4 py-3">
-              <p className="atm-help mb-1">Lower rows paint on top · drag a grip right to nest</p>
-              {clips}
-            </div>
+            <div className="px-3 py-3">{clips}</div>
           </Drawer>
         )}
-        <div className="min-h-0 min-w-0 flex-1">{stage}</div>
+        <main className="min-h-0 min-w-0 flex-1">{stage}</main>
         {drawer === "edit" && (
           <Drawer id="edit" onClose={close}>
             <div className="p-4">{edit}</div>
@@ -93,7 +89,7 @@ export function LandscapeShell({ stage, playback, tracks, clips, edit, drawer, o
         className="flex items-center gap-1 border-t border-border-strong bg-surface-raised px-1 pb-[env(safe-area-inset-bottom)]"
       >
         {drawerButton("clips", <LayersIcon />)}
-        <SquiggleLink />
+        {phoneActions}
         <div className="min-w-0 flex-1">{playback}</div>
         {drawerButton("timeline", <TimelineIcon />)}
         {drawerButton("edit", <SlidersIcon />)}

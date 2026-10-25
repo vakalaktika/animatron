@@ -7,7 +7,7 @@ export type MobileTab = "timeline" | "clips" | "edit";
 
 const TABS: { id: MobileTab; label: string; Icon: ComponentType<SVGProps<SVGSVGElement>> }[] = [
   { id: "timeline", label: "Timeline", Icon: TimelineIcon },
-  { id: "clips", label: "Clips", Icon: LayersIcon },
+  { id: "clips", label: "Layers", Icon: LayersIcon },
   { id: "edit", label: "Edit", Icon: SlidersIcon },
 ];
 

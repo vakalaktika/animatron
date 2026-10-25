@@ -20,7 +20,7 @@ describe("SquiggleStudio", () => {
     expect(screen.getByText("Draw a squiggle here")).toBeInTheDocument();
 
     // Global actions start disabled because there are no strokes yet.
-    expect(screen.getByRole("button", { name: "Export all SVGs" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Download all as SVG" })).toBeDisabled();
 
     // The default rainbow seeds three colour swatches (the minimum).
     expect(screen.getAllByLabelText(/^Colour \d$/)).toHaveLength(3);

@@ -376,7 +376,7 @@ export function welcomePreset(): StudioDoc {
     x: 960,
     y: 760,
     start: Number(arrivalTime(ribbon, 1).toFixed(2)),
-    text: "Draw a path. Ride it. Export the code.",
+    text: "Draw a path. Ride it. Share it.",
     font: "sans",
     fontSize: 26,
     color: "#645e56",
