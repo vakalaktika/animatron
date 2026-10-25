@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Typecheck and test
+        run: npm run typecheck && npm test
+
       - name: Build (static export)
         env:
           # Serve under the project subpath, e.g. /animatron.

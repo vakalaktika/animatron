@@ -15,7 +15,7 @@ interface Props {
   onLoadPreset: (doc: StudioDoc) => void;
   onDeletePreset: (name: string) => void;
   onImportFile: (file: File) => void;
-  onAddClip: (type: "logo" | "chippy" | "bubble" | "text") => void;
+  onAddClip: (type: "logo" | "chippy" | "bubble" | "text" | "ribbon") => void;
   onExportDocCode: () => void;
   onExportDocJson: () => void;
   onRecord: () => void;
@@ -84,6 +84,7 @@ export function StagePanel({
           <Button size="xs" variant="outline" onClick={() => onAddClip("chippy")}>+ Chippy</Button>
           <Button size="xs" variant="outline" onClick={() => onAddClip("bubble")}>+ Speech bubble</Button>
           <Button size="xs" variant="outline" onClick={() => onAddClip("text")}>+ Text</Button>
+          <Button size="xs" variant="outline" onClick={() => onAddClip("ribbon")}>+ Ribbon</Button>
         </div>
         <FileInput size="sm" accept=".json,.svg,.png,.jpg,.jpeg,.webp,.gif" onFile={onImportFile}>
           Import Lottie, clip, or image

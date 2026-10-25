@@ -1,6 +1,7 @@
 import { loopMemberIds } from "@/app/components/motion-studio/engine/hierarchy";
 import { AUTO_TAIL_LENGTH, AUTO_TAIL_POSITION } from "@/app/components/motion-studio/engine/text";
-import { DOC_VERSION, type Clip, type StudioDoc, type TextClip } from "@/app/components/motion-studio/types";
+import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
+import { DOC_VERSION, type Clip, type SpriteClip, type StudioDoc, type TextClip } from "@/app/components/motion-studio/types";
 import { normalizeOrder } from "./tree";
 import { sanitizePath } from "./waypoints";
 
@@ -107,7 +108,11 @@ export function normalizeClip(raw: Clip | LegacyBubble): Clip {
     const legacy = raw as LegacyText;
     return { ...PLAIN_TEXT_DEFAULTS, ...legacy, parentId, followRotation };
   }
-  if (raw.type === "sprite") return { ...raw, path: sanitizePath(raw.path), parentId, followRotation };
+  // Sprites saved before the rainbow trail existed get it switched off.
+  if (raw.type === "sprite") {
+    const legacy = raw as Omit<SpriteClip, "trail"> & Partial<Pick<SpriteClip, "trail">>;
+    return { ...legacy, path: sanitizePath(legacy.path), trail: { ...DEFAULT_TRAIL, ...legacy.trail }, parentId, followRotation };
+  }
   return { ...raw, parentId, followRotation };
 }
 
