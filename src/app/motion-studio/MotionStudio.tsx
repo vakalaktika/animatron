@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
 import { docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
-import { DOC_VERSION, type Clip, type SpriteClip, type StageConfig, type StudioDoc, type Vec2 } from "@/app/components/motion-studio/types";
+import type { Clip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
 import { clipComponentCode, docComponentCode, HANDOFF_NOTES } from "./export/codegen";
 import { downloadBlob, downloadText, startTabRecording, type Recording } from "./export/recorder";
-import { parseSvg } from "@/app/components/motion-studio/engine/svgText";
 import { deleteClip, deltaInParentFrame, dropClip, nudgeClip, reparentClip } from "./lib/attach";
-import { flightFromSquiggle, ribbonFromSquiggle, takeHandoff } from "./lib/handoff";
+import { artworkFromSquiggle, flightFromSquiggle, ribbonFromSquiggle, takeHandoff } from "./lib/handoff";
+import { svgSpriteFrom } from "./lib/svgSprite";
 import { reorder } from "./lib/order";
 import { attachedTextFor, detachRun, restoreRun, setRunText } from "./lib/textRuns";
 import { moveAmongSiblings, normalizeOrder, type DropTarget } from "./lib/tree";
@@ -19,7 +19,7 @@ import type { MobileTab } from "./panel/MobileTabs";
 import { StagePanel } from "./panel/StagePanel";
 import { Transport } from "./panel/Transport";
 import {
-  endCapPreset,
+  welcomePreset,
   loadSavedPresets,
   makeChippy,
   makeImageSprite,
@@ -27,7 +27,6 @@ import {
   makeLottie,
   makeRibbon,
   makeSpeechText,
-  makeSvgSprite,
   makeText,
   newId,
   parseImport,
@@ -46,18 +45,12 @@ import { PortraitShell } from "./shell/PortraitShell";
 import type { StudioSlots } from "./shell/types";
 
 /** Parses SVG markup into a sprite centred on the stage, or null when it isn't SVG. */
-function svgSpriteFrom(text: string, label: string, stage: StageConfig, over: Partial<SpriteClip> = {}): SpriteClip | null {
-  const parsed = parseSvg(text);
-  if (!parsed) return null;
-  return makeSvgSprite(parsed.markup, label, parsed.aspect, parsed.textRuns, { x: stage.width / 2, y: stage.height / 2, ...over });
-}
-
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "animation";
 
 export function MotionStudio() {
   // Restore the autosaved working document on load, falling back to the default
   // preset. Lazy initializer so localStorage is only read on the client.
-  const [doc, setRawDoc] = useState<StudioDoc>(() => loadDoc() ?? endCapPreset());
+  const [doc, setRawDoc] = useState<StudioDoc>(() => loadDoc() ?? welcomePreset());
   // Every write keeps the clip list in tree order (each clip followed by its
   // descendants), which is what the layer tree and the paint order both read.
   const setDoc = useCallback((next: StudioDoc | ((d: StudioDoc) => StudioDoc)) => {
@@ -192,12 +185,13 @@ export function MotionStudio() {
     return true;
   };
 
-  // A squiggle sent over from Squiggle Studio is waiting in sessionStorage.
-  // Taken once on mount into a fresh document, with the clip selected so its
-  // controls show: either Chippy flies it with the rainbow trail, or it lands
-  // as a still picture. This has to be an effect, not a lazy state
-  // initializer: the server renders the preset and the client must hydrate to
-  // the same DOM before the squiggle replaces it.
+  // A squiggle sent over from the Squiggle Studio is waiting in
+  // sessionStorage. Taken once on mount and added to the composition that was
+  // open (the autosaved document is the user's work, so it is never replaced),
+  // with the new clip selected so its controls show: Chippy flies it with the
+  // rainbow trail, it paints in as a ribbon, or it lands as a still picture.
+  // This has to be an effect, not a lazy state initializer: the server
+  // renders the preset and the client must hydrate to the same DOM first.
   const handoffTaken = useRef(false);
   useEffect(() => {
     if (handoffTaken.current) return;
@@ -210,11 +204,10 @@ export function MotionStudio() {
         ? flightFromSquiggle(handoff.points, handoff.colors, handoff.band, stage)
         : handoff.kind === "ribbon"
           ? ribbonFromSquiggle(handoff.points, handoff.colors, handoff.band, stage)
-          : svgSpriteFrom(handoff.svg, handoff.label, stage, { start: 0 });
+          : artworkFromSquiggle(handoff.svg, handoff.label, stage);
     if (!clip) return;
-    const name = { flight: "Squiggle flight", ribbon: "Squiggle ribbon", artwork: "Squiggle artwork" }[handoff.kind];
     /* eslint-disable react-hooks/set-state-in-effect -- a one-time read of an external store on mount */
-    setDoc({ version: DOC_VERSION, name, stage, clips: [clip] });
+    setDoc((d) => ({ ...d, clips: [...d.clips, clip] }));
     setSelectedId(clip.id);
     /* eslint-enable react-hooks/set-state-in-effect */
     clock.replay();

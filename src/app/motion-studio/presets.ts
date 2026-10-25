@@ -310,7 +310,120 @@ export function ribbonRidePreset(): StudioDoc {
     version: DOC_VERSION,
     name: "Ribbon ride",
     stage: { width: 1920, height: 1080, background: "#f7f5ee", transparent: false },
-    clips: [wave, loop, rider, landing],
+    clips: [wave, rider, landing, loop],
+  };
+}
+
+/**
+ * What a new visitor sees first: a ribbon paints across the stage, the
+ * title rides its paint head and settles, a tagline fades in under it, and
+ * a small comet loop keeps the stage alive. Everything here is editable, so
+ * it doubles as a tour of ribbons, seating, text reveals and trails.
+ */
+export function welcomePreset(): StudioDoc {
+  const ribbon = makeRibbon({
+    id: "welcome-ribbon",
+    name: "Ribbon",
+    start: 0,
+    x: 180,
+    y: 560,
+    points: [
+      { x: 0, y: 0 },
+      { x: 280, y: -140 },
+      { x: 580, y: 60 },
+      { x: 880, y: -120 },
+      { x: 1160, y: 40 },
+      { x: 1380, y: -60 },
+    ],
+    duration: 2.8,
+    ease: { name: "inOut" },
+    band: 10,
+    coat: { colors: DEFAULT_COAT_COLORS.slice(), every: 7, duration: 3.5 },
+  });
+  const title = makeText({
+    id: "welcome-title",
+    name: "Title",
+    parentId: ribbon.id,
+    along: "front",
+    followRotation: false,
+    x: 0,
+    y: -84,
+    start: 0.2,
+    text: "Animatron",
+    font: "serif",
+    fontSize: 84,
+    color: "#2a241d",
+    accentSuffix: "",
+    rule: false,
+    direction: "left",
+    letterStagger: 0.06,
+    letterDuration: 0.5,
+  });
+  // Free-standing under the ribbon, timed to when the paint reaches the end.
+  const tagline = makeText({
+    id: "welcome-tagline",
+    name: "Tagline",
+    x: 960,
+    y: 760,
+    start: Number(arrivalTime(ribbon, 1).toFixed(2)),
+    text: "Draw a path. Ride it. Export the code.",
+    font: "sans",
+    fontSize: 26,
+    color: "#645e56",
+    accentSuffix: "",
+    rule: true,
+    ruleDelay: 0.2,
+    ruleDuration: 0.6,
+    ruleWidth: 120,
+    direction: "center",
+    reveal: "fade",
+    revealDuration: 0.6,
+  });
+  const loop = makeRibbon({
+    id: "welcome-loop",
+    name: "Comet loop",
+    start: 0.6,
+    x: 1650,
+    y: 250,
+    points: [
+      { x: 0, y: -110 },
+      { x: 110, y: 0 },
+      { x: 0, y: 110 },
+      { x: -110, y: 0 },
+    ],
+    loop: true,
+    mode: "comet",
+    cometSeconds: 0.9,
+    duration: 2.6,
+    ease: { name: "linear" },
+    colors: DEFAULT_COAT_COLORS.slice(),
+    band: 6,
+  });
+  const flyer = makeChippy({
+    id: "welcome-flyer",
+    name: "Chippy",
+    parentId: loop.id,
+    along: "front",
+    followRotation: true,
+    x: 0,
+    y: 0,
+    start: 0.6,
+    width: 150,
+    path: [],
+    duration: 0.5,
+    ease: { name: "backOut" },
+    scaleFrom: 0,
+    fadeIn: 0.2,
+    loop: false,
+    bank: 0,
+    autoFlip: false,
+    landing: { squash: 0, settleFlaps: 0, foldAngle: 0, foldDuration: 0 },
+  });
+  return {
+    version: DOC_VERSION,
+    name: "Welcome",
+    stage: { width: 1920, height: 1080, background: "#f7f5ee", transparent: false },
+    clips: [ribbon, title, tagline, loop, flyer],
   };
 }
 
@@ -361,6 +474,7 @@ export function loaderPreset(): StudioDoc {
 }
 
 export const BUILT_IN_PRESETS: { label: string; make: () => StudioDoc }[] = [
+  { label: "Welcome", make: welcomePreset },
   { label: "Ribbon ride", make: ribbonRidePreset },
   { label: "End cap", make: endCapPreset },
   { label: "Chippy loader", make: loaderPreset },

@@ -1,5 +1,6 @@
+// @vitest-environment jsdom
 import type { Point } from "@/app/components/motion-studio/engine/rainbow";
-import { flightFromSquiggle, HANDOFF_KEY, ribbonFromSquiggle, takeHandoff, writeHandoff } from "./handoff";
+import { artworkFromSquiggle, flightFromSquiggle, HANDOFF_KEY, ribbonFromSquiggle, takeHandoff, writeHandoff } from "./handoff";
 
 const STAGE = { width: 1920, height: 1080 };
 // A wide, shallow wave drawn on a small canvas, 10px apart.
@@ -72,6 +73,30 @@ describe("ribbonFromSquiggle", () => {
     const xs = clip.points.map((p) => p.x + clip.x);
     expect(Math.min(...xs)).toBeGreaterThanOrEqual(0);
     expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(STAGE.width * 0.8, 0);
+  });
+});
+
+describe("artworkFromSquiggle", () => {
+  const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" width="400" height="200"><path d="M0 0L400 200" stroke="#111" fill="none"/></svg>';
+
+  it("turns the exported SVG into a still sprite centred on the stage", () => {
+    const clip = artworkFromSquiggle(SVG, "squiggle-1.svg", STAGE);
+    expect(clip).not.toBeNull();
+    expect(clip!.type).toBe("sprite");
+    expect(clip!.source.kind).toBe("svg");
+    expect(clip!.start).toBe(0);
+    expect(clip!.x).toBe(STAGE.width / 2);
+    expect(clip!.y).toBe(STAGE.height / 2);
+    expect(clip!.trail.enabled).toBe(false);
+  });
+
+  it("keeps the drawing's aspect ratio (height over width)", () => {
+    const clip = artworkFromSquiggle(SVG, "squiggle-1.svg", STAGE)!;
+    expect(clip.source.kind === "svg" && clip.source.aspect).toBeCloseTo(0.5, 3);
+  });
+
+  it("returns null for markup that is not SVG", () => {
+    expect(artworkFromSquiggle("<div>nope</div>", "x.svg", STAGE)).toBeNull();
   });
 });
 
