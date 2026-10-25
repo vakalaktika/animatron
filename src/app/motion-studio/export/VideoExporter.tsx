@@ -1,6 +1,6 @@
 "use client";
 
-import { useMotionValue } from "motion/react";
+import { frameData, frameSteps, useMotionValue } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { StageCanvas } from "@/app/components/motion-studio/StageCanvas";
 import type { StudioDoc } from "@/app/components/motion-studio/types";
@@ -20,8 +20,16 @@ interface Props {
 
 const FPS = 30;
 
-/** Two animation frames: enough for Motion to flush the new clock value into the DOM. */
-const settled = () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+const STEPS = ["setup", "read", "resolveKeyframes", "preUpdate", "update", "preRender", "render", "postRender"] as const;
+
+/**
+ * Runs Motion's frame loop by hand so the DOM shows the new clock value at
+ * once. Waiting for animation frames instead would tie the render to the
+ * browser's frame rate, and a hidden or covered tab gets one frame a second.
+ */
+function flushFrame() {
+  for (const step of STEPS) frameSteps[step].process(frameData);
+}
 
 /**
  * Renders the composition to a video file without screen capture. A copy of
@@ -52,7 +60,7 @@ export function VideoExporter({ doc, duration, fileStem, onDone, onClose }: Prop
             node: () => nodeRef.current,
             seek: async (s) => {
               time.set(s);
-              await settled();
+              flushFrame();
             },
             onProgress: (done, total) => {
               if (!cancelled) setProgress({ done, total });
@@ -100,7 +108,7 @@ export function VideoExporter({ doc, duration, fileStem, onDone, onClose }: Prop
             <p className="font-sans text-xs tabular-nums tracking-[0.04em] text-ink-muted">
               Frame {progress.done} of {progress.total} · {pct}%
             </p>
-            <p className="text-sm leading-5 text-ink-secondary">Keep this tab open; the file downloads when it is done.</p>
+            <p className="text-sm leading-5 text-ink-secondary">Keep this page open (switching tabs is fine); the file downloads when it is done.</p>
             <Button size="sm" variant="outline" className="self-start" onClick={onClose}>
               Cancel
             </Button>
