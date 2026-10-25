@@ -9,7 +9,9 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: "jsdom",
+    // Pure engine and lib tests run in node; the few that need a DOM say so
+    // with a `// @vitest-environment jsdom` docblock at the top of the file.
+    environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
     css: false,
     setupFiles: ["./vitest.setup.ts"],

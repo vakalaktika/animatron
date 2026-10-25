@@ -2,6 +2,7 @@ import { bbox, polylineLength, resample, type Point } from "@/app/components/mot
 import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
 import type { RibbonClip, SpriteClip, StageConfig } from "@/app/components/motion-studio/types";
 import { makeChippy, makeRibbon } from "../presets";
+import { svgSpriteFrom } from "./svgSprite";
 
 /**
  * Squiggle Studio → Motion Studio handoff. A squiggle is parked in
@@ -156,4 +157,13 @@ export function flightFromSquiggle(
     scaleFrom: 1,
     trail: { ...DEFAULT_TRAIL, enabled: true, colors: colors.slice(), band: Math.max(2, band * scale) },
   });
+}
+
+/**
+ * The squiggle's exported SVG as a still sprite, centred on the stage and
+ * starting at once; it can then follow a path like any imported picture.
+ * Null when the SVG can't be read.
+ */
+export function artworkFromSquiggle(svg: string, label: string, stage: Pick<StageConfig, "width" | "height">): SpriteClip | null {
+  return svgSpriteFrom(svg, label, stage, { start: 0 });
 }
