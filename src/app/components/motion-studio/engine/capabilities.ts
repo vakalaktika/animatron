@@ -32,8 +32,10 @@ export interface Capabilities {
   build: LogoClip | null;
   /** Speed and loop for an imported animation. */
   playback: LottieClip | null;
-  /** The brand squiggle: points, paint-in, comet, coats. */
+  /** The brand squiggle: points, paint-in, coats. */
   ribbon: RibbonClip | null;
+  /** How a line is lit and shaped: a ribbon, or a sprite's trail while it is on. */
+  line: RibbonClip | SpriteClip | null;
   /** Imported SVG whose live text can be edited in place. */
   textRuns: SpriteClip | null;
   /** Imported SVG with no live text (outlined). */
@@ -55,6 +57,7 @@ const NONE: Capabilities = {
   build: null,
   playback: null,
   ribbon: null,
+  line: null,
   textRuns: null,
   outlinedSvg: null,
   raster: null,
@@ -74,6 +77,7 @@ export function capabilities(clip: Clip): Capabilities {
         motion: clip,
         path: clip,
         trail: clip,
+        line: clip.trail.enabled ? clip : null,
         flap: chippy ? clip : null,
         landing: chippy && !clip.loop ? clip : null,
         textRuns: runs ? clip : null,
@@ -86,6 +90,6 @@ export function capabilities(clip: Clip): Capabilities {
     case "lottie":
       return { ...NONE, playback: clip };
     case "ribbon":
-      return { ...NONE, ribbon: clip };
+      return { ...NONE, ribbon: clip, line: clip };
   }
 }

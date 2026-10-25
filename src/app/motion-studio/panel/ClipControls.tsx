@@ -5,6 +5,7 @@ import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { PanelGroup, type PanelSection } from "./PanelGroup";
 import { outlinedSvgSection, rasterSection, textRunsSection, type ArtworkActions } from "./sections/artwork";
 import { buildSections } from "./sections/logo";
+import { lineSection } from "./sections/line";
 import { playbackSection } from "./sections/lottie";
 import { ribbonPointsSection, ribbonSection } from "./sections/ribbon";
 import { placementSection } from "./sections/placement";
@@ -42,11 +43,13 @@ export function ClipControls({ doc, clip, onChange, onReparent, focusText = fals
     caps.motion && motionSection(caps.motion, onChange),
     caps.path && pathSection(caps.path, onChange, waypoints),
     caps.trail && trailSection(caps.trail, onChange),
+    caps.line?.type === "sprite" ? lineSection(caps.line, onChange) : null,
     caps.flap && flapSection(caps.flap, onChange),
     caps.landing && landingSection(caps.landing, onChange),
     ...(caps.build ? buildSections(caps.build, onChange) : []),
     caps.playback && playbackSection(caps.playback, onChange),
     caps.ribbon && ribbonSection(caps.ribbon, onChange),
+    caps.line?.type === "ribbon" ? lineSection(caps.line, onChange) : null,
     caps.ribbon && ribbonPointsSection(caps.ribbon, onChange),
     caps.textRuns && textRunsSection(caps.textRuns, artwork),
     caps.outlinedSvg && outlinedSvgSection(),

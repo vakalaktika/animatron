@@ -13,6 +13,8 @@ interface Props {
   /** Overlay rendered in stage coordinates (editor handles, guides). */
   children?: ReactNode;
   className?: string;
+  /** Let art run past the stage edges (a ribbon bleeding off a hero band). */
+  overflow?: "hidden" | "visible";
 }
 
 /**
@@ -20,11 +22,11 @@ interface Props {
  * absolutely positioned in stage pixels, so the same component serves the
  * editor, the recording view, and any page that embeds a composition.
  */
-export function StageCanvas({ doc, time, zoom = 1, children, className }: Props) {
+export function StageCanvas({ doc, time, zoom = 1, children, className, overflow = "hidden" }: Props) {
   const { width, height, background, transparent } = doc.stage;
   return (
     <div
-      className={["relative overflow-hidden", className].filter(Boolean).join(" ")}
+      className={["relative", overflow === "hidden" ? "overflow-hidden" : "overflow-visible", className].filter(Boolean).join(" ")}
       style={{
         width,
         height,

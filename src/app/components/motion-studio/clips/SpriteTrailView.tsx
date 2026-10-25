@@ -1,10 +1,12 @@
 "use client";
 
 import { motion, useTransform, type MotionValue } from "motion/react";
+import { lineNeedsShape } from "../engine/line";
 import { parentTransformAt } from "../engine/transform";
-import { trailBands, trailOpacity, trailWindow } from "../engine/trail";
+import { trailBands, trailCenterline, trailOpacity, trailShift, trailSubject, trailWindow } from "../engine/trail";
 import type { SpriteClip, StudioDoc } from "../types";
 import { RainbowDashes } from "./RainbowDashes";
+import { ShapedLineView } from "./ShapedLineView";
 
 interface Props {
   doc: StudioDoc;
@@ -16,8 +18,10 @@ interface Props {
  * The rainbow squiggle a sprite paints along its path. The bands live in the
  * sprite's parent frame (they must not bank or flip with the sprite), so this
  * draws in a stage-sized SVG under the sprite and rides the parent's live
- * transform. The lit window comes from the sprite's own progress, so the
- * head stays under the sprite as it flies.
+ * transform. The lit stretch comes from the sprite's own progress, so the
+ * head stays under the sprite as it flies. A plain painted trail is drawn
+ * as dashes; a shaped one (a tapering comet, a braid, ...) is rebuilt per
+ * frame by `ShapedLineView`.
  */
 export function SpriteTrailView({ doc, clip, time }: Props) {
   const bands = trailBands(clip);
@@ -38,7 +42,19 @@ export function SpriteTrailView({ doc, clip, time }: Props) {
       aria-hidden="true"
     >
       <motion.g transform={frame}>
-        <RainbowDashes bands={bands} window={window} fade={clip.trail.mode === "comet"} />
+        {lineNeedsShape(clip.trail.style) ? (
+          <ShapedLineView
+            line={trailCenterline(clip)}
+            style={clip.trail.style}
+            subject={trailSubject(clip)}
+            colors={clip.trail.colors}
+            band={clip.trail.band}
+            time={time}
+            shift={trailShift(clip)}
+          />
+        ) : (
+          <RainbowDashes bands={bands} window={window} fade={false} />
+        )}
       </motion.g>
     </motion.svg>
   );

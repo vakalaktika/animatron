@@ -8,7 +8,9 @@ import {
   type StudioDoc,
   type SvgTextRun,
   type TextClip,
+  type Vec2,
 } from "@/app/components/motion-studio/types";
+import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
 import { arrivalTime, DEFAULT_COAT_COLORS, DEFAULT_RIBBON_COLORS } from "@/app/components/motion-studio/engine/ribbon";
 import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
 import { normalizeClip, normalizeDoc, PLAIN_TEXT_DEFAULTS, type Normalized, type RawDoc } from "./lib/migrate";
@@ -198,6 +200,18 @@ export function makeSvgSprite(
   });
 }
 
+/**
+ * Eight points evenly around a circle, starting at the top. The spline is
+ * centripetal (it hugs its chords rather than overshooting), so a loop needs
+ * this many waypoints to read as round; four give a rounded diamond.
+ */
+export function ringPoints(radius: number): Vec2[] {
+  return Array.from({ length: 8 }, (_, i) => {
+    const a = -Math.PI / 2 + (i * Math.PI) / 4;
+    return { x: Math.round(radius * Math.cos(a)), y: Math.round(radius * Math.sin(a)) };
+  });
+}
+
 /** A gentle S-curve ribbon that paints itself in, ready to be reshaped on stage. */
 export function makeRibbon(over: Partial<RibbonClip> = {}): RibbonClip {
   return {
@@ -223,12 +237,14 @@ export function makeRibbon(over: Partial<RibbonClip> = {}): RibbonClip {
     band: 8,
     duration: 2.4,
     ease: { name: "inOut" },
-    mode: "paint",
-    cometSeconds: 0.8,
+    style: DEFAULT_LINE_STYLE,
     coat: { colors: DEFAULT_COAT_COLORS.slice(), every: 0, duration: 5 },
     ...over,
   };
 }
+
+// Built-in presets use fixed ids so the server-rendered DOM and the client
+// state agree after hydration (drag-to-move looks clips up by DOM id).
 
 /**
  * Two ribbons painting in one after the other, with a caption that rides the
@@ -261,15 +277,9 @@ export function ribbonRidePreset(): StudioDoc {
     start: 1.2,
     x: 1480,
     y: 780,
-    points: [
-      { x: 0, y: -170 },
-      { x: 170, y: 0 },
-      { x: 0, y: 170 },
-      { x: -170, y: 0 },
-    ],
+    points: ringPoints(170),
     loop: true,
-    mode: "comet",
-    cometSeconds: 1.1,
+    style: { ...DEFAULT_LINE_STYLE, motion: "comet", tail: 1.1 },
     duration: 3,
     ease: { name: "linear" },
     colors: DEFAULT_COAT_COLORS.slice(),
@@ -385,15 +395,9 @@ export function welcomePreset(): StudioDoc {
     start: 0.6,
     x: 1650,
     y: 250,
-    points: [
-      { x: 0, y: -110 },
-      { x: 110, y: 0 },
-      { x: 0, y: 110 },
-      { x: -110, y: 0 },
-    ],
+    points: ringPoints(110),
     loop: true,
-    mode: "comet",
-    cometSeconds: 0.9,
+    style: { ...DEFAULT_LINE_STYLE, motion: "comet", tail: 0.9 },
     duration: 2.6,
     ease: { name: "linear" },
     colors: DEFAULT_COAT_COLORS.slice(),
@@ -462,12 +466,7 @@ export function loaderPreset(): StudioDoc {
         bank: 0.6,
         autoFlip: true,
         scaleFrom: 1,
-        path: [
-          { x: 0, y: -260 },
-          { x: 260, y: 0 },
-          { x: 0, y: 260 },
-          { x: -260, y: 0 },
-        ],
+        path: ringPoints(260),
       }),
     ],
   };

@@ -11,10 +11,6 @@ import { setter } from "./setter";
 const EASE_OPTIONS = (Object.keys(EASE_LABELS) as Ease["name"][])
   .filter((name) => name !== "custom")
   .map((value) => ({ value, label: EASE_LABELS[value] }));
-const MODE_OPTIONS: { value: RibbonClip["mode"]; label: string }[] = [
-  { value: "paint", label: "Paint in and stay" },
-  { value: "comet", label: "Comet: fade away behind" },
-];
 const PRESET_LABELS: Record<string, string> = { cool: "Cool", warm: "Warm", full: "Full rainbow" };
 const PRESET_OPTIONS = [
   ...RAINBOW_PRESETS.map((p) => ({ value: p.name, label: PRESET_LABELS[p.name] ?? p.name })),
@@ -41,7 +37,7 @@ function PaletteField({ label, colors, onChange }: { label: string; colors: stri
   );
 }
 
-/** Paint-in timing, comet, colours, stripe width, and repaint coats. */
+/** Paint-in timing, colours, stripe width, and repaint coats. How the line is lit and shaped is the Line style section. */
 export function ribbonSection(clip: RibbonClip, onChange: (c: RibbonClip) => void): PanelSection {
   const set = setter(clip, onChange);
   const coat = (patch: Partial<RibbonClip["coat"]>) => set("coat", { ...clip.coat, ...patch });
@@ -53,13 +49,9 @@ export function ribbonSection(clip: RibbonClip, onChange: (c: RibbonClip) => voi
         <NumField label="Paint-in time (s)" value={clip.duration} min={0.2} max={12} onChange={(v) => set("duration", v)} />
         <SelectField label="Easing" value={clip.ease.name} options={EASE_OPTIONS} onChange={(name) => set("ease", { name })} />
         <ToggleField label="Closed loop" value={clip.loop} onChange={(v) => set("loop", v)} />
-        <SelectField label="Trail" value={clip.mode} options={MODE_OPTIONS} onChange={(mode) => set("mode", mode)} />
-        {clip.mode === "comet" && (
-          <NumField label="Comet length (s of travel)" value={clip.cometSeconds} min={0.1} max={5} step={0.1} onChange={(v) => set("cometSeconds", v)} />
-        )}
         <PaletteField label="Colours" colors={clip.colors} onChange={(colors) => set("colors", colors)} />
         <NumField label="Stripe width (px)" value={clip.band} min={2} max={40} step={1} onChange={(v) => set("band", v)} />
-        {clip.mode === "paint" && (
+        {clip.style.motion === "paint" && (
           <>
             <NumField label="Repaint every (s); 0 = never" value={clip.coat.every} min={0} max={60} step={0.5} onChange={(v) => coat({ every: v })} />
             {clip.coat.every > 0 && (

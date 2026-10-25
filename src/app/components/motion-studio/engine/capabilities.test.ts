@@ -1,3 +1,4 @@
+import { DEFAULT_LINE_STYLE } from "./line";
 import type { Clip, LogoClip, LottieClip, RibbonClip, SpriteClip } from "../types";
 import { capabilities } from "./capabilities";
 
@@ -28,7 +29,7 @@ const sprite = (over: Partial<SpriteClip> = {}): SpriteClip => ({
   fadeIn: 0,
   flap: { hz: 0, depth: 0 },
   landing: { squash: 0, settleFlaps: 0, foldAngle: 0, foldDuration: 0 },
-  trail: { enabled: false, mode: "paint", cometSeconds: 0.8, colors: [], band: 8, fadeOut: 0 },
+  trail: { enabled: false, style: DEFAULT_LINE_STYLE, colors: [], band: 8, fadeOut: 0, offset: { along: 0, across: 0 } },
   ...over,
 });
 
@@ -71,9 +72,9 @@ describe("capabilities", () => {
     expect(on(logo)).toEqual(["build"]);
   });
 
-  test("ribbon is a ribbon and nothing else", () => {
-    const ribbon = { ...base, type: "ribbon", points: [], loop: false, colors: [], band: 8, duration: 1, ease: { name: "linear" }, mode: "paint", cometSeconds: 1, coat: { colors: [], every: 0, duration: 1 } } as RibbonClip;
-    expect(on(ribbon)).toEqual(["ribbon"]);
+  test("ribbon is a ribbon with a line style and nothing else", () => {
+    const ribbon = { ...base, type: "ribbon", points: [], loop: false, colors: [], band: 8, duration: 1, ease: { name: "linear" }, style: DEFAULT_LINE_STYLE, coat: { colors: [], every: 0, duration: 1 } } as RibbonClip;
+    expect(on(ribbon)).toEqual(["line", "ribbon"]);
   });
 
   test("lottie has playback", () => {

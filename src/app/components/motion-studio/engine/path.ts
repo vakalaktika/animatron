@@ -21,30 +21,37 @@ export interface PathSampler {
 }
 
 const SAMPLES_PER_SEGMENT = 40;
+/** Centripetal parameterisation: knots spaced by the square root of the chord length. */
+const ALPHA = 0.5;
 
+/**
+ * Centripetal Catmull-Rom between p1 and p2. Unlike the uniform form it never
+ * cusps or overshoots when waypoints are unevenly spaced, so a ribbon drawn
+ * through a tight loop next to a long straight stays a smooth curve.
+ */
 function catmullRom(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: number): Vec2 {
-  const t2 = t * t;
-  const t3 = t2 * t;
-  return {
-    x:
-      0.5 *
-      (2 * p1.x +
-        (-p0.x + p2.x) * t +
-        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
-        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-    y:
-      0.5 *
-      (2 * p1.y +
-        (-p0.y + p2.y) * t +
-        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
-        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
+  const knot = (a: Vec2, b: Vec2, prev: number) => prev + Math.max(1e-6, Math.hypot(b.x - a.x, b.y - a.y) ** ALPHA);
+  const t0 = 0;
+  const t1 = knot(p0, p1, t0);
+  const t2 = knot(p1, p2, t1);
+  const t3 = knot(p2, p3, t2);
+  const u = t1 + (t2 - t1) * t;
+  const mix = (a: Vec2, b: Vec2, ta: number, tb: number): Vec2 => {
+    const w = (u - ta) / (tb - ta);
+    return { x: a.x + (b.x - a.x) * w, y: a.y + (b.y - a.y) * w };
   };
+  const a1 = mix(p0, p1, t0, t1);
+  const a2 = mix(p1, p2, t1, t2);
+  const a3 = mix(p2, p3, t2, t3);
+  const b1 = mix(a1, a2, t0, t2);
+  const b2 = mix(a2, a3, t1, t3);
+  return mix(b1, b2, t1, t2);
 }
 
 /**
- * Builds an arc-length parameterized Catmull-Rom spline through `points`.
- * Progress 0..1 maps to distance along the path, so speed depends only on the
- * easing applied to progress, not on how the waypoints are spaced.
+ * Builds an arc-length parameterized centripetal Catmull-Rom spline through
+ * `points`. Progress 0..1 maps to distance along the path, so speed depends
+ * only on the easing applied to progress, not on how the waypoints are spaced.
  */
 export function buildPath(points: Vec2[], closed: boolean): PathSampler {
   if (points.length === 0) {

@@ -1,3 +1,4 @@
+import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
 import type { SpriteClip, StudioDoc } from "@/app/components/motion-studio/types";
 import { attachedTextFor, detachRun, restoreRun, setRunText } from "./textRuns";
 
@@ -12,7 +13,7 @@ const svgSprite: SpriteClip = {
   parentId: null,
   followRotation: false,
   type: "sprite",
-  trail: { enabled: false, mode: "paint", cometSeconds: 0.8, colors: [], band: 8, fadeOut: 0 },
+  trail: { enabled: false, style: DEFAULT_LINE_STYLE, colors: [], band: 8, fadeOut: 0, offset: { along: 0, across: 0 } },
   source: {
     kind: "svg",
     markup: "<svg/>",

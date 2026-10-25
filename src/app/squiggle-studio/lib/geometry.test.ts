@@ -1,5 +1,5 @@
 import type { Point } from "../types";
-import { bands, bbox, curve, offset, resample, smoothPts } from "./geometry";
+import { bands, bbox, curve, densify, offset, resample, smoothPts } from "./geometry";
 
 describe("resample", () => {
   it("returns points unchanged when there are fewer than two", () => {
@@ -99,5 +99,41 @@ describe("smoothPts", () => {
       expect(Number.isFinite(y)).toBe(true);
     }
     expect(smoothPts([[0, 0], [1, 1]])).toHaveLength(2);
+  });
+
+  it("flattens hand jitter into a sparse, gently curving line", () => {
+    // A long gentle arc with ±6px wobble every 8px, the way a hand draws.
+    const wobbly: Point[] = Array.from({ length: 101 }, (_, i) => [i * 8, Math.sin(i / 25) * 120 + (i % 2 ? 6 : -6)]);
+    const out = smoothPts(wobbly);
+    // Reduced to ~20px spacing.
+    expect(out.length).toBeLessThan(wobbly.length / 2);
+    // No wobble left: the turn between consecutive segments stays small.
+    // The pinned endpoints keep their own jitter; judge the body of the line.
+    let maxTurn = 0;
+    for (let i = 3; i < out.length - 3; i++) {
+      const a = Math.atan2(out[i][1] - out[i - 1][1], out[i][0] - out[i - 1][0]);
+      const b = Math.atan2(out[i + 1][1] - out[i][1], out[i + 1][0] - out[i][0]);
+      maxTurn = Math.max(maxTurn, Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a))));
+    }
+    expect(maxTurn).toBeLessThan(0.15);
+  });
+});
+
+describe("densify", () => {
+  it("leaves a dense stroke alone and splines a sparse one", () => {
+    const dense: Point[] = Array.from({ length: 20 }, (_, i) => [i * 5, 0]);
+    expect(densify(dense)).toBe(dense);
+    const sparse: Point[] = [
+      [0, 0],
+      [100, 100],
+      [200, 0],
+    ];
+    const out = densify(sparse);
+    expect(out.length).toBeGreaterThan(20);
+    // Passes through the waypoints, with a rounded (not pointed) top.
+    expect(out[0]).toEqual([0, 0]);
+    expect(out[out.length - 1]).toEqual([200, 0]);
+    const top = Math.max(...out.map((p) => p[1]));
+    expect(top).toBeGreaterThan(99);
   });
 });

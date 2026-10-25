@@ -6,5 +6,7 @@ export { transformAt, restTransformAt, type WorldTransform } from "./engine/tran
 export { ancestorChain, childrenOf, descendantIds } from "./engine/hierarchy";
 export { capabilities, type Capabilities } from "./engine/capabilities";
 export { DEFAULT_TRAIL } from "./engine/trail";
+export { DEFAULT_LINE_STYLE, lineSpans, lineFront, lineNeedsShape, type LineSubject, type LitSpan } from "./engine/line";
+export { arrivalTime, ribbonCoat, ribbonPath } from "./engine/ribbon";
 export { RAINBOW, RAINBOW_PRESETS, type Point, type Band } from "./engine/rainbow";
 export type * from "./types";

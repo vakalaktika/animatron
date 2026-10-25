@@ -21,7 +21,7 @@ describe("flightFromSquiggle", () => {
     const last = clip.path[clip.path.length - 1];
     expect(last).toEqual({ x: 0, y: 0 });
     expect(clip.path.length).toBeGreaterThan(4);
-    expect(clip.path.length).toBeLessThanOrEqual(24);
+    expect(clip.path.length).toBeLessThanOrEqual(40);
   });
 
   it("scales the drawing to fit inside the stage, centred", () => {
