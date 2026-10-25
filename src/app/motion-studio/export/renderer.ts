@@ -1,4 +1,4 @@
-import { getFontEmbedCSS, toCanvas } from "html-to-image";
+import { getFontEmbedCSS, toSvg } from "html-to-image";
 import { ArrayBufferTarget as Mp4Target, Muxer as Mp4Muxer } from "mp4-muxer";
 import { ArrayBufferTarget as WebmTarget, Muxer as WebmMuxer } from "webm-muxer";
 
@@ -7,9 +7,10 @@ import { ArrayBufferTarget as WebmTarget, Muxer as WebmMuxer } from "webm-muxer"
  * own clock, each frame rasterised from the live DOM (html-to-image draws the
  * stage into a canvas through an SVG foreignObject, fonts and pictures
  * inlined), then encoded with WebCodecs and muxed in the page. No screen
- * capture, no real-time constraint, works on phones that have WebCodecs.
- * Browsers without WebCodecs fall back to MediaRecorder on a canvas stream,
- * which plays the frames out in real time.
+ * capture, no real-time constraint, works on phones that have WebCodecs, and
+ * keeps its pace when the tab is hidden because nothing here waits on the
+ * frame loop. Browsers without WebCodecs fall back to MediaRecorder on a
+ * canvas stream, which plays the frames out in real time.
  */
 
 export interface RenderPlan {
@@ -73,16 +74,32 @@ async function pickCodec(width: number, height: number): Promise<{ codec: string
   return null;
 }
 
+/**
+ * Yields to the event loop through a message port. Unlike timers and
+ * animation frames, these are not slowed to once a second when the tab is
+ * hidden or covered, so a render keeps its pace in the background.
+ */
+const yieldToBrowser = () =>
+  new Promise<void>((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => resolve();
+    channel.port2.postMessage(0);
+  });
+
+/** Loads the SVG snapshot as an image without waiting on the frame loop. */
+async function decodeSnapshot(url: string): Promise<HTMLImageElement> {
+  const img = new Image();
+  img.decoding = "async";
+  img.src = url;
+  await img.decode();
+  await yieldToBrowser();
+  return img;
+}
+
 /** Rasterises the stage as it is right now. The embedded font CSS is reused across frames. */
 async function paintFrame(node: HTMLElement, plan: RenderPlan, fontEmbedCSS: string, target: CanvasRenderingContext2D) {
-  const shot = await toCanvas(node, {
-    width: plan.width,
-    height: plan.height,
-    pixelRatio: 1,
-    cacheBust: false,
-    fontEmbedCSS,
-    backgroundColor: plan.background,
-  });
+  const svg = await toSvg(node, { width: plan.width, height: plan.height, cacheBust: false, fontEmbedCSS });
+  const shot = await decodeSnapshot(svg);
   target.fillStyle = plan.background;
   target.fillRect(0, 0, plan.width, plan.height);
   target.drawImage(shot, 0, 0, plan.width, plan.height);
@@ -129,7 +146,7 @@ export async function renderVideo(input: RenderPlan, hooks: RenderHooks): Promis
       if (failure) throw failure;
       hooks.onProgress?.(i + 1, total);
       // Let the encoder drain so memory stays flat on long pieces.
-      if (encoder.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 0));
+      if (encoder.encodeQueueSize > 8) await yieldToBrowser();
     }
     await encoder.flush();
     encoder.close();
