@@ -3,11 +3,12 @@
 import { useMotionValueEvent, type MotionValue } from "motion/react";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { clipEnd } from "@/app/components/motion-studio/engine/timing";
-import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
+import type { AudioTrack, Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { Button, Select, Toggle } from "@/app/components/shared-components";
 import { DragHandle, MoveButtons } from "./reorderChrome";
 import { PauseIcon, PlayIcon, ReplayIcon } from "./icons";
 import { rowMotion, useReorderDrag } from "./useReorderDrag";
+import { SoundRow } from "./SoundRow";
 import { WaypointMarkers } from "./WaypointMarkers";
 import { canTrim, trimClip } from "../lib/trim";
 
@@ -33,6 +34,12 @@ interface Props {
   onRetimeWaypoint: (clipId: string, index: number, travel: number) => void;
   /** Same effect as the clip's Start slider. */
   onSetStart: (id: string, start: number) => void;
+  /** The sound track changed (dragged on the timeline). */
+  onChangeAudio: (next: AudioTrack) => void;
+  /** The sound lane was picked: open the canvas settings, where its controls live. */
+  onSelectAudio: () => void;
+  /** Nothing is selected and the sound lane should read as picked. */
+  audioSelected?: boolean;
   /** The end of a bar was dragged: the clip with its length changed. */
   onChangeClip: (clip: Clip) => void;
   /** Row order is stacking order: later rows render on top of earlier ones. */
@@ -154,6 +161,9 @@ export function Transport({
   onLoop,
   onSelect,
   onSetStart,
+  onChangeAudio,
+  onSelectAudio,
+  audioSelected = false,
   onChangeClip,
   onReorder,
   selectedPoint = null,
@@ -280,7 +290,7 @@ export function Transport({
   // Mobile: the always-visible playback strip under the stage.
   if (layout === "bar") {
     return (
-      <div className="flex items-center gap-1.5 bg-surface-raised px-2 py-0.5">
+      <div className="flex items-center gap-1.5 bg-surface-raised px-2 py-0.5" data-tour="scrub">
         {playButton}
         {replayButton}
         {scrubber}
@@ -430,6 +440,18 @@ export function Transport({
           </div>
         );
       })}
+      {doc.audio && (
+        <SoundRow
+          doc={doc}
+          duration={duration}
+          selected={audioSelected}
+          secondsPerPixel={secondsPerPixel}
+          onSelect={onSelectAudio}
+          onChange={onChangeAudio}
+          stacked={stacked}
+          labelWidth={LABEL_W}
+        />
+      )}
       {!stacked && (
         <div
           aria-hidden="true"
@@ -459,7 +481,7 @@ export function Transport({
         <span className="w-28">{readout}</span>
         {speedAndLoop}
       </div>
-      <div className="flex">
+      <div className="flex" data-tour="scrub">
         <span style={{ width: LABEL_W }} className="shrink-0" aria-hidden="true" />
         <Ruler duration={duration} now={now} onSeek={onSeek} />
       </div>

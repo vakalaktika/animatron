@@ -26,3 +26,5 @@ People who want a short, polished animation without learning an animation tool: 
 - Plain language in the interface. Units in the value box, never the label. No persistent manual text; help lives behind `?` and in tooltips.
 - The engine's document model (`src/app/components/motion-studio/types.ts`) is the contract; the editor never adds fields the runtime cannot play.
 - Nothing destructive without undo.
+- Big files (video, sound) live in the browser's IndexedDB media store and are referenced by id; the JSON document stays small enough for localStorage and share links. A JSON download inlines them so the file stands on its own.
+- One sound track per composition. Per-layer sound would need a mixer UI the product does not want yet.

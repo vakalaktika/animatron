@@ -1,10 +1,13 @@
 "use client";
 
+import { Button } from "@/app/components/shared-components";
 import { Dialog } from "./Dialog";
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Replays the first-run tour. */
+  onTour: () => void;
   /** Mac shows ⌘, everything else Ctrl. */
   mac: boolean;
 }
@@ -15,11 +18,13 @@ const tips = (mac: boolean): [string, string][] => [
   ["Shape a path", "Select a picture or ribbon and drag its numbered dots. Press W to drop a new point wherever the picture is right now."],
   ["Make something ride along", "In Position and timing, open \"Follow another clip\". Text can even ride the tip of a ribbon as it draws."],
   ["Change when things happen", "Drag a bar on the timeline to move it, or drag its right end to make it longer or shorter."],
+  ["Add video and sound", "Drop in an MP4 or MOV with the picture tool: a landscape one becomes the backdrop. Add one music or voice track with the Sound tool; it plays in the preview and is baked into rendered videos."],
+  ["Save as MP4 or GIF", "Share renders the file right here, even with the tab in the background. A see-through canvas can come out as a transparent GIF or WebM."],
   ["Nothing is lost", "Every change can be undone, and each composition autosaves in this browser. Find them all under Compositions."],
 ];
 
 /** Keyboard shortcuts and the five things worth knowing, in one place. */
-export function HelpDialog({ open, onClose, mac }: Props) {
+export function HelpDialog({ open, onClose, onTour, mac }: Props) {
   const mod = mac ? "⌘" : "Ctrl";
   const shortcuts: [string, string][] = [
     ["Space", "Play or pause"],
@@ -38,9 +43,14 @@ export function HelpDialog({ open, onClose, mac }: Props) {
     <Dialog open={open} onClose={onClose} title="Help" description="How the studio works, and the keys that speed it up." size="lg">
       <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr]">
         <section aria-labelledby="help-tips">
-          <h3 id="help-tips" className="atm-section-label mb-3">
-            Good to know
-          </h3>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 id="help-tips" className="atm-section-label">
+              Good to know
+            </h3>
+            <Button size="xs" variant="outline" onClick={onTour}>
+              Show the tour
+            </Button>
+          </div>
           <ol className="flex flex-col gap-4">
             {tips(mac).map(([title, body], i) => (
               <li key={title} className="flex gap-3">

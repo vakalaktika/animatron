@@ -1,17 +1,12 @@
 "use client";
 
-import { EASE_LABELS } from "@/app/components/motion-studio/engine/easing";
-import type { Ease, RibbonClip } from "@/app/components/motion-studio/types";
+import type { RibbonClip } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
-import { ChipField, MoreFields, NumField, ToggleField } from "../fields";
+import { EaseField } from "../EaseField";
+import { MoreFields, NumField, ToggleField } from "../fields";
 import type { PanelSection } from "../PanelGroup";
 import { PaletteField } from "./palette";
 import { setter } from "./setter";
-
-const EASE_CHIPS = (["smoothOut", "inOut", "flight", "backOut", "linear"] as Ease["name"][]).map((value) => ({
-  value,
-  label: EASE_LABELS[value],
-}));
 
 /** Draw-in timing, colours, stripe width, and recolour sweeps. How the line is lit and shaped is the Line style section. */
 export function ribbonSection(clip: RibbonClip, onChange: (c: RibbonClip) => void): PanelSection {
@@ -25,7 +20,7 @@ export function ribbonSection(clip: RibbonClip, onChange: (c: RibbonClip) => voi
         <PaletteField label="Colours" colors={clip.colors} onChange={(colors) => set("colors", colors)} />
         <NumField label="Band width" unit="px" value={clip.band} min={2} max={40} step={1} onChange={(v) => set("band", v)} />
         <NumField label="Draws in over" unit="s" value={clip.duration} min={0.2} max={12} onChange={(v) => set("duration", v)} />
-        <ChipField label="Pace" value={clip.ease.name === "custom" ? "smoothOut" : clip.ease.name} options={EASE_CHIPS} onChange={(name) => set("ease", { name })} />
+        <EaseField value={clip.ease} onChange={(ease) => set("ease", ease)} />
         <MoreFields>
           <ToggleField label="Closed loop" value={clip.loop} onChange={(v) => set("loop", v)} />
           {clip.style.motion === "paint" && (

@@ -12,7 +12,10 @@ Live app: https://vakalaktika.github.io/animatron/
 - **Compositions** keeps every piece you work on in this browser, with live thumbnails, plus the templates and a blank canvas in any frame.
 - **Resize and turn** anything with the corner handles and the turn handle above it; shift-click to pick several layers and move or delete them together. Drag the right end of a timeline bar to make a clip longer or shorter.
 - **Draw** with the pen in the add bar: a line on the canvas becomes a ribbon where you drew it, or the flight path of the picture you picked first.
-- **Share** copies a link that carries the whole composition, renders an MP4 frame by frame in the browser (no screen capture), downloads JSON, or shows the React component for developers.
+- **Share** copies a link that carries the whole composition, renders an MP4, GIF or see-through WebM frame by frame in the browser (no screen capture, keeps going in a background tab, carries the sound track), downloads JSON with any video and sound inside it, or shows the React component for developers.
+- **Video and sound**: drop in an MP4 or MOV as a backdrop or a travelling picture (it seeks frame-exact in renders); add one music or voice-over track that plays in the preview and is encoded into MP4 and WebM renders.
+- **Pace**: every move picks from seven easing curves with live previews, or a custom two-handle bezier.
+- **First-run tour**: three stops on the first visit, replayable from Help.
 
 ## Development
 

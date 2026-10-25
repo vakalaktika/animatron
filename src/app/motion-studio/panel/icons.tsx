@@ -363,3 +363,36 @@ export const PencilIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="m14.8 6 3.2 3.2" />
   </Icon>
 );
+
+/** A play triangle in a frame: a video layer. */
+export const VideoIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
+    <path d="m10.5 9.5 4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none" />
+  </Icon>
+);
+
+/** A note: the composition's sound. */
+export const MusicIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M9.5 17.5V6.8l10-2.3v10.5" />
+    <circle cx="7" cy="17.5" r="2.5" />
+    <circle cx="17" cy="15" r="2.5" />
+  </Icon>
+);
+
+/** Two wavy bars: a GIF or image sequence. */
+export const GifIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+    <path d="M8.5 10.5H7a1.5 1.5 0 0 0 0 3h1.5v-1.5M11.5 10.5v3M14 13.5v-3h2.5M14 12h2" />
+  </Icon>
+);
+
+/** A chequer and a corner: transparency. */
+export const AlphaIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <rect x="3.5" y="3.5" width="17" height="17" rx="2.5" />
+    <path d="M3.5 12h8.5V3.5M12 20.5V12h8.5" />
+  </Icon>
+);

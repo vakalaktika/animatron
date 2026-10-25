@@ -313,7 +313,55 @@
   background-position: 0 0, 8px 8px;
 }
 
+/* The pace preview: a dot crossing its track with the chosen timing function. */
+@keyframes atm-pace {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(var(--atm-track, 200px) - 0.75rem));
+  }
+}
+.atm-pace-track {
+  container-type: inline-size;
+}
+.atm-pace-dot {
+  --atm-track: 100cqw;
+  animation: atm-pace 1.4s infinite alternate;
+  animation-delay: 0.2s;
+}
+
+/* The first-run tour: a cut-out spotlight and a card that slides in. */
+.atm-spot {
+  box-shadow: 0 0 0 9999px rgba(6, 1, 3, 0.55);
+  transition:
+    top var(--duration-medium) var(--ease-smooth-out),
+    left var(--duration-medium) var(--ease-smooth-out),
+    width var(--duration-medium) var(--ease-smooth-out),
+    height var(--duration-medium) var(--ease-smooth-out);
+}
+@keyframes atm-tour-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--distance-short, 8px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.atm-tour-card {
+  animation: atm-tour-in var(--duration-medium) var(--ease-smooth-out) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .atm-pace-dot,
+  .atm-tour-card {
+    animation: none;
+  }
+  .atm-spot {
+    transition: none;
+  }
   .atm-drawer-left,
   .atm-drawer-right,
   .atm-drawer-up {

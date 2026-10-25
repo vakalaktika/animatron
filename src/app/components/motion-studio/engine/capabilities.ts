@@ -42,6 +42,8 @@ export interface Capabilities {
   outlinedSvg: SpriteClip | null;
   /** Imported raster picture; any text in it is baked. */
   raster: SpriteClip | null;
+  /** A video file: has a trim, a play length and a fit. */
+  video: SpriteClip | null;
 }
 
 const NONE: Capabilities = {
@@ -61,6 +63,7 @@ const NONE: Capabilities = {
   textRuns: null,
   outlinedSvg: null,
   raster: null,
+  video: null,
 };
 
 export function capabilities(clip: Clip): Capabilities {
@@ -83,6 +86,7 @@ export function capabilities(clip: Clip): Capabilities {
         textRuns: runs ? clip : null,
         outlinedSvg: source.kind === "svg" && !runs ? clip : null,
         raster: source.kind === "image" ? clip : null,
+        video: source.kind === "video" ? clip : null,
       };
     }
     case "logo":

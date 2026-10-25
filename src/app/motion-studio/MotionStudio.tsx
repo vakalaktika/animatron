@@ -4,15 +4,15 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
 import { clipEnd, docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
-import type { Clip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
+import type { AudioTrack, Clip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
 import { ExportDialog } from "./dialogs/ExportDialog";
 import { GalleryDialog } from "./dialogs/GalleryDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
 import { clipComponentCode, docComponentCode, HANDOFF_NOTES } from "./export/codegen";
 import { downloadBlob, downloadText, startTabRecording, type Recording } from "./export/recorder";
-import { canRenderOffline } from "./export/renderer";
-import { VideoExporter } from "./export/VideoExporter";
+import { canRenderAlpha, canRenderOffline } from "./export/renderer";
+import { VideoExporter, type RenderOptions } from "./export/VideoExporter";
 import { deleteClip, deltaInParentFrame, dropClip, nudgeClip, reparentClip } from "./lib/attach";
 import { ancestorChain } from "@/app/components/motion-studio/engine/hierarchy";
 import { copyClip, copyOf, heldClip } from "./lib/clipboard";
@@ -30,6 +30,7 @@ import {
   upsertCurrent,
   type ProjectStore,
 } from "./lib/projects";
+import { hasMedia, hydrateMedia, inlineMedia } from "./lib/mediaDoc";
 import { docFromHash, shareUrl } from "./lib/share";
 import { makeShape, type ShapeKind } from "./lib/shapes";
 import { svgSpriteFrom } from "./lib/svgSprite";
@@ -38,14 +39,17 @@ import { insertWaypointAt, retimeWaypoint } from "./lib/waypoints";
 import { spriteTiming } from "@/app/components/motion-studio/engine/spriteTiming";
 import { useMediaQuery } from "./lib/useMediaQuery";
 import { AddToolbar, type AddKind } from "./panel/AddToolbar";
+import { AudioPlayer } from "./panel/AudioPlayer";
 import { CanvasPanel } from "./panel/CanvasPanel";
 import { ClipControls } from "./panel/ClipControls";
 import { ClipTree, clipIcon } from "./panel/ClipTree";
 import { ChevronLeftIcon, CollapseIcon, GridIcon, HelpIcon, RedoIcon, ShareIcon, SquiggleIcon, UndoIcon } from "./panel/icons";
 import type { MobileTab } from "./panel/MobileTabs";
 import { Toast, type ToastMessage } from "./panel/Toast";
+import { markTourSeen, Tour, TOUR_STEPS, tourSeen } from "./panel/Tour";
 import { Transport } from "./panel/Transport";
-import { makeChippy, makeImageSprite, makeLogo, makeLottie, makeRibbon, makeSpeechText, makeText, parseImport, welcomePreset } from "./presets";
+import { makeChippy, makeImageSprite, makeLogo, makeLottie, makeRibbon, makeSpeechText, makeText, makeVideoSprite, parseImport, welcomePreset } from "./presets";
+import { hasMediaStore, probeMedia, putMedia } from "@/app/components/motion-studio/engine/media";
 import { DesktopShell } from "./shell/DesktopShell";
 import { IconButton } from "./shell/IconButton";
 import { LandscapeShell } from "./shell/LandscapeShell";
@@ -119,7 +123,21 @@ export function MotionStudio() {
   const dismissToast = useCallback((id: number) => setToast((t) => (t?.id === id ? null : t)), []);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "failed">("saved");
   const [dialog, setDialog] = useState<"gallery" | "export" | "help" | "render" | null>(null);
+  const [renderOptions, setRenderOptions] = useState<RenderOptions>({ format: "mp4" });
+  // The first-run tour: shown once, replayable from Help.
+  const [tour, setTour] = useState(false);
+  useEffect(() => {
+    if (tourSeen() || window.location.hash.startsWith("#share=")) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of localStorage on mount
+    const timer = window.setTimeout(() => setTour(true), 900);
+    return () => window.clearTimeout(timer);
+  }, []);
+  const endTour = useCallback(() => {
+    markTourSeen();
+    setTour(false);
+  }, []);
   const canRender = typeof window !== "undefined" && canRenderOffline();
+  const canAlpha = typeof window !== "undefined" && canRenderAlpha();
   // Phone portrait: which panel the bottom tab bar shows under the stage.
   const [mobileTab, setMobileTab] = useState<MobileTab>("timeline");
   // Portrait: panels hidden so the stage fills the screen.
@@ -352,8 +370,10 @@ export function MotionStudio() {
         const result = parseImport(parsed);
         if (result.kind === "doc") {
           // A whole composition opens as its own project; nothing is overwritten.
-          openDoc(result.doc);
-          notify(result.warnings.length ? `Opened “${result.doc.name}”. ${result.warnings.join(" ")}` : `Opened “${result.doc.name}” as a new composition.`);
+          const { doc: hydrated, missing } = await hydrateMedia(result.doc);
+          openDoc(hydrated);
+          const warnings = [...result.warnings, ...(missing.length ? [`Missing media: ${missing.join(", ")}.`] : [])];
+          notify(warnings.length ? `Opened “${hydrated.name}”. ${warnings.join(" ")}` : `Opened “${hydrated.name}” as a new composition.`);
         } else if (result.kind === "clip") addClip(result.clip);
         else notify(result.message, { sticky: true });
         return;
@@ -361,6 +381,34 @@ export function MotionStudio() {
       if (/\.svg$/i.test(file.name)) {
         if (addSvgMarkup(await file.text(), file.name)) return;
         notify(`Couldn't read ${file.name} as SVG, so it was imported as a picture.`);
+      }
+      const isVideo = /^video\//.test(file.type) || /\.(mp4|m4v|mov|webm)$/i.test(file.name);
+      const isAudio = /^audio\//.test(file.type) || /\.(mp3|wav|m4a|aac|ogg|oga|flac)$/i.test(file.name);
+      if (isVideo || isAudio) {
+        if (!hasMediaStore()) throw new Error("This browser can't keep video or sound files. Try Chrome, Edge, Safari or Firefox.");
+        const probe = await probeMedia(file, isVideo ? "video" : "audio");
+        const mediaId = await putMedia(file, file.name);
+        const label = file.name.replace(/\.[a-z0-9]+$/i, "");
+        if (isAudio) {
+          setDoc((d) => ({ ...d, audio: { mediaId, name: label, length: probe.length, offset: 0, trimStart: 0, volume: 1, fadeOut: 0.5 } }));
+          setSelectedId(null);
+          notify(`“${label}” is the sound for this composition. Its settings are in the Canvas panel.`);
+          return;
+        }
+        // A landscape video wider than half the stage is most likely a backdrop.
+        const background = probe.aspect <= 1 && doc.clips.every((c) => c.type !== "sprite" || c.source.kind !== "video");
+        const clip = makeVideoSprite(
+          { mediaId, label: file.name, aspect: probe.aspect, length: probe.length, trimStart: 0, playFor: Math.min(probe.length || 10, 60) },
+          doc.stage,
+          background,
+        );
+        if (background) {
+          setDoc((d) => ({ ...d, clips: [clip, ...d.clips] }));
+          setSelectedId(clip.id);
+          notify("Added as the backdrop, behind everything else. Shorten it by dragging the end of its bar.");
+        } else addClip(clip);
+        clock.replay();
+        return;
       }
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -485,6 +533,7 @@ export function MotionStudio() {
   };
 
   const makeShareLink = () => {
+    if (hasMedia(doc)) return { ok: false as const, reason: "Video and sound files are too big for a link. Download the composition as a JSON file instead; the media travels inside it." };
     const result = shareUrl(doc, window.location);
     if (result.ok) return result;
     return { ok: false as const, reason: "This composition has pictures in it, which are too big for a link. Download it as a JSON file instead." };
@@ -644,6 +693,9 @@ export function MotionStudio() {
     onSetStart: setClipStart,
     onChangeClip: updateClip,
     onReorder: reorderClips,
+    onChangeAudio: (audio: AudioTrack) => setDoc((d) => ({ ...d, audio }), "audio"),
+    onSelectAudio: () => pickClip(null),
+    audioSelected: selectedId === null && !!doc.audio,
   };
 
   // Choosing a clip from the list opens its settings wherever they live.
@@ -726,11 +778,11 @@ export function MotionStudio() {
               </div>
             )}
             {mode === "desktop" ? (
-              <div data-stage-overlay className="absolute top-4 left-4 z-10">
+              <div data-stage-overlay data-tour="add" className="absolute top-4 left-4 z-10">
                 {addToolbar("rail")}
               </div>
             ) : (
-              <div data-stage-overlay className="absolute right-3 bottom-3 z-10">
+              <div data-stage-overlay data-tour="add" className="absolute right-3 bottom-3 z-10">
                 {addToolbar("sheet")}
               </div>
             )}
@@ -769,9 +821,11 @@ export function MotionStudio() {
           <SquiggleIcon width={18} height={18} />
           Squiggles
         </Link>
-        <Button size="sm" icon={<ShareIcon width={18} height={18} />} onClick={() => setDialog("export")}>
-          Share
-        </Button>
+        <span data-tour="share" className="inline-flex">
+          <Button size="sm" icon={<ShareIcon width={18} height={18} />} onClick={() => setDialog("export")}>
+            Share
+          </Button>
+        </span>
         <IconButton label="Help and shortcuts (?)" onClick={() => setDialog("help")}>
           <HelpIcon />
         </IconButton>
@@ -783,9 +837,11 @@ export function MotionStudio() {
         <IconButton label="Compositions" onClick={() => setDialog("gallery")}>
           <GridIcon />
         </IconButton>
-        <IconButton label="Share and export" onClick={() => setDialog("export")}>
-          <ShareIcon />
-        </IconButton>
+        <span data-tour="share" className="inline-flex">
+          <IconButton label="Share and export" onClick={() => setDialog("export")}>
+            <ShareIcon />
+          </IconButton>
+        </span>
       </>
     ),
     stage,
@@ -864,7 +920,7 @@ export function MotionStudio() {
       </>
     ) : (
       <>
-        <CanvasPanel doc={doc} onChangeDoc={(next) => setDoc(next, "canvas")} />
+        <CanvasPanel doc={doc} onChangeDoc={(next) => setDoc(next, "canvas")} onImport={(f) => void importFile(f)} />
         {mode !== "desktop" && (
           <div className="mt-6 flex flex-wrap gap-2 border-t border-hairline pt-4">
             <Link href="/squiggle" className="atm-button-type inline-flex min-h-11 items-center gap-2 rounded-md border border-border-control px-3 text-[12.5px] leading-none text-ink">
@@ -899,6 +955,7 @@ export function MotionStudio() {
     <>
       <style>{"nextjs-portal { display: none; }"}</style>
       {clean ? <div className="h-dvh">{stage}</div> : shell}
+      {doc.audio && dialog !== "render" && <AudioPlayer audio={doc.audio} time={clock.time} playing={clock.playing} duration={duration} speed={speed} />}
       <Toast toast={toast} onDismiss={dismissToast} />
       <GalleryDialog
         open={dialog === "gallery"}
@@ -921,11 +978,20 @@ export function MotionStudio() {
         docName={doc.name}
         duration={duration / speed}
         canRender={canRender}
-        onRender={() => setDialog("render")}
+        canAlpha={canAlpha}
+        transparent={doc.stage.transparent}
+        stageWidth={doc.stage.width}
+        hasSound={!!doc.audio}
+        onRender={(options) => {
+          setRenderOptions(options);
+          setDialog("render");
+        }}
         canRecord={canRecord}
         onRecord={() => void record_()}
         onShareLink={makeShareLink}
-        onDownloadJson={() => downloadText(JSON.stringify(doc, null, 2), `${slug(doc.name)}.studio.json`, "application/json")}
+        onDownloadJson={() => {
+          void inlineMedia(doc).then((full) => downloadText(JSON.stringify(full, null, 2), `${slug(doc.name)}.studio.json`, "application/json"));
+        }}
         onShowCode={() => {
           setDialog(null);
           setCodePreview({ title: `${slug(doc.name)}.tsx`, code: docComponentCode(doc) });
@@ -936,12 +1002,22 @@ export function MotionStudio() {
           clock.replay();
         }}
       />
-      <HelpDialog open={dialog === "help"} onClose={() => setDialog(null)} mac={mac} />
+      <HelpDialog
+        open={dialog === "help"}
+        onClose={() => setDialog(null)}
+        onTour={() => {
+          setDialog(null);
+          setTour(true);
+        }}
+        mac={mac}
+      />
+      {tour && dialog === null && <Tour steps={TOUR_STEPS} onDone={endTour} />}
       {dialog === "render" && (
         <VideoExporter
           doc={doc}
           duration={duration}
           fileStem={slug(doc.name)}
+          options={renderOptions}
           onDone={(message) => {
             setDialog(null);
             notify(message);
