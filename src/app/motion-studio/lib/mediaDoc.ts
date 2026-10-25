@@ -1,5 +1,6 @@
-import { getMedia, hasMediaStore, mediaDataUrl, putMediaDataUrl } from "@/app/components/motion-studio/engine/media";
-import type { StudioDoc } from "@/app/components/motion-studio/types";
+import { deleteMedia, getMedia, hasMediaStore, listMediaIds, mediaDataUrl, putMediaDataUrl } from "@/app/components/motion-studio/engine/media";
+import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
+import type { ProjectStore } from "./projects";
 
 /**
  * Video and sound live in the browser's media store, not in the document.
@@ -48,6 +49,43 @@ export async function hydrateMedia(doc: StudioDoc): Promise<{ doc: StudioDoc; mi
     audio = { ...rest, mediaId: await restore(rest.mediaId, mediaData, rest.name) };
   }
   return { doc: { ...doc, clips, audio }, missing };
+}
+
+/** One clip on its own (the "Save layer as JSON" path). */
+export async function inlineClipMedia(clip: Clip): Promise<Clip> {
+  const { clips } = await inlineMedia({ version: 2, name: "", stage: { width: 0, height: 0, background: "", transparent: false }, clips: [clip] });
+  return clips[0];
+}
+
+export async function hydrateClipMedia(clip: Clip): Promise<{ clip: Clip; missing: string[] }> {
+  const { doc, missing } = await hydrateMedia({ version: 2, name: "", stage: { width: 0, height: 0, background: "", transparent: false }, clips: [clip] });
+  return { clip: doc.clips[0], missing };
+}
+
+/** Every media id any saved composition still points at. */
+export function referencedMedia(store: ProjectStore, extra?: StudioDoc): Set<string> {
+  const ids = new Set<string>();
+  const docs = [...store.projects.map((p) => p.doc), ...(extra ? [extra] : [])];
+  for (const doc of docs) {
+    if (doc.audio) ids.add(doc.audio.mediaId);
+    for (const clip of doc.clips) if (clip.type === "sprite" && clip.source.kind === "video") ids.add(clip.source.mediaId);
+  }
+  return ids;
+}
+
+/**
+ * Drops stored files no saved composition points at any more. Run at start
+ * and when a project is deleted; not after a layer or sound is removed,
+ * since undo can bring those back, and never on a timer: an import puts its
+ * file in the store a moment before the document references it.
+ */
+export async function pruneMedia(store: ProjectStore, current?: StudioDoc): Promise<number> {
+  if (!hasMediaStore()) return 0;
+  const keep = referencedMedia(store, current);
+  const ids = await listMediaIds().catch(() => [] as string[]);
+  const gone = ids.filter((id) => !keep.has(id));
+  await Promise.all(gone.map((id) => deleteMedia(id).catch(() => undefined)));
+  return gone.length;
 }
 
 /** Whether the document references media that cannot travel in a link. */

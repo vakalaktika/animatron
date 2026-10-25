@@ -86,7 +86,7 @@ export const PRESET_BEZIERS: Record<Exclude<Ease["name"], "custom">, [number, nu
 /** The CSS timing function for an ease, for live previews. */
 export function easeCss(ease: Ease): string {
   if (ease.name === "linear") return "linear";
-  const [x1, y1, x2, y2] = ease.name === "custom" ? (ease.custom ?? DEFAULT_BEZIER) : PRESET_BEZIERS[ease.name];
+  const [x1, y1, x2, y2] = ease.name === "custom" ? (ease.custom ?? DEFAULT_BEZIER) : (PRESET_BEZIERS[ease.name] ?? PRESET_BEZIERS.smoothOut);
   return `cubic-bezier(${x1}, ${y1}, ${x2}, ${y2})`;
 }
 
@@ -95,5 +95,6 @@ export function resolveEase(ease: Ease): (t: number) => number {
     const [x1, y1, x2, y2] = ease.custom ?? [0.25, 0.1, 0.25, 1];
     return cubicBezier(x1, y1, x2, y2);
   }
-  return EASE_PRESETS[ease.name];
+  // A name this build doesn't know (a newer file) plays as the default rather than throwing.
+  return EASE_PRESETS[ease.name] ?? EASE_PRESETS.smoothOut;
 }

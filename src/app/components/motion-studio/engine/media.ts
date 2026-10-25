@@ -60,6 +60,15 @@ export async function getMedia(id: string): Promise<MediaRecord | null> {
   return (await request(tx.objectStore(STORE).get(id))) ?? null;
 }
 
+/** Every id in the store. */
+export async function listMediaIds(): Promise<string[]> {
+  if (!hasMediaStore()) return [];
+  const db = await open();
+  const tx = db.transaction(STORE, "readonly");
+  const keys = await request(tx.objectStore(STORE).getAllKeys());
+  return keys.map(String);
+}
+
 export async function deleteMedia(id: string): Promise<void> {
   if (!hasMediaStore()) return;
   const db = await open();

@@ -127,6 +127,7 @@ export function SoundRow({ doc, duration, selected, secondsPerPixel, onSelect, o
       tabIndex={0}
       aria-label={`${audio.name} starts`}
       aria-valuemin={0}
+      aria-valuemax={Math.max(duration, audio.offset)}
       aria-valuenow={audio.offset}
       aria-valuetext={`${audio.offset.toFixed(2)} seconds`}
       className={`t-drag-bar absolute cursor-ew-resize touch-none overflow-hidden rounded-md ${stacked ? "top-0 h-full" : "top-0.5 h-4 pointer-coarse:top-2 pointer-coarse:h-7"}`}

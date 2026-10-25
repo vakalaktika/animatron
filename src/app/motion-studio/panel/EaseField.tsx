@@ -120,7 +120,9 @@ function CurveEditor({ value, onChange }: { value: Bezier; onChange: (next: Bezi
             tabIndex={0}
             role="slider"
             aria-label={i === 0 ? "Start handle" : "End handle"}
-            aria-valuetext={`${p.x}, ${p.y}`}
+            aria-valuetext={`${p.x} across, ${p.y} up`}
+            aria-valuemin={-60}
+            aria-valuemax={160}
             aria-valuenow={round(p.y * 100)}
             className="cursor-grab outline-none focus-visible:stroke-[3px] active:cursor-grabbing"
             onPointerDown={begin(i as 0 | 1)}

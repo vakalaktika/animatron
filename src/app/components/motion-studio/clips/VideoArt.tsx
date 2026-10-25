@@ -2,6 +2,7 @@
 
 import { useAnimationFrame, type MotionValue } from "motion/react";
 import { useCallback, useEffect, useRef } from "react";
+import { mediaUrl } from "../engine/media";
 import { useFrameSync, useMediaUrl } from "../engine/useMedia";
 import type { SpriteClip } from "../types";
 
@@ -20,15 +21,20 @@ const SEEK_TIMEOUT_MS = 4000;
 /** How far the free-running video may drift from the clock before it is snapped back. */
 const DRIFT_SECONDS = 0.15;
 
+/** Resolves on the event, on a decode error, or after `timeout`; says which. */
 const once = (el: HTMLMediaElement, event: string, timeout: number) =>
-  new Promise<void>((resolve) => {
-    const timer = window.setTimeout(finish, timeout);
-    function finish() {
+  new Promise<"ok" | "error" | "timeout">((resolve) => {
+    const timer = window.setTimeout(() => finish("timeout"), timeout);
+    function finish(how: "ok" | "error" | "timeout") {
       window.clearTimeout(timer);
-      el.removeEventListener(event, finish);
-      resolve();
+      el.removeEventListener(event, onEvent);
+      el.removeEventListener("error", onError);
+      resolve(how);
     }
-    el.addEventListener(event, finish);
+    const onEvent = () => finish("ok");
+    const onError = () => finish("error");
+    el.addEventListener(event, onEvent);
+    el.addEventListener("error", onError);
   });
 
 /**
@@ -43,6 +49,8 @@ export function VideoArt({ clip, source, time, width, height }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const last = useRef(Number.NaN);
+  // Set once the file fails to decode or load: later frames stop waiting on it.
+  const broken = useRef(false);
   const sync = useFrameSync();
 
   const fileEnd = Math.min(source.length || Infinity, source.trimStart + source.playFor);
@@ -88,18 +96,33 @@ export function VideoArt({ clip, source, time, width, height }: Props) {
     if (!sync) return;
     return sync.register(async (s) => {
       const v = videoRef.current;
-      if (!v || !url) return;
+      if (!v || broken.current) return;
+      if (!v.src) {
+        // A cold start: the object URL may not be in the cache yet.
+        const fresh = await mediaUrl(source.mediaId);
+        if (!fresh) {
+          broken.current = true;
+          return;
+        }
+        v.src = fresh;
+      }
       if (!v.paused) v.pause();
-      if (v.readyState < 2) await once(v, "loadeddata", SEEK_TIMEOUT_MS);
+      if (v.readyState < 2 && (await once(v, "loadeddata", SEEK_TIMEOUT_MS)) !== "ok") {
+        broken.current = true;
+        return;
+      }
       const target = fileTimeAt(s);
       if (Math.abs(v.currentTime - target) > 0.0005) {
         const seeked = once(v, "seeked", SEEK_TIMEOUT_MS);
         v.currentTime = target;
-        await seeked;
+        if ((await seeked) === "error") {
+          broken.current = true;
+          return;
+        }
       }
       paint();
     });
-  }, [sync, url, fileTimeAt, paint]);
+  }, [sync, source.mediaId, fileTimeAt, paint]);
 
   useEffect(() => {
     const v = videoRef.current;

@@ -60,7 +60,9 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
     ...(transparent && canAlpha ? [{ value: "webm" as const, label: "WebM, see-through", hint: "Keeps the transparency. Renders in real time." }] : []),
   ];
   const gifSizes = [...new Set([480, 720, 1080, stageWidth].filter((w) => w <= stageWidth))].sort((a, b) => a - b);
-  const renderLabel = format === "gif" ? "Render GIF" : format === "webm" ? "Render WebM" : "Render MP4";
+  // A see-through WebM picked earlier falls back to MP4 once the stage is opaque again.
+  const chosen: RenderFormat = formats.some((f) => f.value === format) ? format : "mp4";
+  const renderLabel = chosen === "gif" ? "Render GIF" : chosen === "webm" ? "Render WebM" : "Render MP4";
 
   const makeLink = async () => {
     const result = onShareLink();
@@ -104,7 +106,7 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
           Preview
         </Button>
         {canRender ? (
-          <Button size="sm" onClick={() => onRender({ format, gifWidth })}>
+          <Button size="sm" onClick={() => onRender({ format: chosen, gifWidth })}>
             {renderLabel}
           </Button>
         ) : (
@@ -117,7 +119,7 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
         <div className="-mt-2 mb-3 flex flex-col gap-2 sm:pl-14">
           <div role="radiogroup" aria-label="Format" className="flex flex-wrap gap-1.5">
             {formats.map((f) => {
-              const on = f.value === format;
+              const on = f.value === chosen;
               return (
                 <button
                   key={f.value}
@@ -134,7 +136,7 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
                 </button>
               );
             })}
-            {format === "gif" && gifSizes.length > 1 && (
+            {chosen === "gif" && gifSizes.length > 1 && (
               <label className="ml-auto flex items-center gap-2 font-sans text-[12px] text-ink-secondary">
                 Width
                 <Select variant="compact" value={String(gifWidth)} onChange={(e) => setGifWidth(Number(e.target.value))} aria-label="GIF width">
@@ -148,9 +150,9 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
             )}
           </div>
           <p className="text-xs leading-4 text-ink-muted">
-            {formats.find((f) => f.value === format)?.hint}
-            {transparent && format === "mp4" ? " MP4 has no transparency: the background renders white." : ""}
-            {hasSound && format === "gif" ? " The sound is left out of a GIF." : ""}
+            {formats.find((f) => f.value === chosen)?.hint}
+            {transparent && chosen === "mp4" ? " MP4 has no transparency: the background renders white." : ""}
+            {hasSound && chosen === "gif" ? " The sound is left out of a GIF." : ""}
           </p>
         </div>
       )}

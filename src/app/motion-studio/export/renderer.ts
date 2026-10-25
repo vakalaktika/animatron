@@ -251,9 +251,23 @@ function encodeAudio(lane: AudioLane, audio: AudioBuffer) {
 async function renderEncoded(plan: RenderPlan, hooks: RenderHooks, codec: { codec: string; container: "mp4" | "webm" }): Promise<RenderResult> {
   const frame = await prepare(plan, hooks, plan.fps);
   const wantAudio = !!plan.audio;
+
+  // The sound is encoded first, offline and in one go. If that fails the
+  // file is built without an audio track rather than lost.
   let lane: AudioLane | null = null;
-  const pendingAudio: { chunk: EncodedAudioChunk; meta?: EncodedAudioChunkMetadata }[] = [];
-  if (plan.audio) lane = await openAudio(codec.container, plan.audio, (chunk, meta) => pendingAudio.push({ chunk, meta }));
+  const audioChunks: { chunk: EncodedAudioChunk; meta?: EncodedAudioChunkMetadata }[] = [];
+  if (plan.audio) {
+    try {
+      lane = await openAudio(codec.container, plan.audio, (chunk, meta) => audioChunks.push({ chunk, meta }));
+      if (lane) {
+        encodeAudio(lane, plan.audio);
+        await lane.flush();
+      }
+    } catch {
+      lane = null;
+      audioChunks.length = 0;
+    }
+  }
   const audioTrack = lane && plan.audio ? { codec: lane.codec, sampleRate: plan.audio.sampleRate, numberOfChannels: plan.audio.numberOfChannels } : null;
 
   const muxer =
@@ -279,25 +293,24 @@ async function renderEncoded(plan: RenderPlan, hooks: RenderHooks, codec: { code
   });
   encoder.configure({ codec: codec.codec, width: plan.width, height: plan.height, bitrate: 8_000_000, framerate: plan.fps });
   const frameMicros = Math.round(1_000_000 / plan.fps);
-  for (let i = 0; i < frame.total; i++) {
-    frame.check();
-    await hooks.seek(i / plan.fps);
-    await paintFrame(frame.node, plan, frame.fontEmbedCSS, frame.ctx);
-    const vf = new VideoFrame(frame.canvas, { timestamp: i * frameMicros, duration: frameMicros });
-    encoder.encode(vf, { keyFrame: i % (plan.fps * 2) === 0 });
-    vf.close();
-    if (failure) throw failure;
-    hooks.onProgress?.(i + 1, frame.total);
-    // Let the encoder drain so memory stays flat on long pieces.
-    if (encoder.encodeQueueSize > 8) await yieldToBrowser();
+  try {
+    for (let i = 0; i < frame.total; i++) {
+      frame.check();
+      await hooks.seek(i / plan.fps);
+      await paintFrame(frame.node, plan, frame.fontEmbedCSS, frame.ctx);
+      const vf = new VideoFrame(frame.canvas, { timestamp: i * frameMicros, duration: frameMicros });
+      encoder.encode(vf, { keyFrame: i % (plan.fps * 2) === 0 });
+      vf.close();
+      if (failure) throw failure;
+      hooks.onProgress?.(i + 1, frame.total);
+      // Let the encoder drain so memory stays flat on long pieces.
+      if (encoder.encodeQueueSize > 8) await yieldToBrowser();
+    }
+    await encoder.flush();
+  } finally {
+    if (encoder.state !== "closed") encoder.close();
   }
-  await encoder.flush();
-  encoder.close();
-  if (lane && plan.audio) {
-    encodeAudio(lane, plan.audio);
-    await lane.flush();
-    for (const { chunk, meta } of pendingAudio) muxer.addAudioChunk(chunk, meta);
-  }
+  for (const { chunk, meta } of audioChunks) muxer.addAudioChunk(chunk, meta);
   muxer.finalize();
   const buffer = (muxer.target as Mp4Target | WebmTarget).buffer;
   return {
@@ -364,12 +377,17 @@ async function renderRecorded(plan: RenderPlan, hooks: RenderHooks): Promise<Ren
       if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     }
   } finally {
-    source?.stop();
-    void audioCtx?.close();
+    try {
+      source?.stop();
+    } catch {
+      // Already ended.
+    }
   }
-  recorder.stop();
+  if (recorder.state !== "inactive") recorder.stop();
+  const blob = await stopped;
   stream.getTracks().forEach((t) => t.stop());
-  return { blob: await stopped, extension: "webm", silent: wantAudio && !source };
+  void audioCtx?.close();
+  return { blob, extension: "webm", silent: wantAudio && !source };
 }
 
 // ----- GIF -------------------------------------------------------------------

@@ -101,6 +101,23 @@ export function Tour({ steps, onDone }: { steps: TourStep[]; onDone: () => void 
       if (e.key === "Escape") onDone();
       if (e.key === "ArrowRight") setIndex((i) => Math.min(steps.length - 1, i + 1));
       if (e.key === "ArrowLeft") setIndex((i) => Math.max(0, i - 1));
+      // Keep Tab inside the card while the rest of the page is dimmed.
+      if (e.key === "Tab" && cardRef.current) {
+        const focusable = Array.from(cardRef.current.querySelectorAll<HTMLElement>("button, [tabindex]:not([tabindex='-1'])"));
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        } else if (!cardRef.current.contains(document.activeElement)) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

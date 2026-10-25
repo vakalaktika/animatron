@@ -30,7 +30,7 @@ import {
   upsertCurrent,
   type ProjectStore,
 } from "./lib/projects";
-import { hasMedia, hydrateMedia, inlineMedia } from "./lib/mediaDoc";
+import { hasMedia, hydrateClipMedia, hydrateMedia, inlineClipMedia, inlineMedia, pruneMedia } from "./lib/mediaDoc";
 import { docFromHash, shareUrl } from "./lib/share";
 import { makeShape, type ShapeKind } from "./lib/shapes";
 import { svgSpriteFrom } from "./lib/svgSprite";
@@ -308,6 +308,8 @@ export function MotionStudio() {
       clock.replay();
       return;
     }
+    // Files left behind by compositions deleted in an earlier visit.
+    void pruneMedia(storeRef.current, doc);
     const handoff = takeHandoff();
     if (!handoff) return;
     const stage = doc.stage;
@@ -374,7 +376,11 @@ export function MotionStudio() {
           openDoc(hydrated);
           const warnings = [...result.warnings, ...(missing.length ? [`Missing media: ${missing.join(", ")}.`] : [])];
           notify(warnings.length ? `Opened “${hydrated.name}”. ${warnings.join(" ")}` : `Opened “${hydrated.name}” as a new composition.`);
-        } else if (result.kind === "clip") addClip(result.clip);
+        } else if (result.kind === "clip") {
+          const { clip, missing } = await hydrateClipMedia(result.clip);
+          addClip(clip);
+          if (missing.length) notify(`Missing media: ${missing.join(", ")}. The layer is here but its file is not.`, { sticky: true });
+        }
         else notify(result.message, { sticky: true });
         return;
       }
@@ -477,6 +483,7 @@ export function MotionStudio() {
   const deleteProject = (id: string) => {
     const wasCurrent = id === storeRef.current.currentId;
     const next = changeStore((s) => removeProject(s, id));
+    void pruneMedia(next, wasCurrent ? undefined : doc);
     if (!wasCurrent) return;
     // The open composition was deleted: fall back to the latest, or a fresh Welcome.
     const fallback = next.projects.find((p) => p.id === next.currentId);
@@ -580,7 +587,9 @@ export function MotionStudio() {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
-      if (dialog !== null || codePreview) return;
+      // Handles and dialogs (timeline bars, curve handles, the tour) take their own keys.
+      if (target?.closest?.('[role="slider"], [role="dialog"], dialog')) return;
+      if (dialog !== null || codePreview || tour) return;
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
       if (mod && !e.altKey) {
@@ -636,7 +645,7 @@ export function MotionStudio() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clock, addWaypoint, removeWaypoint, selectedPoint, selected, undo, redo, duplicateClip, addClip, doc, removeClip, moveClip, clean, drawing, extras, dialog, codePreview, notify]);
+  }, [clock, addWaypoint, removeWaypoint, selectedPoint, selected, undo, redo, duplicateClip, addClip, doc, removeClip, moveClip, clean, drawing, extras, dialog, codePreview, tour, notify]);
 
   // Choosing a clip from the list or the stage shows it: if the playhead is
   // outside its time range it would be invisible, so park the clock where it
@@ -910,7 +919,7 @@ export function MotionStudio() {
           <Button size="xs" variant="outline" onClick={() => duplicateClip(selected)}>
             Duplicate
           </Button>
-          <Button size="xs" variant="outline" onClick={() => downloadText(JSON.stringify(selected, null, 2), `${slug(selected.name)}.clip.json`, "application/json")}>
+          <Button size="xs" variant="outline" onClick={() => void inlineClipMedia(selected).then((full) => downloadText(JSON.stringify(full, null, 2), `${slug(selected.name)}.clip.json`, "application/json"))}>
             Save layer as JSON
           </Button>
           <Button size="xs" variant="danger" onClick={() => removeClip(selected.id)}>
