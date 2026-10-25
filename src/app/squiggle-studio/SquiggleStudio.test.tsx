@@ -16,7 +16,7 @@ describe("SquiggleStudio", () => {
     expect(screen.getByRole("button", { name: "Cool" })).toBeInTheDocument();
 
     // The empty-canvas hint shows until something is drawn.
-    expect(screen.getByText(/to make a squiggle/)).toBeInTheDocument();
+    expect(screen.getByText("Draw a squiggle here")).toBeInTheDocument();
 
     // Global actions start disabled because there are no strokes yet.
     expect(screen.getByRole("button", { name: "Export all SVGs" })).toBeDisabled();

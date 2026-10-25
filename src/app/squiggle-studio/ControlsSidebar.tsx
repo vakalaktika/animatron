@@ -15,7 +15,7 @@ interface ControlsSidebarProps {
   onArtworkStroke: (stroke: Stroke, index: number) => void;
 }
 
-const PRESET_LABELS: Record<string, string> = { cool: "Cool", warm: "Warm", full: "Full rainbow" };
+const PRESET_LABELS: Record<string, string> = { cool: "Cool", warm: "Warm", full: "Full" };
 
 /** Quiet uppercase anchor that heads each sidebar section, with an optional count. */
 function SectionHeading({ children, count }: { children: ReactNode; count?: string }) {

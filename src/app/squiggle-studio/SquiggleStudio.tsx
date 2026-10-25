@@ -80,19 +80,19 @@ export function SquiggleStudio() {
 
       <div className={`flex min-h-0 flex-1 ${wide ? "flex-row" : "flex-col"}`}>
         <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-4">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
-            <p className="atm-help mr-auto">{wide ? "Draw squiggles and loops with your mouse." : "Draw with a finger or a stylus."}</p>
+          <div className={wide ? "flex flex-wrap items-center gap-x-2 gap-y-3" : "grid grid-cols-4 gap-2"}>
+            {wide && <p className="atm-help mr-auto">Draw squiggles and loops with your mouse.</p>}
             <Button variant="outline" size="xs" onClick={undo} disabled={noStrokes}>
               Undo
             </Button>
             <Button variant="outline" size="xs" onClick={clearAll} disabled={noStrokes}>
               Clear
             </Button>
-            <Button variant="outline" size="xs" onClick={smoothAll} disabled={noStrokes}>
-              Smooth all
+            <Button variant="outline" size="xs" onClick={smoothAll} disabled={noStrokes} aria-label="Smooth all">
+              {wide ? "Smooth all" : "Smooth"}
             </Button>
-            <Button variant="primary" size="xs" onClick={exportAll} disabled={noStrokes}>
-              Export all SVGs
+            <Button variant="primary" size="xs" onClick={exportAll} disabled={noStrokes} aria-label="Export all SVGs">
+              {wide ? "Export all SVGs" : "Export"}
             </Button>
           </div>
           <DrawingCanvas

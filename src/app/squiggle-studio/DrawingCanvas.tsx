@@ -72,7 +72,7 @@ export function DrawingCanvas({ colors, band, strokes, current, hover, onBegin, 
       </svg>
       {showHint && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center px-6 text-center">
-          <p className="font-display text-lg text-ink-muted">Click and drag (or draw with a finger) to make a squiggle</p>
+          <p className="font-display text-lg text-ink-muted">Draw a squiggle here</p>
         </div>
       )}
     </div>
