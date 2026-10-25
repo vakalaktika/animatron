@@ -29,19 +29,32 @@ const SIZE: Record<NonNullable<Props["size"]>, string> = {
  */
 export function Dialog({ open, onClose, title, description, headerActions, size = "md", children }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
+  // A close we asked for (the owner set open=false) also fires the native
+  // close event; that must not read as the user dismissing it, or the owner's
+  // next state (another dialog taking over) gets clobbered.
+  const closingSelf = useRef(false);
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+    if (!open && dialog.open) {
+      closingSelf.current = true;
+      dialog.close();
+    }
   }, [open]);
 
   return (
     <dialog
       ref={ref}
       aria-label={title}
-      onClose={onClose}
+      onClose={() => {
+        if (closingSelf.current) {
+          closingSelf.current = false;
+          return;
+        }
+        onClose();
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

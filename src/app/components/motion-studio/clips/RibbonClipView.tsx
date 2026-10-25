@@ -41,7 +41,7 @@ export function RibbonClipView({ doc, clip, time }: Props) {
   const sweepWindow = useTransform(coatState, (c) => ({ tail: 0, length: c.sweeping?.progress ?? 0 }));
   const sweepIsCoat = useTransform(coatState, (c) => (c.sweeping && c.sweeping.colors === clip.coat.colors ? 1 : 0));
   const sweepIsOwn = useTransform(coatState, (c) => (c.sweeping && c.sweeping.colors === clip.colors ? 1 : 0));
-  const opacity = useTransform(time, (t) => ribbonOpacity(clip, t));
+  const opacity = useTransform(time, (t) => ribbonOpacity(clip, t) * (clip.opacity ?? 1));
   const frame = useTransform(time, (t) => {
     const w = parentTransformAt(doc, clip.id, t);
     return `translate(${w.x} ${w.y}) scale(${w.scaleX} ${w.scaleY}) rotate(${w.rotation})`;

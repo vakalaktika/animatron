@@ -37,6 +37,10 @@ export function placementSection(
           <NumField label={attached ? "Offset Y" : "Y"} unit="px" value={clip.y} min={-2500} max={2500} step={1} onChange={(v) => set("y", v)} />
         </div>
         <NumField label="Size" unit="×" value={clip.scale} min={0.1} max={4} step={0.01} onChange={(v) => set("scale", v)} />
+        <div className="grid grid-cols-2 gap-4">
+          {clip.type !== "ribbon" && <NumField label="Turn" unit="°" value={clip.rotation ?? 0} min={-180} max={180} step={1} onChange={(v) => set("rotation", v)} />}
+          <NumField label="Opacity" value={clip.opacity ?? 1} min={0} max={1} step={0.01} onChange={(v) => set("opacity", v)} />
+        </div>
         {!attached && (
           <div className={BUTTON_ROW}>
             <Button size="xs" variant="outline" onClick={center}>

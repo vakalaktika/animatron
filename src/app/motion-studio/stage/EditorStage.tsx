@@ -8,21 +8,33 @@ import type { Clip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types
 import { SNAP_SCREEN_PX, snapPoint, snapTargets, type SnapGuide, type SnapTargets } from "../lib/snap";
 import { AttachmentOverlay } from "./AttachmentOverlay";
 import { PathEditor } from "./PathEditor";
+import { SelectionBox } from "./SelectionBox";
 import { TailHandle } from "./TailHandle";
 
 interface Props {
   doc: StudioDoc;
   time: MotionValue<number>;
   selectedId: string | null;
-  onSelect: (id: string | null) => void;
+  /** `additive` (shift held) adds the clip to the selection instead of replacing it. */
+  onSelect: (id: string | null, additive?: boolean) => void;
   onMoveClip: (id: string, delta: Vec2) => void;
   onMovePoint: (clipId: string, index: number, delta: Vec2) => void;
+  /** Also-selected clips (shift-click): marked, moved along, but not edited. */
+  extraIds?: ReadonlySet<string>;
   /** Waypoint being edited on the selected sprite, if any. */
   selectedPoint: number | null;
   onSelectPoint: (index: number) => void;
   onChangeClip: (next: Clip) => void;
+  /** Corner handles: uniform size about the centre. */
+  onScaleClip: (id: string, scale: number) => void;
+  /** The turn handle above the selection. */
+  onRotateClip: (id: string, degrees: number) => void;
   /** Preview / recording mode: fill the window, no chrome, no handles. */
   clean: boolean;
+  /** The pen: pointer strokes become lines instead of moving things. */
+  drawing?: boolean;
+  /** A finished stroke, in stage pixels. */
+  onDraw?: (points: [number, number][]) => void;
   /** Floating controls drawn over the stage area (the add rail, the preview exit). */
   overlay?: ReactNode;
 }
@@ -50,16 +62,24 @@ export function EditorStage({
   doc,
   time,
   selectedId,
+  extraIds,
   onSelect,
   onMoveClip,
   onMovePoint,
   selectedPoint,
   onSelectPoint,
   onChangeClip,
+  onScaleClip,
+  onRotateClip,
   clean,
+  drawing = false,
+  onDraw,
   overlay,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const stroke = useRef<[number, number][] | null>(null);
+  const [strokePath, setStrokePath] = useState<string | null>(null);
+  const canvasBoxRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(0.5);
   const drag = useRef<Drag | null>(null);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
@@ -81,10 +101,24 @@ export function EditorStage({
     return () => ro.disconnect();
   }, [doc.stage.width, doc.stage.height, clean]);
 
+  /** Pointer position in stage pixels. */
+  const stagePoint = (e: ReactPointerEvent<HTMLDivElement>): [number, number] => {
+    const box = canvasBoxRef.current?.getBoundingClientRect();
+    if (!box) return [0, 0];
+    return [(e.clientX - box.left) / zoom, (e.clientY - box.top) / zoom];
+  };
+
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (clean) return;
     // Controls floating over the stage are not the stage.
     if ((e.target as HTMLElement).closest("[data-stage-overlay]")) return;
+    if (drawing) {
+      e.preventDefault();
+      stroke.current = [stagePoint(e)];
+      setStrokePath(null);
+      e.currentTarget.setPointerCapture(e.pointerId);
+      return;
+    }
     const target = (e.target as HTMLElement).closest<HTMLElement>("[data-clip-id]");
     if (!target) {
       onSelect(null);
@@ -93,12 +127,21 @@ export function EditorStage({
     const id = target.dataset.clipId;
     if (!id) return;
     e.preventDefault();
-    onSelect(id);
+    onSelect(id, e.shiftKey);
     const rest = restTransformAt(doc, id);
     drag.current = { id, anchor: { x: rest.x, y: rest.y }, startX: e.clientX, startY: e.clientY, targets: snapTargets(doc, id) };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (stroke.current) {
+      const [px, py] = stroke.current[stroke.current.length - 1];
+      const next = stagePoint(e);
+      if (Math.hypot(next[0] - px, next[1] - py) >= 2 / zoom) {
+        stroke.current.push(next);
+        setStrokePath(stroke.current.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" "));
+      }
+      return;
+    }
     const d = drag.current;
     if (!d) return;
     const wanted = { x: d.anchor.x + (e.clientX - d.startX) / zoom, y: d.anchor.y + (e.clientY - d.startY) / zoom };
@@ -109,6 +152,13 @@ export function EditorStage({
     setGuides(snapped.guides);
   };
   const onPointerUp = () => {
+    if (stroke.current) {
+      const points = stroke.current;
+      stroke.current = null;
+      setStrokePath(null);
+      if (points.length > 1) onDraw?.(points);
+      return;
+    }
     drag.current = null;
     setGuides([]);
   };
@@ -132,8 +182,9 @@ export function EditorStage({
       onPointerCancel={onPointerUp}
     >
       <div
+        ref={canvasBoxRef}
         className={clean ? "" : `box-content border border-border-strong sm:shadow-pop ${doc.stage.transparent ? "atm-checker" : ""}`}
-        style={{ width: scaledW, height: scaledH, cursor: clean ? "default" : "grab" }}
+        style={{ width: scaledW, height: scaledH, cursor: clean ? "default" : drawing ? "crosshair" : "grab" }}
       >
         <StageCanvas doc={doc} time={time} zoom={zoom}>
           {!clean && (selected?.type === "sprite" || selected?.type === "ribbon") && (
@@ -159,6 +210,36 @@ export function EditorStage({
               className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-info"
               style={{ left: selected.x, top: selected.y }}
             />
+          )}
+          {!clean &&
+            extraIds &&
+            doc.clips
+              .filter((c) => extraIds.has(c.id) && c.id !== selectedId)
+              .map((c) => {
+                const w = restTransformAt(doc, c.id);
+                return (
+                  <div
+                    key={c.id}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-info bg-surface-raised"
+                    style={{ left: w.x, top: w.y }}
+                  />
+                );
+              })}
+          {!clean && selected && selected.type !== "ribbon" && (
+            <SelectionBox
+              clip={selected}
+              zoom={zoom}
+              stageEl={() => (canvasBoxRef.current?.firstElementChild as HTMLElement | null) ?? null}
+              onScale={(s) => onScaleClip(selected.id, s)}
+              onRotate={(d) => onRotateClip(selected.id, d)}
+              canRotate
+            />
+          )}
+          {strokePath && (
+            <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+              <path d={strokePath} fill="none" stroke="var(--info)" strokeWidth={4 / zoom} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${8 / zoom} ${6 / zoom}`} />
+            </svg>
           )}
           {!clean &&
             guides.map((g) => (

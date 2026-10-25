@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
-import Link from "next/link";
 import { Button } from "@/app/components/shared-components";
 import { SHAPE_COLORS, SHAPES, type ShapeKind } from "../lib/shapes";
 import { Dialog } from "../dialogs/Dialog";
@@ -13,6 +12,9 @@ interface Props {
   onAdd: (kind: AddKind) => void;
   onAddShape: (kind: ShapeKind, fill: string) => void;
   onImport: (file: File) => void;
+  /** The pen is on: strokes on the canvas become ribbons or a picture's path. */
+  drawing: boolean;
+  onToggleDraw: () => void;
   /** rail — a vertical toolbar beside the stage; sheet — a floating + that opens a sheet. */
   layout: "rail" | "sheet";
 }
@@ -30,7 +32,7 @@ const TOOLS: Tool[] = [
   { id: "shape", label: "Shape", hint: "A circle, star, arrow and friends", Icon: ShapesIcon },
   { id: "import", label: "Picture or animation", hint: "PNG, JPG, SVG or a Lottie file", Icon: ImageIcon },
   { id: "ribbon", label: "Ribbon", hint: "A rainbow line that draws itself in", Icon: SquiggleIcon },
-  { id: "draw", label: "Draw a squiggle", hint: "Sketch a ribbon or a flight path by hand", Icon: PencilIcon },
+  { id: "draw", label: "Draw", hint: "Sketch on the canvas: a ribbon, or a path for the picture you picked (Esc to stop)", Icon: PencilIcon },
   { id: "chippy", label: "Chippy", hint: "The bird, flying along a path", Icon: WingIcon },
   { id: "logo", label: "Logo rings", hint: "Rings spring in and a letter traces", Icon: RingsIcon },
 ];
@@ -106,7 +108,7 @@ function ShapePicker({ onPick }: { onPick: (kind: ShapeKind, fill: string) => vo
  * desktop a slim rail beside the stage with a tooltip per tool; on phones a
  * floating + that opens a sheet with the same list spelled out.
  */
-export function AddToolbar({ onAdd, onAddShape, onImport, layout }: Props) {
+export function AddToolbar({ onAdd, onAddShape, onImport, drawing, onToggleDraw, layout }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [shapesOpen, setShapesOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -138,7 +140,11 @@ export function AddToolbar({ onAdd, onAddShape, onImport, layout }: Props) {
       setShapesOpen(true);
       return;
     }
-    if (tool.id === "draw") return;
+    if (tool.id === "draw") {
+      onToggleDraw();
+      setSheetOpen(false);
+      return;
+    }
     onAdd(tool.id);
     setSheetOpen(false);
   };
@@ -179,21 +185,16 @@ export function AddToolbar({ onAdd, onAddShape, onImport, layout }: Props) {
               </span>
             </>
           );
+          const on = (tool.id === "shape" && shapesOpen) || (tool.id === "draw" && drawing);
           const cls = `group relative flex h-10 w-10 items-center justify-center rounded-md text-ink-secondary transition-colors duration-150 hover:bg-surface-sunken hover:text-ink ${
-            tool.id === "shape" && shapesOpen ? "bg-primary-soft text-primary" : ""
+            on ? "bg-primary-soft text-primary" : ""
           }`;
-          if (tool.id === "draw") {
-            return (
-              <Link key={tool.id} href="/squiggle" aria-label={tool.label} className={cls}>
-                {content}
-              </Link>
-            );
-          }
           return (
             <button
               key={tool.id}
               type="button"
               aria-label={tool.label}
+              aria-pressed={tool.id === "draw" ? drawing : undefined}
               aria-expanded={tool.id === "shape" ? shapesOpen : undefined}
               aria-haspopup={tool.id === "shape" ? "dialog" : undefined}
               onClick={() => run(tool)}
@@ -256,15 +257,9 @@ export function AddToolbar({ onAdd, onAddShape, onImport, layout }: Props) {
               const cls = "flex min-h-14 w-full items-center gap-3 rounded-md px-2 text-left transition-colors duration-150 hover:bg-surface-sunken";
               return (
                 <li key={tool.id}>
-                  {tool.id === "draw" ? (
-                    <Link href="/squiggle" className={cls}>
-                      {inner}
-                    </Link>
-                  ) : (
-                    <button type="button" className={cls} onClick={() => run(tool)}>
-                      {inner}
-                    </button>
-                  )}
+                  <button type="button" className={cls} aria-pressed={tool.id === "draw" ? drawing : undefined} onClick={() => run(tool)}>
+                    {inner}
+                  </button>
                 </li>
               );
             })}

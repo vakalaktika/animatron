@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import type { Point } from "@/app/components/motion-studio/engine/rainbow";
-import { artworkFromSquiggle, flightFromSquiggle, HANDOFF_KEY, ribbonFromSquiggle, takeHandoff, writeHandoff } from "./handoff";
+import { artworkFromSquiggle, flightFromSquiggle, HANDOFF_KEY, pathFromStroke, ribbonFromSquiggle, ribbonFromStroke, takeHandoff, writeHandoff } from "./handoff";
+import { makeChippy } from "../presets";
 
 const STAGE = { width: 1920, height: 1080 };
 // A wide, shallow wave drawn on a small canvas, 10px apart.
@@ -122,5 +123,32 @@ describe("handoff storage", () => {
     });
     expect(writeHandoff({ kind: "artwork", svg: "<svg/>", label: "a.svg" })).toBe(false);
     setItem.mockRestore();
+  });
+});
+
+describe("drawing on the canvas", () => {
+  const line: [number, number][] = Array.from({ length: 40 }, (_, i) => [200 + i * 20, 300 + Math.sin(i / 4) * 60]);
+
+  it("makes a ribbon exactly where the line was drawn", () => {
+    const ribbon = ribbonFromStroke(line);
+    expect(ribbon).not.toBeNull();
+    expect(ribbon!.x).toBe(200);
+    expect(ribbon!.points[0]).toEqual({ x: 0, y: 0 });
+    const last = ribbon!.points[ribbon!.points.length - 1];
+    expect(ribbon!.x + last.x).toBeCloseTo(line[line.length - 1][0], 0);
+  });
+
+  it("turns a stroke into the selected picture's path, landing at its end", () => {
+    const chippy = makeChippy({ x: 0, y: 0, loop: true });
+    const flown = pathFromStroke(chippy, line);
+    expect(flown).not.toBeNull();
+    expect(flown!.loop).toBe(false);
+    expect(flown!.x).toBeCloseTo(line[line.length - 1][0], 0);
+    expect(flown!.path[flown!.path.length - 1]).toEqual({ x: 0, y: 0 });
+    expect(flown!.duration).toBeGreaterThanOrEqual(1.5);
+  });
+
+  it("ignores a stroke too short to mean anything", () => {
+    expect(ribbonFromStroke([[0, 0], [3, 2]])).toBeNull();
   });
 });

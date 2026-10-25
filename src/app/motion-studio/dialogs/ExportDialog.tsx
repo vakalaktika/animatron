@@ -11,6 +11,10 @@ interface Props {
   docName: string;
   /** Seconds the recording will run. */
   duration: number;
+  /** WebCodecs or a canvas recorder is available: render without screen capture. */
+  canRender: boolean;
+  onRender: () => void;
+  /** Tab capture is available (desktop browsers). */
   canRecord: boolean;
   onRecord: () => void;
   /** Resolves to the link, or a reason it couldn't be made. */
@@ -38,7 +42,7 @@ function Row({ icon, title, blurb, children }: { icon: ReactNode; title: string;
  * Video records this tab through the browser's own capture, so the steps are
  * spelled out; the share link carries the whole composition in the URL.
  */
-export function ExportDialog({ open, onClose, docName, duration, canRecord, onRecord, onShareLink, onDownloadJson, onShowCode, onPreview }: Props) {
+export function ExportDialog({ open, onClose, docName, duration, canRender, onRender, canRecord, onRecord, onShareLink, onDownloadJson, onShowCode, onPreview }: Props) {
   const [share, setShare] = useState<{ url?: string; error?: string; copied?: boolean } | null>(null);
 
   const makeLink = async () => {
@@ -68,14 +72,39 @@ export function ExportDialog({ open, onClose, docName, duration, canRecord, onRe
       description={docName}
       size="md"
     >
-      <Row icon={<FilmIcon />} title="Record a video" blurb={canRecord ? `Plays the composition once (${duration.toFixed(1)}s) and saves a WebM file. The browser will ask what to capture: pick this tab.` : "Video recording needs a desktop browser. Open this composition on a computer, or share a link instead."}>
+      <Row
+        icon={<FilmIcon />}
+        title="Save a video"
+        blurb={
+          canRender
+            ? `Renders the composition frame by frame (${duration.toFixed(1)}s at 30 fps) and saves an MP4, right here in the browser.`
+            : canRecord
+              ? `Plays the composition once (${duration.toFixed(1)}s) and saves a WebM file. The browser will ask what to capture: pick this tab.`
+              : "This browser can't make video files. Share a link, or open the composition in a current Chrome, Edge or Safari."
+        }
+      >
         <Button size="sm" variant="outline" onClick={onPreview}>
           Preview
         </Button>
-        <Button size="sm" disabled={!canRecord} onClick={onRecord}>
-          Record
-        </Button>
+        {canRender ? (
+          <Button size="sm" onClick={onRender}>
+            Render video
+          </Button>
+        ) : (
+          <Button size="sm" disabled={!canRecord} onClick={onRecord}>
+            Record
+          </Button>
+        )}
       </Row>
+      {canRender && canRecord && (
+        <p className="-mt-2 mb-2 text-xs leading-4 text-ink-muted sm:pl-14">
+          Prefer a live capture of this tab instead?{" "}
+          <button type="button" className="underline decoration-hairline underline-offset-2 hover:text-ink" onClick={onRecord}>
+            Record the tab
+          </button>
+          .
+        </p>
+      )}
       <Row icon={<ShareIcon />} title="Share a link" blurb="The whole composition travels in the link. Anyone who opens it gets their own copy to edit.">
         <Button size="sm" variant={share?.url ? "outline" : "primary"} onClick={() => void makeLink()} icon={share?.copied ? <CheckIcon width={16} height={16} /> : undefined}>
           {share?.copied ? "Copied" : share?.url ? "Copy again" : "Copy link"}

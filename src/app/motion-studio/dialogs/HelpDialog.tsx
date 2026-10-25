@@ -10,10 +10,11 @@ interface Props {
 }
 
 const tips = (mac: boolean): [string, string][] => [
-  ["Pick anything on the canvas", `Tap or click it, then change it in the settings panel. Drag it to move it; it snaps to the middle and to other layers. Hold ${mac ? "Option" : "Alt"} to skip snapping.`],
+  ["Pick anything on the canvas", `Tap or click it, then change it in the settings panel. Drag it to move it; it snaps to the middle and to other layers (hold ${mac ? "Option" : "Alt"} to skip). Drag a corner to resize, the handle above to turn it. Shift-click to pick several at once.`],
+  ["Draw a line", "Pick the pen in the add bar and draw on the canvas: a ribbon appears where you drew. Pick a picture first and your line becomes its flight path."],
   ["Shape a path", "Select a picture or ribbon and drag its numbered dots. Press W to drop a new point wherever the picture is right now."],
   ["Make something ride along", "In Position and timing, open \"Follow another clip\". Text can even ride the tip of a ribbon as it draws."],
-  ["Change when things happen", "Drag a bar on the timeline left or right, or set Starts at in the panel."],
+  ["Change when things happen", "Drag a bar on the timeline to move it, or drag its right end to make it longer or shorter."],
   ["Nothing is lost", "Every change can be undone, and each composition autosaves in this browser. Find them all under Compositions."],
 ];
 
@@ -30,7 +31,7 @@ export function HelpDialog({ open, onClose, mac }: Props) {
     ["← ↑ → ↓", "Nudge by 1 px (⇧ for 10)"],
     ["Delete", "Remove the selected layer or path point"],
     ["W", "Add a path point where the picture is"],
-    ["Esc", "Deselect, or leave the preview"],
+    ["Esc", "Stop drawing, deselect, or leave the preview"],
     ["?", "This sheet"],
   ];
   return (
