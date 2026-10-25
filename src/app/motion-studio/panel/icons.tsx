@@ -124,3 +124,39 @@ export const AtomMark = (p: SVGProps<SVGSVGElement>) => (
     <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-60 12 12)" />
   </Icon>
 );
+
+export const SquiggleIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M3 14c2.5-6 4.5-6 6 0s3.5 6 6 0 4-6 6 0" />
+  </Icon>
+);
+
+export const DownloadIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5" />
+    <path d="M4.5 17.5v2h15v-2" />
+  </Icon>
+);
+
+export const ImageIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <rect x="4" y="5" width="16" height="14" rx="2" />
+    <circle cx="9" cy="10" r="1.6" />
+    <path d="m4.5 17 4.5-4.5 3 3 3-3.5 4.5 5" />
+  </Icon>
+);
+
+export const WingIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M3.5 13c3-6 8-8 17-7-2 5-6 8-12 9l-2 3" />
+    <path d="M8.5 15c2-3 5-5 9-6" />
+  </Icon>
+);
+
+export const SmoothIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M4 17c5 0 5-10 11-10 2 0 3.5 1 5 3" />
+    <circle cx="4" cy="17" r="1.6" fill="currentColor" stroke="none" />
+    <circle cx="20" cy="10" r="1.6" fill="currentColor" stroke="none" />
+  </Icon>
+);

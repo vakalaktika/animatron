@@ -4,6 +4,7 @@ import { SIDEBAR, TIMELINE, usePanelLayout } from "../lib/usePanelLayout";
 import { AtomMark, BottomPanelIcon, SidePanelIcon } from "../panel/icons";
 import { ResizeHandle } from "../panel/ResizeHandle";
 import { IconButton } from "./IconButton";
+import { SquiggleLink } from "./SquiggleLink";
 import type { StudioSlots } from "./types";
 
 const SIDEBAR_ID = "studio-sidebar";
@@ -27,6 +28,7 @@ export function DesktopShell({ docName, stage, playback, timeline, clips, edit }
         </h1>
         <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">{docName}</span>
         <div className="flex items-center gap-1">
+          <SquiggleLink />
           <IconButton
             label={timelineOpen ? "Hide timeline" : "Show timeline"}
             pressed={timelineOpen}

@@ -3,6 +3,7 @@
 import { AtomMark, CollapseIcon, ExpandIcon } from "../panel/icons";
 import { MobileTabs, panelId, tabId, type MobileTab } from "../panel/MobileTabs";
 import { IconButton } from "./IconButton";
+import { SquiggleLink } from "./SquiggleLink";
 import type { StudioSlots } from "./types";
 
 interface Props extends StudioSlots {
@@ -30,6 +31,7 @@ export function PortraitShell({ docName, stage, playback, tracks, clips, edit, t
           <span className="sr-only">Animatron</span>
         </h1>
         <span className="min-w-0 flex-1 truncate font-display text-[17px] font-semibold tracking-[-0.01em]">{docName}</span>
+        <SquiggleLink />
         <IconButton label={focused ? "Show panels" : "Focus on the stage"} pressed={focused} onClick={() => onFocused(!focused)}>
           {focused ? <CollapseIcon /> : <ExpandIcon />}
         </IconButton>

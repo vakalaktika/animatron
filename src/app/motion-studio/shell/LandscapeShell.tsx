@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { CloseIcon, LayersIcon, SlidersIcon, TimelineIcon } from "../panel/icons";
 import type { MobileTab } from "../panel/MobileTabs";
 import { IconButton } from "./IconButton";
+import { SquiggleLink } from "./SquiggleLink";
 import type { StudioSlots } from "./types";
 
 interface Props extends StudioSlots {
@@ -92,6 +93,7 @@ export function LandscapeShell({ stage, playback, tracks, clips, edit, drawer, o
         className="flex items-center gap-1 border-t border-border-strong bg-surface-raised px-1 pb-[env(safe-area-inset-bottom)]"
       >
         {drawerButton("clips", <LayersIcon />)}
+        <SquiggleLink />
         <div className="min-w-0 flex-1">{playback}</div>
         {drawerButton("timeline", <TimelineIcon />)}
         {drawerButton("edit", <SlidersIcon />)}
