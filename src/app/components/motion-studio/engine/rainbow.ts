@@ -5,6 +5,8 @@
  * looks like. Pure geometry and literal colours, no DOM, no CSS variables.
  */
 
+import { buildPath } from "./path";
+
 /** A 2D point in pixel space, `[x, y]`. */
 export type Point = [number, number];
 
@@ -84,21 +86,49 @@ export function resample(pts: Point[], step: number): Point[] {
 }
 
 /**
- * Smooth a squiggle: resample tightly, run three windowed box-blur passes over
- * the interior points (endpoints pinned), then resample loosely so the result
- * is an even, flowing curve. Each call rounds off a little more, which is why
- * repeated "Smooth" presses keep relaxing the line.
+ * Points closer together than this are drawn as they lie (a stroke straight
+ * off the pointer); sparser ones are run through the spline first, so a
+ * hand-drawn line and a few clean waypoints both come out as the same smooth
+ * curve. The spline is skipped for dense input because a stroke in progress
+ * redraws every pointer move.
+ */
+const DENSE_SPACING = 12;
+
+/**
+ * The smooth curve through `pts`, sampled every `step` pixels. Sparse points
+ * are interpolated with the centripetal spline (the one ribbons and flight
+ * paths use), which never kinks or overshoots however the points fall.
+ */
+export function densify(pts: Point[], step = 10): Point[] {
+  if (pts.length < 3) return pts.slice();
+  if (polylineLength(pts) / (pts.length - 1) <= DENSE_SPACING) return pts;
+  const spline = buildPath(pts.map(([x, y]) => ({ x, y })), false).polyline;
+  return resample(spline.map((p): Point => [p.x, p.y]), step);
+}
+
+/** Spacing of the points a smoothed squiggle is reduced to. Sparse enough that the spline, not the hand, shapes the curve. */
+const SMOOTH_SPACING = 20;
+/** Box-blur half-window in 3px samples: about ±18px, the scale of hand jitter. */
+const SMOOTH_WINDOW = 6;
+
+/**
+ * Smooth a squiggle the way the homepage ribbons are smooth: blur out the
+ * hand's jitter, then keep only a sparse set of points and let the spline
+ * draw the curve between them. The line is first densified along its spline
+ * (so a previously smoothed, sparse line is not re-read as a polygon), then
+ * resampled tightly, blurred in three passes with the endpoints pinned, and
+ * reduced to `SMOOTH_SPACING`. Each call relaxes a little more, which is why
+ * repeated "Smooth" presses keep rounding the line.
  */
 export function smoothPts(pts: Point[]): Point[] {
-  let p = resample(pts, 3);
+  let p = resample(densify(pts, 3), 3);
   for (let pass = 0; pass < 3; pass++) {
-    const win = 4;
     const q = p.slice();
     for (let i = 1; i < p.length - 1; i++) {
       let sx = 0;
       let sy = 0;
       let n = 0;
-      for (let k = -win; k <= win; k++) {
+      for (let k = -SMOOTH_WINDOW; k <= SMOOTH_WINDOW; k++) {
         const j = Math.min(p.length - 1, Math.max(0, i + k));
         sx += p[j][0];
         sy += p[j][1];
@@ -108,7 +138,7 @@ export function smoothPts(pts: Point[]): Point[] {
     }
     p = q;
   }
-  return resample(p, 10);
+  return resample(p, SMOOTH_SPACING);
 }
 
 /**
@@ -166,10 +196,11 @@ export function curve(pts: Point[]): string {
  */
 export function bands(pts: Point[], colors: string[], band: number): Band[] {
   const n = colors.length;
+  const line = densify(pts);
   return colors.map((color, i) => ({
     color,
     w: band + 0.6,
-    d: curve(offset(pts, (i - (n - 1) / 2) * band)),
+    d: curve(offset(line, (i - (n - 1) / 2) * band)),
   }));
 }
 

@@ -93,10 +93,11 @@ export function SpriteClipView({ clip, time }: Props) {
   const width = clip.width;
   const height = width * aspect;
   const anchor = isChippy ? CHIPPY_ANCHOR : { x: 0.5, y: 0.5 };
+  const round = source.kind === "image" && source.round === true;
 
   return (
     <div
-      className="absolute"
+      className={round ? "absolute overflow-hidden rounded-full" : "absolute"}
       style={{ left: -width * anchor.x, top: -height * anchor.y, width, height }}
     >
       {isChippy ? (
@@ -109,7 +110,7 @@ export function SpriteClipView({ clip, time }: Props) {
           width={Math.round(width)}
           height={Math.round(height)}
           draggable={false}
-          className="h-full w-full select-none object-contain"
+          className={round ? "h-full w-full select-none object-cover" : "h-full w-full select-none object-contain"}
         />
       ) : null}
     </div>

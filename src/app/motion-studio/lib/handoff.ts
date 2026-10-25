@@ -68,8 +68,11 @@ function isHandoff(v: unknown): v is Handoff {
 
 /** Fraction of the stage the squiggle is scaled to fill, so Chippy has room at the edges. */
 const FIT = 0.8;
-/** Waypoints the squiggle is reduced to; each becomes a draggable dot on stage. */
+/** Waypoints a short squiggle is reduced to; each becomes a draggable dot on stage. */
 const WAYPOINTS = 18;
+/** Never space waypoints further than this, so a long squiggle's loops stay round. */
+const MAX_WAYPOINT_GAP = 80;
+const waypointStep = (length: number) => Math.min(MAX_WAYPOINT_GAP, Math.max(20, length / WAYPOINTS));
 /** Stage pixels Chippy covers per second, clamped to a sensible flight time. */
 const SPEED = 520;
 const MIN_DURATION = 1.5;
@@ -110,7 +113,7 @@ export function ribbonFromSquiggle(
 ): RibbonClip {
   const { fitted, scale } = fitToStage(points, stage);
   const length = polylineLength(fitted);
-  const waypoints = dropCrowdedEnd(resample(fitted, Math.max(20, length / WAYPOINTS)), 10);
+  const waypoints = dropCrowdedEnd(resample(fitted, waypointStep(length)), 10);
   const [ax, ay] = waypoints[0];
   return makeRibbon({
     name: "Squiggle ribbon",
@@ -139,7 +142,7 @@ export function flightFromSquiggle(
 ): SpriteClip {
   const { fitted, scale } = fitToStage(points, stage);
   const length = polylineLength(fitted);
-  const step = Math.max(20, length / WAYPOINTS);
+  const step = waypointStep(length);
   const waypoints = dropCrowdedEnd(resample(fitted, step), step / 2);
   const [ax, ay] = waypoints[waypoints.length - 1];
   const duration = Math.min(MAX_DURATION, Math.max(MIN_DURATION, length / SPEED));

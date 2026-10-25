@@ -1,10 +1,20 @@
 "use client";
 
 import { motion, useTransform, type MotionValue } from "motion/react";
-import { ribbonBands, ribbonCoat, ribbonCoatBands, ribbonOpacity, ribbonWindow } from "../engine/ribbon";
+import { lineNeedsShape } from "../engine/line";
+import {
+  ribbonBands,
+  ribbonCenterline,
+  ribbonCoat,
+  ribbonCoatBands,
+  ribbonOpacity,
+  ribbonSubject,
+  ribbonWindow,
+} from "../engine/ribbon";
 import { parentTransformAt } from "../engine/transform";
 import type { RibbonClip, StudioDoc } from "../types";
 import { RainbowDashes, RainbowSolid } from "./RainbowDashes";
+import { ShapedLineView } from "./ShapedLineView";
 
 interface Props {
   doc: StudioDoc;
@@ -17,8 +27,10 @@ interface Props {
  * the parent frame (the anchor offset is baked into the bands) rather than
  * inside the clip's own transform, so it is positioned by `ClipView`'s
  * sibling placement, not by this element. Layers, bottom to top: the ribbon's
- * own colours lit along the live window; the resting coat (if a repaint has
+ * own colours lit per its line style; the resting coat (if a repaint has
  * completed) covering it whole; the sweep in flight painting the next coat.
+ * A plain painted line is drawn as dashes; a shaped one (taper, braid, nib,
+ * ...) is rebuilt per frame by `ShapedLineView`.
  */
 export function RibbonClipView({ doc, clip, time }: Props) {
   const own = ribbonBands(clip);
@@ -36,7 +48,7 @@ export function RibbonClipView({ doc, clip, time }: Props) {
   });
 
   if (own.length === 0) return null;
-  const coats = clip.mode === "paint" && clip.coat.every > 0;
+  const coats = clip.style.motion === "paint" && (clip.coat.every > 0 || (clip.coat.at?.length ?? 0) > 0);
 
   return (
     <motion.svg
@@ -46,7 +58,18 @@ export function RibbonClipView({ doc, clip, time }: Props) {
       aria-hidden="true"
     >
       <motion.g transform={frame}>
-        <RainbowDashes bands={own} window={window} fade={clip.mode === "comet"} />
+        {lineNeedsShape(clip.style) ? (
+          <ShapedLineView
+            line={ribbonCenterline(clip)}
+            style={clip.style}
+            subject={ribbonSubject(clip)}
+            colors={clip.colors}
+            band={clip.band}
+            time={time}
+          />
+        ) : (
+          <RainbowDashes bands={own} window={window} fade={false} />
+        )}
         {coats && (
           <>
             <motion.g style={{ opacity: restingOnCoat }}>

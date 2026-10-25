@@ -3,8 +3,10 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/app/components/shared-components";
 import { useMediaQuery } from "../motion-studio/lib/useMediaQuery";
+import { RAIL, usePanelLayout } from "../motion-studio/lib/usePanelLayout";
 import { writeHandoff, type Handoff } from "../motion-studio/lib/handoff";
 import { AtomMark, ChevronLeftIcon } from "../motion-studio/panel/icons";
+import { ResizeHandle } from "../motion-studio/panel/ResizeHandle";
 import { IconButton } from "../motion-studio/shell/IconButton";
 import { ControlsSidebar } from "./ControlsSidebar";
 import { DrawingCanvas } from "./DrawingCanvas";
@@ -21,13 +23,15 @@ const CONTROLS_ID = "squiggle-controls";
 /**
  * The whole drawing studio: a canvas with the global actions (undo / clear /
  * smooth all / export all) along its top, and the controls beside it on wide
- * screens or under it on phones. All drawing state lives in `useSquiggles`;
+ * screens (in a rail that can be dragged wider, remembered) or under it on
+ * phones. All drawing state lives in `useSquiggles`;
  * this component wires it to the UI and owns SVG export and the handoff to the
  * Motion Studio.
  */
 export function SquiggleStudio() {
   const router = useRouter();
   const wide = useMediaQuery("(min-width: 1024px) and (min-height: 501px)");
+  const { layout, update } = usePanelLayout();
   const squiggles = useSquiggles();
   const { colors, band, strokes, current, hover, beginStroke, extendStroke, endStroke, undo, clearAll, smoothAll } = squiggles;
 
@@ -108,13 +112,26 @@ export function SquiggleStudio() {
         </main>
 
         {wide ? (
-          <aside
-            id={CONTROLS_ID}
-            aria-label="Squiggle controls"
-            className="atm-drawer-right w-80 shrink-0 overflow-y-auto border-l border-border-strong bg-surface-raised p-6"
-          >
-            {controls}
-          </aside>
+          <>
+            <ResizeHandle
+              axis="x"
+              label="Resize squiggle controls"
+              controls={CONTROLS_ID}
+              value={layout.railWidth}
+              min={RAIL.min}
+              max={RAIL.max}
+              initial={RAIL.initial}
+              onChange={(w) => update({ railWidth: w })}
+            />
+            <aside
+              id={CONTROLS_ID}
+              aria-label="Squiggle controls"
+              className="atm-drawer-right shrink-0 overflow-y-auto bg-surface-raised p-6"
+              style={{ width: layout.railWidth }}
+            >
+              {controls}
+            </aside>
+          </>
         ) : (
           <section
             id={CONTROLS_ID}

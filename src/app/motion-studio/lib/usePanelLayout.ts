@@ -7,16 +7,20 @@ export interface PanelLayout {
   sidebarWidth: number;
   /** Bottom timeline height in px. */
   timelineHeight: number;
+  /** The Squiggle Studio's controls rail width in px. */
+  railWidth: number;
 }
 
 export const SIDEBAR = { min: 300, max: 640, initial: 380 } as const;
 export const TIMELINE = { min: 120, max: 560, initial: 240 } as const;
+export const RAIL = { min: 260, max: 560, initial: 320 } as const;
 
 const DEFAULTS: PanelLayout = {
   sidebarOpen: true,
   timelineOpen: true,
   sidebarWidth: SIDEBAR.initial,
   timelineHeight: TIMELINE.initial,
+  railWidth: RAIL.initial,
 };
 
 const KEY = "animatron.panel-layout";
@@ -37,6 +41,7 @@ function readLayout(): PanelLayout {
       timelineOpen: bool(saved.timelineOpen, DEFAULTS.timelineOpen),
       sidebarWidth: num(saved.sidebarWidth, DEFAULTS.sidebarWidth, SIDEBAR.min, SIDEBAR.max),
       timelineHeight: num(saved.timelineHeight, DEFAULTS.timelineHeight, TIMELINE.min, TIMELINE.max),
+      railWidth: num(saved.railWidth, DEFAULTS.railWidth, RAIL.min, RAIL.max),
     };
   } catch {
     return DEFAULTS;
@@ -44,8 +49,9 @@ function readLayout(): PanelLayout {
 }
 
 /**
- * The desktop studio's panel arrangement: which panels are showing and how
- * big they are, remembered in localStorage across visits.
+ * The desktop studio's panel arrangement (which panels are showing and how
+ * big they are) and the Squiggle Studio's rail width, remembered in
+ * localStorage across visits.
  */
 export function usePanelLayout() {
   const [layout, setLayout] = useState<PanelLayout>(readLayout);
@@ -65,6 +71,7 @@ export function usePanelLayout() {
         ...patch,
         sidebarWidth: clamp(patch.sidebarWidth ?? prev.sidebarWidth, SIDEBAR.min, SIDEBAR.max),
         timelineHeight: clamp(patch.timelineHeight ?? prev.timelineHeight, TIMELINE.min, TIMELINE.max),
+        railWidth: clamp(patch.railWidth ?? prev.railWidth, RAIL.min, RAIL.max),
       })),
     [],
   );

@@ -1,7 +1,17 @@
 import { loopMemberIds } from "@/app/components/motion-studio/engine/hierarchy";
 import { AUTO_TAIL_LENGTH, AUTO_TAIL_POSITION } from "@/app/components/motion-studio/engine/text";
+import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
 import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
-import { DOC_VERSION, type Clip, type SpriteClip, type StudioDoc, type TextClip } from "@/app/components/motion-studio/types";
+import {
+  DOC_VERSION,
+  type Clip,
+  type LineStyle,
+  type RibbonClip,
+  type SpriteClip,
+  type SpriteTrail,
+  type StudioDoc,
+  type TextClip,
+} from "@/app/components/motion-studio/types";
 import { normalizeOrder } from "./tree";
 import { sanitizePath } from "./waypoints";
 
@@ -45,6 +55,20 @@ type LegacyText = Omit<TextClip, "font" | "container" | "tail" | "reveal" | "rev
   Partial<Pick<TextClip, "font" | "container" | "tail" | "reveal" | "revealDuration" | "overshoot">>;
 
 const num = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
+
+/** Before the line style existed, a line had a `mode` (paint | comet) and a comet length. */
+interface LegacyLine {
+  mode?: unknown;
+  cometSeconds?: unknown;
+  style?: Partial<LineStyle>;
+}
+
+/** A line style from whatever an older file stored: the old two modes map onto the motion knob. */
+function lineStyleFrom(legacy: LegacyLine): LineStyle {
+  const motion = legacy.mode === "comet" ? "comet" : DEFAULT_LINE_STYLE.motion;
+  const tail = num(legacy.cometSeconds, DEFAULT_LINE_STYLE.tail);
+  return { ...DEFAULT_LINE_STYLE, motion, tail, ...legacy.style };
+}
 
 export const PLAIN_TEXT_DEFAULTS: Pick<TextClip, "font" | "container" | "tail" | "reveal" | "revealDuration" | "overshoot"> = {
   font: "sans",
@@ -108,10 +132,22 @@ export function normalizeClip(raw: Clip | LegacyBubble): Clip {
     const legacy = raw as LegacyText;
     return { ...PLAIN_TEXT_DEFAULTS, ...legacy, parentId, followRotation };
   }
-  // Sprites saved before the rainbow trail existed get it switched off.
+  // Sprites saved before the rainbow trail existed get it switched off; a
+  // trail saved with the old paint/comet switch gets the matching line style.
   if (raw.type === "sprite") {
-    const legacy = raw as Omit<SpriteClip, "trail"> & Partial<Pick<SpriteClip, "trail">>;
-    return { ...legacy, path: sanitizePath(legacy.path), trail: { ...DEFAULT_TRAIL, ...legacy.trail }, parentId, followRotation };
+    const legacy = raw as Omit<SpriteClip, "trail"> & { trail?: Partial<SpriteTrail> & LegacyLine };
+    const { mode: _mode, cometSeconds: _comet, ...trail } = legacy.trail ?? {};
+    return {
+      ...legacy,
+      path: sanitizePath(legacy.path),
+      trail: { ...DEFAULT_TRAIL, ...trail, style: lineStyleFrom(legacy.trail ?? {}) },
+      parentId,
+      followRotation,
+    };
+  }
+  if (raw.type === "ribbon") {
+    const { mode: _mode, cometSeconds: _comet, ...legacy } = raw as RibbonClip & LegacyLine;
+    return { ...legacy, style: lineStyleFrom(raw as LegacyLine), parentId, followRotation };
   }
   return { ...raw, parentId, followRotation };
 }

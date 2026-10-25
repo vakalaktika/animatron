@@ -1,5 +1,7 @@
 import type { RibbonClip } from "../types";
-import { clamp01, resolveEase } from "./easing";
+import { clamp01 } from "./easing";
+import { lineFront, lineSpans, type LineSubject, type LitSpan } from "./line";
+import { centerline, type Centerline } from "./lineShape";
 import { buildPath, type PathSample, type PathSampler } from "./path";
 import { bands, RAINBOW, resample, type Band, type Point } from "./rainbow";
 import type { TrailWindow } from "./trail";
@@ -15,6 +17,15 @@ export const DEFAULT_COAT_COLORS = [RAINBOW.red, RAINBOW.orange, RAINBOW.yellow]
 const samplers = new WeakMap<RibbonClip, PathSampler>();
 const baseBands = new WeakMap<RibbonClip, Band[]>();
 const coatBands = new WeakMap<RibbonClip, Band[]>();
+const lines = new WeakMap<RibbonClip, Centerline>();
+
+/** The ribbon's paint-in as the timing its line is lit on. */
+export const ribbonSubject = (clip: RibbonClip): LineSubject => ({
+  start: clip.start,
+  duration: clip.duration,
+  loop: clip.loop,
+  ease: clip.ease,
+});
 
 /** The ribbon's spline, anchor-relative and arc-length parameterised. */
 export function ribbonPath(clip: RibbonClip): PathSampler {
@@ -48,25 +59,38 @@ export function ribbonCoatBands(clip: RibbonClip): Band[] {
   return built;
 }
 
-/** Where along the ribbon (0..1) the paint head is at time `t`. */
-export function ribbonHead(clip: RibbonClip, t: number): number {
-  const raw = (t - clip.start) / Math.max(0.001, clip.duration);
-  if (clip.loop && clip.mode === "comet") return raw <= 0 ? 0 : raw % 1;
-  return resolveEase(clip.ease)(clamp01(raw));
+/** The dense centerline the shaped ribbon is built on, in its parent frame. */
+export function ribbonCenterline(clip: RibbonClip): Centerline {
+  const cached = lines.get(clip);
+  if (cached) return cached;
+  const built = centerline(ribbonPath(clip).polyline, clip, clip.loop);
+  lines.set(clip, built);
+  return built;
 }
 
 /**
- * The lit stretch of the ribbon. Paint mode lights from the start to the
- * head. Comet mode lights from where the head was `cometSeconds` ago to where
- * it is now, wrapping around the join on a loop (length counts past 1; the
- * dash pattern repeats).
+ * Where along the ribbon (0..1) the front is at time `t`: the paint head,
+ * or whatever the line's motion has out in front (a comet head, a pulse).
+ * Clips seated on the "front" follow this.
+ */
+export function ribbonHead(clip: RibbonClip, t: number): number {
+  return lineFront(clip.style, ribbonSubject(clip), t);
+}
+
+/** Everything lit on the ribbon at `t`, per its line style. */
+export function ribbonSpans(clip: RibbonClip, t: number): LitSpan[] {
+  return lineSpans(clip.style, ribbonSubject(clip), t);
+}
+
+/**
+ * The single lit stretch, for the dash renderer. Paint lights from the
+ * start to the head; a comet from where the head was `tail` seconds ago to
+ * where it is now, wrapping around the join on a loop (length counts past
+ * 1; the dash pattern repeats).
  */
 export function ribbonWindow(clip: RibbonClip, t: number): TrailWindow {
-  if (clip.mode !== "comet") return { tail: 0, length: ribbonHead(clip, t) };
-  const head = ribbonHead(clip, t);
-  const tail = ribbonHead(clip, t - Math.max(0, clip.cometSeconds));
-  const wrapped = clip.loop && tail > head;
-  return { tail, length: wrapped ? head - tail + 1 : head - tail };
+  const span = ribbonSpans(clip, t)[0];
+  return span ? { tail: span.tail, length: span.length } : { tail: 0, length: 0 };
 }
 
 export interface CoatState {
@@ -80,24 +104,29 @@ export interface CoatState {
 const paletteFor = (clip: RibbonClip, pass: number) => (pass % 2 === 1 ? clip.coat.colors : clip.colors);
 
 /**
- * Which coat covers the ribbon at time `t`. Sweeps start `every` seconds
- * after the paint-in finishes and repeat; each takes `duration` and then
- * rests until the next. Comet ribbons never coat (there is nothing to cover).
+ * Which coat covers the ribbon at time `t`. Regular sweeps start `every`
+ * seconds after the paint-in finishes and repeat; scheduled sweeps (`at`)
+ * start when they say. Each takes `duration` and then rests until the next;
+ * palettes alternate by how many sweeps have started. Only a painted ribbon
+ * coats (there is nothing to cover otherwise).
  */
 export function ribbonCoat(clip: RibbonClip, t: number): CoatState {
   const none: CoatState = { resting: null, sweeping: null };
-  const { every, duration } = clip.coat;
-  if (clip.mode === "comet" || every <= 0 || clip.coat.colors.length === 0) return none;
-  const since = t - (clip.start + clip.duration);
-  if (since < every) return none;
-  const pass = Math.floor(since / every);
-  const into = since - pass * every;
-  const completed = into >= duration ? pass : pass - 1;
-  const resting = completed >= 1 ? paletteFor(clip, completed) : null;
-  const restingIsOwn = completed >= 1 && completed % 2 === 0;
-  const sweeping =
-    into < duration ? { colors: paletteFor(clip, pass), progress: clamp01(into / Math.max(0.001, duration)) } : null;
-  return { resting: restingIsOwn ? null : resting, sweeping };
+  const { every, duration, at = [] } = clip.coat;
+  if (clip.style.motion !== "paint" || clip.coat.colors.length === 0) return none;
+  const painted = clip.start + clip.duration;
+  const regular = every > 0 ? Math.max(0, Math.floor((t - painted) / every)) : 0;
+  const scheduled = at.filter((s) => s <= t);
+  const pass = regular + scheduled.length;
+  if (pass === 0) return none;
+  const latest = Math.max(regular > 0 ? painted + regular * every : -Infinity, ...scheduled);
+  const into = t - latest;
+  const sweeping = into < duration;
+  const completed = sweeping ? pass - 1 : pass;
+  return {
+    resting: completed >= 1 && completed % 2 === 1 ? clip.coat.colors : null,
+    sweeping: sweeping ? { colors: paletteFor(clip, pass), progress: clamp01(into / Math.max(0.001, duration)) } : null,
+  };
 }
 
 /** Hidden before its start, else fully visible. */

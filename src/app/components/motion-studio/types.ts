@@ -109,7 +109,14 @@ export interface SvgTextRun {
 
 export type SpriteSource =
   | { kind: "chippy" }
-  | { kind: "image"; dataUrl: string; label: string; aspect: number }
+  | {
+      kind: "image";
+      dataUrl: string;
+      label: string;
+      aspect: number;
+      /** Clip the picture to a circle, filling it edge to edge (a face in the hero). */
+      round?: boolean;
+    }
   | {
       kind: "svg";
       /** The SVG markup with each live text run stamped with `data-studio-run`. */
@@ -125,18 +132,100 @@ export type SpriteSource =
  * and the paint head rides the sprite's own progress, so Chippy leaves the
  * rainbow behind as it flies.
  */
+export type LineMotion =
+  /** Lights from the start to the head and stays. */
+  | "paint"
+  /** Only the last stretch behind the head stays lit; the tail follows. */
+  | "comet"
+  /** Paints in, holds, then retracts from its start until gone. */
+  | "erase"
+  /** Paints in and stays; a short highlight in the accent palette then runs along it on a timer. */
+  | "pulse"
+  /** A short lit stretch bounces end to end forever. */
+  | "pingpong"
+  /** Short dashes march along the whole line forever. */
+  | "dash"
+  /** Grows from the middle toward both ends and stays. */
+  | "unfold";
+
+export type LineColour =
+  /** The line's own colours. */
+  | "fixed"
+  /** Own colours at the head blending into the accent palette toward the tail. */
+  | "along"
+  /** Hue drifts over time. */
+  | "cycle"
+  /** The colour bands slide along the line forever (barber pole). */
+  | "chase";
+
+/**
+ * How a line (a ribbon, or the squiggle a sprite paints) is lit and shaped.
+ * Five independent knobs: which stretch is lit and how it moves (`motion`),
+ * the width and opacity profile along the lit stretch (`taper`, `fade`,
+ * `nib`, `core`), colour behaviour (`colour`), copies (`echo`, `wiggle`
+ * braids the bands), and finish (`glow`). Every look in the studio's "Look"
+ * menu is a combination of these.
+ */
+export interface LineStyle {
+  motion: LineMotion;
+  /**
+   * Length of the lit stretch. Comet: seconds of travel kept behind the
+   * head. Pulse, ping-pong, dash: fraction of the line (0..1).
+   */
+  tail: number;
+  /** Erase: seconds the full line holds before retracting. Pulse: seconds between pulses (never less than one crossing). */
+  hold: number;
+  /** 0 keeps the trailing end full width; 1 thins it to a hairline. */
+  taper: number;
+  /** 0 ends the trailing end hard; 1 fades it over the whole lit stretch. */
+  fade: number;
+  /**
+   * Width where the line meets the thing leaving it (the sprite, or the
+   * paint head), as a fraction of full width. 1 is full width; smaller
+   * values pinch the head so the line visibly grows out of the object,
+   * widening to full over the stretch just behind it.
+   */
+  head: number;
+  /** Thick-and-thin by stroke direction, like a broad nib. 0 off, 1 strong. */
+  nib: number;
+  /** A thin bright line down the middle. */
+  core: boolean;
+  /** Trailing copies, each later, fainter, and offset sideways. 0..3. */
+  echo: number;
+  /** Soft glow behind the line, 0..1. */
+  glow: number;
+  /** Sideways wobble in stage pixels; the bands braid around each other. */
+  wiggle: number;
+  colour: LineColour;
+  /** Speed multiplier for `cycle` and `chase`. */
+  colourSpeed: number;
+  /** Second palette: the pulse highlight and the tail colours of `along`. */
+  accent: string[];
+}
+
+/**
+ * A rainbow squiggle painted along the sprite's path as it travels. Bands are
+ * fanned around the path's centerline exactly as Squiggle Studio draws them,
+ * and the paint head rides the sprite's own progress, so Chippy leaves the
+ * rainbow behind as it flies.
+ */
 export interface SpriteTrail {
   enabled: boolean;
-  /** `paint` leaves the whole squiggle behind; `comet` keeps only the last `cometSeconds` of travel. */
-  mode: "paint" | "comet";
-  /** Comet length in seconds of travel: the tail sits where the sprite was this long ago. */
-  cometSeconds: number;
+  style: LineStyle;
   /** Concrete colours, one band each, drawn in order across the stripe. */
   colors: string[];
   /** Width of one colour band in stage pixels. */
   band: number;
-  /** Paint mode: seconds the trail lingers after the sprite lands before fading; 0 keeps it. */
+  /** Paint motion: seconds the trail lingers after the sprite lands before fading; 0 keeps it. */
   fadeOut: number;
+  /**
+   * Where the head sits relative to the sprite's anchor, in stage pixels:
+   * `along` moves it back along the path (positive = behind the sprite),
+   * `across` moves the whole trail sideways (positive = to the right of
+   * travel). For tucking the head under the body so the trail is seen to
+   * come out of the sprite.
+   */
+  offset: { along: number; across: number };
 }
 
 export interface SpriteClip extends ClipBase {
@@ -246,16 +335,21 @@ export interface LottieClip extends ClipBase {
  */
 export interface RibbonCoat {
   colors: string[];
-  /** Seconds between sweeps; 0 = never repaint. */
+  /** Seconds between sweeps; 0 = no regular repaint. */
   every: number;
   /** Seconds one sweep takes to cover the ribbon. */
   duration: number;
+  /**
+   * Extra sweeps at these clock times, on top of (or instead of) the regular
+   * ones. A page that repaints on hover or at random appends to this list.
+   */
+  at?: number[];
 }
 
 /**
  * The brand squiggle as a clip of its own: a centerline fanned into colour
- * bands that paints itself in, can trail off like a comet, and can repaint
- * in a new palette. Other clips thread onto it or ride its paint head via
+ * bands, lit and shaped by its `style` (paint in, comet, pulse, ...), that
+ * can repaint in a new palette. Other clips thread onto it or ride its paint head via
  * `along`. Points are relative to the anchor, like a sprite's path.
  */
 export interface RibbonClip extends ClipBase {
@@ -269,9 +363,8 @@ export interface RibbonClip extends ClipBase {
   /** Seconds to paint in. */
   duration: number;
   ease: Ease;
-  /** `paint` leaves the whole ribbon; `comet` keeps only the last `cometSeconds` of travel. */
-  mode: "paint" | "comet";
-  cometSeconds: number;
+  style: LineStyle;
+  /** Repaint sweeps; only a `paint` ribbon coats (there is nothing to cover otherwise). */
   coat: RibbonCoat;
 }
 

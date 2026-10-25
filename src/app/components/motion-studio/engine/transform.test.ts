@@ -1,3 +1,4 @@
+import { DEFAULT_LINE_STYLE } from "./line";
 import type { Clip, SpriteClip, StudioDoc, TextClip } from "../types";
 import {
   composeTransforms,
@@ -28,7 +29,7 @@ function sprite(id: string, over: Partial<SpriteClip> = {}): SpriteClip {
     ...base(id),
     type: "sprite",
     source: { kind: "image", dataUrl: "", label: "img", aspect: 1 },
-    trail: { enabled: false, mode: "paint", cometSeconds: 0.8, colors: [], band: 8, fadeOut: 0 },
+    trail: { enabled: false, style: DEFAULT_LINE_STYLE, colors: [], band: 8, fadeOut: 0, offset: { along: 0, across: 0 } },
     width: 100,
     path: [
       { x: -100, y: 0 },

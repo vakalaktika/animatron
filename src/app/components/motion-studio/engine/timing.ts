@@ -1,7 +1,10 @@
 import type { Clip, StudioDoc } from "../types";
 import { LOGO_LAYER_COUNT } from "../assets/logoPaths";
+import { lineDuration, lineForever } from "./line";
+import { ribbonSubject } from "./ribbon";
 import { spriteActiveDuration } from "./spriteTiming";
 import { revealDuration } from "./text";
+import { trailSubject } from "./trail";
 
 export const IDLE_FLAP_SECONDS = 0.55;
 export const LANDING_SQUASH_SECONDS = 0.45;
@@ -24,9 +27,13 @@ export function clipDuration(clip: Clip): number {
               clip.landing.settleFlaps * IDLE_FLAP_SECONDS + clip.landing.foldDuration,
             )
           : 0;
-      // A trail that fades out, or a comet tail still catching up, keeps the
-      // clip on the clock until it's gone.
-      const trail = !clip.trail.enabled ? 0 : clip.trail.mode === "comet" ? clip.trail.cometSeconds : clip.trail.fadeOut;
+      // A trail that fades out, or one still moving after the landing (a
+      // comet tail catching up, an erase), keeps the clip on the clock.
+      const trail = !clip.trail.enabled
+        ? 0
+        : clip.trail.style.motion === "paint"
+          ? clip.trail.fadeOut
+          : lineDuration(clip.trail.style, trailSubject(clip)) - active;
       return active + Math.max(perch, trail);
     }
     case "text": {
@@ -34,12 +41,13 @@ export function clipDuration(clip: Clip): number {
       return Math.max(revealDuration(clip), ruleEnd);
     }
     case "ribbon": {
-      // A comet tail keeps catching up after the head stops. A repainting
-      // ribbon stays on the clock through one full cycle of coats (new
-      // palette, then back to its own), so a looped composition is seamless.
-      if (clip.mode === "comet") return clip.duration + (clip.loop ? 0 : clip.cometSeconds);
-      const coats = clip.coat.every > 0 ? 2 * clip.coat.every + clip.coat.duration : 0;
-      return clip.duration + coats;
+      // The line settles when its motion does (a comet tail keeps catching
+      // up after the head stops). A repainting ribbon stays on the clock
+      // through one full cycle of coats (new palette, then back to its own),
+      // so a looped composition is seamless.
+      const line = lineDuration(clip.style, ribbonSubject(clip));
+      const coats = clip.style.motion === "paint" && clip.coat.every > 0 ? 2 * clip.coat.every + clip.coat.duration : 0;
+      return line + coats;
     }
     case "lottie": {
       const ip = Number(clip.data.ip ?? 0);
@@ -55,10 +63,11 @@ export function clipDuration(clip: Clip): number {
 export function loopsForever(clip: Clip): boolean {
   switch (clip.type) {
     case "sprite":
+      return clip.loop || (clip.trail.enabled && lineForever(clip.trail.style, trailSubject(clip)));
     case "lottie":
       return clip.loop;
     case "ribbon":
-      return clip.loop && clip.mode === "comet";
+      return lineForever(clip.style, ribbonSubject(clip));
     default:
       return false;
   }
