@@ -6,9 +6,11 @@ import { PanelGroup, type PanelSection } from "./PanelGroup";
 import { outlinedSvgSection, rasterSection, textRunsSection, type ArtworkActions } from "./sections/artwork";
 import { buildSections } from "./sections/logo";
 import { playbackSection } from "./sections/lottie";
+import { ribbonPointsSection, ribbonSection } from "./sections/ribbon";
 import { placementSection } from "./sections/placement";
 import { flapSection, landingSection, motionSection, pathSection, type WaypointControls } from "./sections/sprite";
 import { containerSection, revealSection, textSection } from "./sections/text";
+import { trailSection } from "./sections/trail";
 
 interface Props {
   doc: StudioDoc;
@@ -39,10 +41,13 @@ export function ClipControls({ doc, clip, onChange, onReparent, focusText = fals
     caps.reveal && revealSection(caps.reveal, onChange),
     caps.motion && motionSection(caps.motion, onChange),
     caps.path && pathSection(caps.path, onChange, waypoints),
+    caps.trail && trailSection(caps.trail, onChange),
     caps.flap && flapSection(caps.flap, onChange),
     caps.landing && landingSection(caps.landing, onChange),
     ...(caps.build ? buildSections(caps.build, onChange) : []),
     caps.playback && playbackSection(caps.playback, onChange),
+    caps.ribbon && ribbonSection(caps.ribbon, onChange),
+    caps.ribbon && ribbonPointsSection(caps.ribbon, onChange),
     caps.textRuns && textRunsSection(caps.textRuns, artwork),
     caps.outlinedSvg && outlinedSvgSection(),
     caps.raster && rasterSection(caps.raster, artwork),

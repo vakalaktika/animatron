@@ -70,6 +70,14 @@ export interface ClipBase {
   parentId: string | null;
   /** Also inherit the parent's rotation (a wing on a bird: yes; a bubble on a bird: no). */
   followRotation: boolean;
+  /**
+   * Seat on a ribbon parent. A fraction 0..1 threads the clip onto the
+   * ribbon at that point along it; `"front"` makes it ride the paint head.
+   * `x` / `y` then offset from the seat. Ignored unless the parent is a
+   * ribbon. With `followRotation` the clip also turns with the ribbon's
+   * tangent there.
+   */
+  along?: number | "front" | null;
 }
 
 export interface LogoClip extends ClipBase {
@@ -111,9 +119,30 @@ export type SpriteSource =
       textRuns: SvgTextRun[];
     };
 
+/**
+ * A rainbow squiggle painted along the sprite's path as it travels. Bands are
+ * fanned around the path's centerline exactly as Squiggle Studio draws them,
+ * and the paint head rides the sprite's own progress, so Chippy leaves the
+ * rainbow behind as it flies.
+ */
+export interface SpriteTrail {
+  enabled: boolean;
+  /** `paint` leaves the whole squiggle behind; `comet` keeps only the last `cometSeconds` of travel. */
+  mode: "paint" | "comet";
+  /** Comet length in seconds of travel: the tail sits where the sprite was this long ago. */
+  cometSeconds: number;
+  /** Concrete colours, one band each, drawn in order across the stripe. */
+  colors: string[];
+  /** Width of one colour band in stage pixels. */
+  band: number;
+  /** Paint mode: seconds the trail lingers after the sprite lands before fading; 0 keeps it. */
+  fadeOut: number;
+}
+
 export interface SpriteClip extends ClipBase {
   type: "sprite";
   source: SpriteSource;
+  trail: SpriteTrail;
   /** Rendered width in stage pixels. */
   width: number;
   /**
@@ -210,7 +239,43 @@ export interface LottieClip extends ClipBase {
   loop: boolean;
 }
 
-export type Clip = LogoClip | SpriteClip | TextClip | LottieClip;
+/**
+ * A new palette swept over a ribbon after it has painted in, the way the
+ * homepage ribbons drift between warm and cool. Coats alternate between the
+ * ribbon's own colours and these, one sweep every `every` seconds.
+ */
+export interface RibbonCoat {
+  colors: string[];
+  /** Seconds between sweeps; 0 = never repaint. */
+  every: number;
+  /** Seconds one sweep takes to cover the ribbon. */
+  duration: number;
+}
+
+/**
+ * The brand squiggle as a clip of its own: a centerline fanned into colour
+ * bands that paints itself in, can trail off like a comet, and can repaint
+ * in a new palette. Other clips thread onto it or ride its paint head via
+ * `along`. Points are relative to the anchor, like a sprite's path.
+ */
+export interface RibbonClip extends ClipBase {
+  type: "ribbon";
+  points: Vec2[];
+  /** Closed ribbon: the paint head laps it instead of stopping at the end. */
+  loop: boolean;
+  colors: string[];
+  /** Width of one colour band in stage pixels. */
+  band: number;
+  /** Seconds to paint in. */
+  duration: number;
+  ease: Ease;
+  /** `paint` leaves the whole ribbon; `comet` keeps only the last `cometSeconds` of travel. */
+  mode: "paint" | "comet";
+  cometSeconds: number;
+  coat: RibbonCoat;
+}
+
+export type Clip = LogoClip | SpriteClip | TextClip | LottieClip | RibbonClip;
 export type ClipType = Clip["type"];
 
 export interface StageConfig {

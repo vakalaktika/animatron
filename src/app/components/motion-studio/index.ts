@@ -5,4 +5,6 @@ export { clipDuration, clipEnd, docDuration } from "./engine/timing";
 export { transformAt, restTransformAt, type WorldTransform } from "./engine/transform";
 export { ancestorChain, childrenOf, descendantIds } from "./engine/hierarchy";
 export { capabilities, type Capabilities } from "./engine/capabilities";
+export { DEFAULT_TRAIL } from "./engine/trail";
+export { RAINBOW, RAINBOW_PRESETS, type Point, type Band } from "./engine/rainbow";
 export type * from "./types";

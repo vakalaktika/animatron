@@ -1,4 +1,4 @@
-import type { Clip, LogoClip, LottieClip, SpriteClip, TextClip } from "../types";
+import type { Clip, LogoClip, LottieClip, RibbonClip, SpriteClip, TextClip } from "../types";
 
 /**
  * What a clip can do, derived from its type and source. The properties
@@ -22,6 +22,8 @@ export interface Capabilities {
   motion: SpriteClip | null;
   /** Editable waypoints. */
   path: SpriteClip | null;
+  /** Rainbow squiggle painted along the path. */
+  trail: SpriteClip | null;
   /** Wing flap in flight. */
   flap: SpriteClip | null;
   /** Squash, settle, fold on arrival. */
@@ -30,6 +32,8 @@ export interface Capabilities {
   build: LogoClip | null;
   /** Speed and loop for an imported animation. */
   playback: LottieClip | null;
+  /** The brand squiggle: points, paint-in, comet, coats. */
+  ribbon: RibbonClip | null;
   /** Imported SVG whose live text can be edited in place. */
   textRuns: SpriteClip | null;
   /** Imported SVG with no live text (outlined). */
@@ -45,10 +49,12 @@ const NONE: Capabilities = {
   container: null,
   motion: null,
   path: null,
+  trail: null,
   flap: null,
   landing: null,
   build: null,
   playback: null,
+  ribbon: null,
   textRuns: null,
   outlinedSvg: null,
   raster: null,
@@ -67,6 +73,7 @@ export function capabilities(clip: Clip): Capabilities {
         editText: runs ? "runs" : "none",
         motion: clip,
         path: clip,
+        trail: clip,
         flap: chippy ? clip : null,
         landing: chippy && !clip.loop ? clip : null,
         textRuns: runs ? clip : null,
@@ -78,5 +85,7 @@ export function capabilities(clip: Clip): Capabilities {
       return { ...NONE, build: clip };
     case "lottie":
       return { ...NONE, playback: clip };
+    case "ribbon":
+      return { ...NONE, ribbon: clip };
   }
 }

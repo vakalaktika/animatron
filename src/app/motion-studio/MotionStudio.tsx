@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
-import { docDuration } from "@/app/components/motion-studio/engine/timing";
-import type { Clip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
+import { docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
+import { DOC_VERSION, type Clip, type SpriteClip, type StageConfig, type StudioDoc, type Vec2 } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
 import { clipComponentCode, docComponentCode, HANDOFF_NOTES } from "./export/codegen";
 import { downloadBlob, downloadText, startTabRecording, type Recording } from "./export/recorder";
 import { parseSvg } from "@/app/components/motion-studio/engine/svgText";
 import { deleteClip, deltaInParentFrame, dropClip, nudgeClip, reparentClip } from "./lib/attach";
+import { flightFromSquiggle, ribbonFromSquiggle, takeHandoff } from "./lib/handoff";
 import { reorder } from "./lib/order";
 import { attachedTextFor, detachRun, restoreRun, setRunText } from "./lib/textRuns";
 import { moveAmongSiblings, normalizeOrder, type DropTarget } from "./lib/tree";
@@ -24,6 +25,7 @@ import {
   makeImageSprite,
   makeLogo,
   makeLottie,
+  makeRibbon,
   makeSpeechText,
   makeSvgSprite,
   makeText,
@@ -42,6 +44,13 @@ import { DesktopShell } from "./shell/DesktopShell";
 import { LandscapeShell } from "./shell/LandscapeShell";
 import { PortraitShell } from "./shell/PortraitShell";
 import type { StudioSlots } from "./shell/types";
+
+/** Parses SVG markup into a sprite centred on the stage, or null when it isn't SVG. */
+function svgSpriteFrom(text: string, label: string, stage: StageConfig, over: Partial<SpriteClip> = {}): SpriteClip | null {
+  const parsed = parseSvg(text);
+  if (!parsed) return null;
+  return makeSvgSprite(parsed.markup, label, parsed.aspect, parsed.textRuns, { x: stage.width / 2, y: stage.height / 2, ...over });
+}
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "animation";
 
@@ -91,9 +100,7 @@ export function MotionStudio() {
 
   const duration = useMemo(() => docDuration(doc), [doc]);
   // A composition with a looping clip keeps running so loaders never freeze.
-  const hasLoopingClip = doc.clips.some(
-    (c) => c.enabled && (c.type === "sprite" || c.type === "lottie") && c.loop,
-  );
+  const hasLoopingClip = doc.clips.some((c) => c.enabled && loopsForever(c));
   const clock = useStudioClock(duration, { autoplay: true, loop: loop || hasLoopingClip, speed });
 
   const selected = doc.clips.find((c) => c.id === selectedId) ?? null;
@@ -146,8 +153,11 @@ export function MotionStudio() {
     setDoc((d) => ({
       ...d,
       clips: d.clips.map((c) => {
-        if (c.id !== clipId || c.type !== "sprite") return c;
+        if (c.id !== clipId || (c.type !== "sprite" && c.type !== "ribbon")) return c;
         const delta = deltaInParentFrame(d, clipId, stageDelta, clock.time.get());
+        if (c.type === "ribbon") {
+          return { ...c, points: c.points.map((p, i) => (i === index ? { x: p.x + delta.x, y: p.y + delta.y } : p)) };
+        }
         // The last waypoint is the anchor for landing sprites, and every other
         // waypoint is stored relative to it. Dragging the end point moves the
         // anchor and counter-shifts the rest so they stay put on stage.
@@ -174,10 +184,47 @@ export function MotionStudio() {
     setSelectedId(clip.id);
   };
 
-  const addByType = (type: "logo" | "chippy" | "bubble" | "text") => {
+  /** An SVG document becomes a sprite; returns false when it can't be read as SVG. */
+  const addSvgMarkup = (text: string, label: string): boolean => {
+    const clip = svgSpriteFrom(text, label, doc.stage);
+    if (!clip) return false;
+    addClip(clip);
+    return true;
+  };
+
+  // A squiggle sent over from Squiggle Studio is waiting in sessionStorage.
+  // Taken once on mount into a fresh document, with the clip selected so its
+  // controls show: either Chippy flies it with the rainbow trail, or it lands
+  // as a still picture. This has to be an effect, not a lazy state
+  // initializer: the server renders the preset and the client must hydrate to
+  // the same DOM before the squiggle replaces it.
+  const handoffTaken = useRef(false);
+  useEffect(() => {
+    if (handoffTaken.current) return;
+    handoffTaken.current = true;
+    const handoff = takeHandoff();
+    if (!handoff) return;
+    const stage = doc.stage;
+    const clip =
+      handoff.kind === "flight"
+        ? flightFromSquiggle(handoff.points, handoff.colors, handoff.band, stage)
+        : handoff.kind === "ribbon"
+          ? ribbonFromSquiggle(handoff.points, handoff.colors, handoff.band, stage)
+          : svgSpriteFrom(handoff.svg, handoff.label, stage, { start: 0 });
+    if (!clip) return;
+    const name = { flight: "Squiggle flight", ribbon: "Squiggle ribbon", artwork: "Squiggle artwork" }[handoff.kind];
+    /* eslint-disable react-hooks/set-state-in-effect -- a one-time read of an external store on mount */
+    setDoc({ version: DOC_VERSION, name, stage, clips: [clip] });
+    setSelectedId(clip.id);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    clock.replay();
+  }, [clock, doc.stage, setDoc]);
+
+  const addByType = (type: "logo" | "chippy" | "bubble" | "text" | "ribbon") => {
     const cx = doc.stage.width / 2;
     const cy = doc.stage.height / 2;
     if (type === "logo") addClip(makeLogo({ x: cx, y: cy, start: 0 }));
+    if (type === "ribbon") addClip(makeRibbon({ x: cx, y: cy, start: 0 }));
     if (type === "chippy") addClip(makeChippy({ x: cx, y: cy, start: 0 }));
     if (type === "text") {
       const clip = makeText({ x: cx, y: cy, start: 0.5, text: "Your text", accentSuffix: "", rule: false });
@@ -214,11 +261,7 @@ export function MotionStudio() {
         return;
       }
       if (/\.svg$/i.test(file.name)) {
-        const parsed = parseSvg(await file.text());
-        if (parsed) {
-          addClip(makeSvgSprite(parsed.markup, file.name, parsed.aspect, parsed.textRuns, { x: doc.stage.width / 2, y: doc.stage.height / 2 }));
-          return;
-        }
+        if (addSvgMarkup(await file.text(), file.name)) return;
         setNotice(`Couldn't read ${file.name} as SVG, so it was imported as a picture.`);
       }
       const dataUrl = await new Promise<string>((resolve, reject) => {

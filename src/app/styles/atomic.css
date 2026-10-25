@@ -38,6 +38,7 @@
   --chart-2: #c33a26;
   --chart-3: #d69a2c;
   --chart-4: #2b6cb0;
+  --chart-5: #7a4f9a;
 
   --atm-shadow-sm: 0 1px 0 rgba(42, 36, 29, 0.14);
   --atm-shadow-md: 0 2px 0 rgba(42, 36, 29, 0.16), 0 8px 20px -12px rgba(42, 36, 29, 0.28);
@@ -93,6 +94,7 @@
     --chart-2: #e56a4e;
     --chart-3: #f0c04e;
     --chart-4: #69a8d4;
+    --chart-5: #b48cd6;
 
     --atm-shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.5);
     --atm-shadow-md: 0 2px 0 rgba(0, 0, 0, 0.55), 0 8px 20px -12px rgba(0, 0, 0, 0.7);

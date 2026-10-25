@@ -1,6 +1,7 @@
 import type { Clip, SpriteClip, StudioDoc, TextClip, Vec2 } from "../types";
 import { clamp01, lerp } from "./easing";
 import { ancestorChain } from "./hierarchy";
+import { ribbonHead, ribbonPointAt } from "./ribbon";
 import { spriteActiveDuration, spritePath, spriteProgress, waypointValuesAt } from "./spriteTiming";
 import { revealTransform } from "./text";
 import { LANDING_SQUASH_SECONDS } from "./timing";
@@ -98,8 +99,28 @@ export function localTransformAt(clip: Clip, t: number): WorldTransform {
       return textLocal(clip, t);
     case "logo":
     case "lottie":
+    case "ribbon":
       return restLocal(clip);
   }
+}
+
+/**
+ * A clip seated on a ribbon parent (`along`) is placed at that point of the
+ * ribbon, offset by its own x / y; riding the front follows the paint head
+ * at time `t` (or sits at the end when asked for the rest pose). With
+ * `followRotation` it also turns with the ribbon's heading there, folded so
+ * it never hangs upside down.
+ */
+export function seatOnRibbon(clip: Clip, parent: Clip | undefined, local: WorldTransform, t: number, rest: boolean): WorldTransform {
+  if (!parent || parent.type !== "ribbon" || clip.along === null || clip.along === undefined) return local;
+  const fraction = clip.along === "front" ? (rest ? 1 : ribbonHead(parent, t)) : clip.along;
+  const seat = ribbonPointAt(parent, fraction);
+  return {
+    ...local,
+    x: local.x + seat.x,
+    y: local.y + seat.y,
+    rotation: local.rotation + (clip.followRotation ? foldedHeading(seat.angle) : 0),
+  };
 }
 
 /** Places `local` inside `parent`'s frame. Position and scale always inherit; rotation only on request. */
@@ -129,7 +150,8 @@ function worldFrom(doc: StudioDoc, clipId: string, t: number, local: LocalFn): W
   const chain = ancestorChain(doc, clipId);
   let world = IDENTITY;
   for (let i = chain.length - 1; i >= 0; i--) {
-    world = composeTransforms(world, local(chain[i], t), chain[i].followRotation);
+    const seated = seatOnRibbon(chain[i], chain[i + 1], local(chain[i], t), t, local === restLocal);
+    world = composeTransforms(world, seated, chain[i].followRotation);
   }
   return world;
 }

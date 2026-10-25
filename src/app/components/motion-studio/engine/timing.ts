@@ -24,11 +24,22 @@ export function clipDuration(clip: Clip): number {
               clip.landing.settleFlaps * IDLE_FLAP_SECONDS + clip.landing.foldDuration,
             )
           : 0;
-      return active + perch;
+      // A trail that fades out, or a comet tail still catching up, keeps the
+      // clip on the clock until it's gone.
+      const trail = !clip.trail.enabled ? 0 : clip.trail.mode === "comet" ? clip.trail.cometSeconds : clip.trail.fadeOut;
+      return active + Math.max(perch, trail);
     }
     case "text": {
       const ruleEnd = clip.rule ? clip.ruleDelay + clip.ruleDuration : 0;
       return Math.max(revealDuration(clip), ruleEnd);
+    }
+    case "ribbon": {
+      // A comet tail keeps catching up after the head stops. A repainting
+      // ribbon stays on the clock through one full cycle of coats (new
+      // palette, then back to its own), so a looped composition is seamless.
+      if (clip.mode === "comet") return clip.duration + (clip.loop ? 0 : clip.cometSeconds);
+      const coats = clip.coat.every > 0 ? 2 * clip.coat.every + clip.coat.duration : 0;
+      return clip.duration + coats;
     }
     case "lottie": {
       const ip = Number(clip.data.ip ?? 0);
@@ -37,6 +48,19 @@ export function clipDuration(clip: Clip): number {
       const frames = Math.max(0, op - ip);
       return fr > 0 && clip.speed > 0 ? frames / fr / clip.speed : 0;
     }
+  }
+}
+
+/** A clip that never settles, so the composition keeps running for it. */
+export function loopsForever(clip: Clip): boolean {
+  switch (clip.type) {
+    case "sprite":
+    case "lottie":
+      return clip.loop;
+    case "ribbon":
+      return clip.loop && clip.mode === "comet";
+    default:
+      return false;
   }
 }
 

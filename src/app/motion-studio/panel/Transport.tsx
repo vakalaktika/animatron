@@ -53,6 +53,7 @@ const TYPE_COLOR: Record<Clip["type"], string> = {
   sprite: "var(--chart-2)",
   text: "var(--chart-1)",
   lottie: "var(--chart-4)",
+  ribbon: "var(--chart-5)",
 };
 
 /** Percent span of a clip on a timeline of `duration` seconds, clamped to it. */

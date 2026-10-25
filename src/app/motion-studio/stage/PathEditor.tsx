@@ -2,13 +2,14 @@
 
 import { motion, useTransform, type MotionValue } from "motion/react";
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { ribbonPath } from "@/app/components/motion-studio/engine/ribbon";
 import { spritePath } from "@/app/components/motion-studio/engine/spriteTiming";
 import { parentTransformAt } from "@/app/components/motion-studio/engine/transform";
-import type { SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
+import type { RibbonClip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 
 interface Props {
   doc: StudioDoc;
-  clip: SpriteClip;
+  clip: SpriteClip | RibbonClip;
   time: MotionValue<number>;
   zoom: number;
   /** Delta in stage pixels; the caller converts it into the parent's frame. */
@@ -19,12 +20,15 @@ interface Props {
 }
 
 /**
- * Draws the selected sprite's spline with draggable waypoints. Path points
- * live in the sprite's parent frame, so the whole drawing rides the parent's
- * live transform; for a root sprite that frame is the stage itself.
+ * Draws the selected sprite's or ribbon's spline with draggable waypoints.
+ * Points live in the clip's parent frame, so the whole drawing rides the
+ * parent's live transform; for a root clip that frame is the stage itself.
  */
 export function PathEditor({ doc, clip, time, zoom, onMovePoint, selectedPoint, onSelectPoint }: Props) {
-  const sampler = spritePath(clip);
+  const sampler = clip.type === "sprite" ? spritePath(clip) : ribbonPath(clip);
+  const points = clip.type === "sprite" ? clip.path : clip.points;
+  // A landing sprite's last point is its anchor; it is drawn red to say so.
+  const markEnd = clip.type === "sprite" && !clip.loop;
   const drag = useRef<{ index: number; lastX: number; lastY: number } | null>(null);
   const handleRadius = 9 / zoom;
   const frame = useTransform(time, (t) => {
@@ -57,7 +61,7 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint, selectedPoint, 
     <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
       <motion.g transform={frame}>
       <path d={d} fill="none" stroke="#2b6cb0" strokeWidth={2 / zoom} strokeDasharray={`${8 / zoom} ${6 / zoom}`} />
-      {clip.path.map((p, i) => (
+      {points.map((p, i) => (
         <g key={i}>
           {i === selectedPoint && (
             <circle
@@ -73,7 +77,7 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint, selectedPoint, 
             cx={clip.x + p.x}
             cy={clip.y + p.y}
             r={handleRadius}
-            fill={i === clip.path.length - 1 && !clip.loop ? "#c33a26" : "#2b6cb0"}
+            fill={markEnd && i === points.length - 1 ? "#c33a26" : "#2b6cb0"}
             stroke="#fff"
             strokeWidth={2 / zoom}
             style={{ cursor: "move", pointerEvents: "all" }}

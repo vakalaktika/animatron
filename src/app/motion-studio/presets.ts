@@ -3,11 +3,14 @@ import {
   type Clip,
   type LogoClip,
   type LottieClip,
+  type RibbonClip,
   type SpriteClip,
   type StudioDoc,
   type SvgTextRun,
   type TextClip,
 } from "@/app/components/motion-studio/types";
+import { arrivalTime, DEFAULT_COAT_COLORS, DEFAULT_RIBBON_COLORS } from "@/app/components/motion-studio/engine/ribbon";
+import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
 import { normalizeClip, normalizeDoc, PLAIN_TEXT_DEFAULTS, type Normalized, type RawDoc } from "./lib/migrate";
 
 // Storage key stays on v1: saved documents of any version are migrated on read.
@@ -75,6 +78,7 @@ export function makeChippy(over: Partial<SpriteClip> = {}): SpriteClip {
     fadeIn: 0,
     flap: { hz: 3.3, depth: 34 },
     landing: { squash: 0.1, settleFlaps: 2, foldAngle: -70, foldDuration: 0.5 },
+    trail: DEFAULT_TRAIL,
     ...over,
   };
 }
@@ -194,10 +198,122 @@ export function makeSvgSprite(
   });
 }
 
-// Built-in presets use fixed ids so the server-rendered DOM and the client
-// state agree after hydration (drag-to-move looks clips up by DOM id).
+/** A gentle S-curve ribbon that paints itself in, ready to be reshaped on stage. */
+export function makeRibbon(over: Partial<RibbonClip> = {}): RibbonClip {
+  return {
+    id: newId(),
+    type: "ribbon",
+    name: "Ribbon",
+    enabled: true,
+    start: 0,
+    x: 960,
+    y: 540,
+    scale: 1,
+    parentId: null,
+    followRotation: false,
+    points: [
+      { x: -600, y: 120 },
+      { x: -300, y: -140 },
+      { x: 0, y: 120 },
+      { x: 300, y: -140 },
+      { x: 600, y: 120 },
+    ],
+    loop: false,
+    colors: DEFAULT_RIBBON_COLORS.slice(),
+    band: 8,
+    duration: 2.4,
+    ease: { name: "inOut" },
+    mode: "paint",
+    cometSeconds: 0.8,
+    coat: { colors: DEFAULT_COAT_COLORS.slice(), every: 0, duration: 5 },
+    ...over,
+  };
+}
 
-/** The recorded YC end cap, as shipped on /thank-you-end-cap. */
+/**
+ * Two ribbons painting in one after the other, with a caption that rides the
+ * paint head of the first and a second strand that loops as a comet. A quick
+ * tour of what ribbons do; every point is draggable on stage.
+ */
+export function ribbonRidePreset(): StudioDoc {
+  const wave = makeRibbon({
+    id: "ride-wave",
+    name: "Wave",
+    start: 0,
+    x: 240,
+    y: 440,
+    points: [
+      { x: 0, y: 0 },
+      { x: 240, y: -180 },
+      { x: 480, y: 60 },
+      { x: 720, y: -200 },
+      { x: 960, y: 40 },
+      { x: 1200, y: -160 },
+      { x: 1440, y: 0 },
+    ],
+    duration: 2.6,
+    ease: { name: "inOut" },
+    coat: { colors: DEFAULT_COAT_COLORS.slice(), every: 5, duration: 3 },
+  });
+  const loop = makeRibbon({
+    id: "ride-loop",
+    name: "Comet loop",
+    start: 1.2,
+    x: 1480,
+    y: 780,
+    points: [
+      { x: 0, y: -170 },
+      { x: 170, y: 0 },
+      { x: 0, y: 170 },
+      { x: -170, y: 0 },
+    ],
+    loop: true,
+    mode: "comet",
+    cometSeconds: 1.1,
+    duration: 3,
+    ease: { name: "linear" },
+    colors: DEFAULT_COAT_COLORS.slice(),
+    band: 7,
+  });
+  const rider = makeText({
+    id: "ride-caption",
+    name: "Rider",
+    parentId: wave.id,
+    along: "front",
+    followRotation: true,
+    x: 0,
+    y: -44,
+    start: 0,
+    text: "ribbon",
+    fontSize: 30,
+    accentSuffix: "",
+    rule: false,
+    direction: "center",
+    letterStagger: 0.05,
+    letterDuration: 0.4,
+  });
+  const landing = makeText({
+    id: "ride-landing",
+    name: "Landing",
+    parentId: wave.id,
+    along: 1,
+    x: 120,
+    y: 36,
+    start: Number(arrivalTime(wave, 1).toFixed(2)),
+    text: "painted in",
+    fontSize: 22,
+    accentSuffix: "",
+    rule: false,
+    direction: "left",
+  });
+  return {
+    version: DOC_VERSION,
+    name: "Ribbon ride",
+    stage: { width: 1920, height: 1080, background: "#f7f5ee", transparent: false },
+    clips: [wave, loop, rider, landing],
+  };
+}
+
 export function endCapPreset(): StudioDoc {
   return {
     version: DOC_VERSION,
@@ -245,6 +361,7 @@ export function loaderPreset(): StudioDoc {
 }
 
 export const BUILT_IN_PRESETS: { label: string; make: () => StudioDoc }[] = [
+  { label: "Ribbon ride", make: ribbonRidePreset },
   { label: "End cap", make: endCapPreset },
   { label: "Chippy loader", make: loaderPreset },
 ];
@@ -265,6 +382,7 @@ export function loadSavedPresets(): SavedPreset[] {
     if (!Array.isArray(parsed)) return [];
     return (parsed as { name: string; savedAt: string; doc: RawDoc }[]).map((p) => ({ ...p, doc: normalizeDoc(p.doc).doc }));
   } catch {
+    // Every saved preset silently disappears from the list when this fails.
     return [];
   }
 }

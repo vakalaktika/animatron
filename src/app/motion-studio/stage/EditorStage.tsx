@@ -109,7 +109,7 @@ export function EditorStage({
         style={{ width: scaledW, height: scaledH, cursor: clean ? "default" : "grab" }}
       >
         <StageCanvas doc={doc} time={time} zoom={zoom}>
-          {!clean && selected?.type === "sprite" && (
+          {!clean && (selected?.type === "sprite" || selected?.type === "ribbon") && (
             <PathEditor
               doc={doc}
               clip={selected}

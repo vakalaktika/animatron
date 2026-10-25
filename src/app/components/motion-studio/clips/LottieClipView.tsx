@@ -35,6 +35,7 @@ export function LottieClipView({ clip, time }: Props) {
         setAnim(item);
       })
       .catch((err: unknown) => {
+        // The lottie-web chunk failed to load, or it rejected the imported JSON.
         setError(err instanceof Error ? err.message : String(err));
       });
     return () => {
