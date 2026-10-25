@@ -1,7 +1,7 @@
 "use client";
 
 import { useMotionValueEvent, type MotionValue } from "motion/react";
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { clipEnd } from "@/app/components/motion-studio/engine/timing";
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { Button, Select, Toggle } from "@/app/components/shared-components";
@@ -73,18 +73,46 @@ function tickStep(duration: number): number {
   return 5;
 }
 
-/** Seconds along the top of the tracks; click anywhere on it to jump there. */
-function Ruler({ duration, onSeek }: { duration: number; onSeek: (s: number) => void }) {
+/** Seconds along the top of the tracks; press or drag anywhere on it to move the playhead. */
+function Ruler({ duration, now, onSeek }: { duration: number; now: number; onSeek: (s: number) => void }) {
   const step = tickStep(duration);
   const ticks: number[] = [];
   for (let t = 0; t <= duration + 1e-6; t += step) ticks.push(Number(t.toFixed(2)));
+  const scrubbing = useRef(false);
+  const seekTo = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    onSeek(Math.max(0, Math.min(duration, ((e.clientX - r.left) / r.width) * duration)));
+  };
   return (
     <div
-      role="presentation"
-      className="relative h-4 min-w-0 flex-1 cursor-pointer select-none border-b border-hairline"
+      role="slider"
+      tabIndex={0}
+      aria-label="Playhead"
+      aria-valuemin={0}
+      aria-valuemax={duration}
+      aria-valuenow={now}
+      aria-valuetext={`${now.toFixed(2)} seconds`}
+      className="relative h-6 min-w-0 flex-1 cursor-ew-resize touch-none select-none border-b border-hairline"
       onPointerDown={(e) => {
-        const r = e.currentTarget.getBoundingClientRect();
-        onSeek(Math.max(0, Math.min(duration, ((e.clientX - r.left) / r.width) * duration)));
+        scrubbing.current = true;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        seekTo(e);
+      }}
+      onPointerMove={(e) => {
+        if (scrubbing.current) seekTo(e);
+      }}
+      onPointerUp={() => {
+        scrubbing.current = false;
+      }}
+      onPointerCancel={() => {
+        scrubbing.current = false;
+      }}
+      onKeyDown={(e) => {
+        const nudge = e.shiftKey ? 1 : 0.1;
+        if (e.key === "ArrowLeft") onSeek(Math.max(0, now - nudge));
+        if (e.key === "ArrowRight") onSeek(Math.min(duration, now + nudge));
+        if (e.key === "Home") onSeek(0);
+        if (e.key === "End") onSeek(duration);
       }}
     >
       {ticks.map((t) => (
@@ -98,6 +126,11 @@ function Ruler({ duration, onSeek }: { duration: number; onSeek: (s: number) => 
           <span className="h-1 w-px bg-border-strong" />
         </span>
       ))}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-px h-3 w-3 -translate-x-1/2 translate-y-1/2 rotate-45 rounded-[2px] bg-accent"
+        style={{ left: `${duration > 0 ? (now / duration) * 100 : 0}%` }}
+      />
     </div>
   );
 }
@@ -126,9 +159,13 @@ export function Transport({
 }: Props) {
   const [now, setNow] = useState(0);
   useMotionValueEvent(time, "change", (t) => setNow(t));
+  const trackRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectedId) return;
+    trackRef.current?.querySelector<HTMLElement>(`[data-track-id="${selectedId}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [selectedId, doc.clips.length]);
   const pct = duration > 0 ? (now / duration) * 100 : 0;
 
-  const trackRef = useRef<HTMLDivElement>(null);
   const barDrag = useRef<{ id: string; startX: number; startValue: number } | null>(null);
   const [draggingBar, setDraggingBar] = useState<string | null>(null);
   const reorder = useReorderDrag(onReorder);
@@ -282,6 +319,7 @@ export function Transport({
             <div
               key={clip.id}
               data-reorder-row
+              data-track-id={clip.id}
               className={`group flex items-center gap-0.5 rounded-md py-1 pr-1 ${isSelected ? "bg-primary-soft" : ""} ${motion.className}`}
               style={motion.style}
             >
@@ -303,6 +341,7 @@ export function Transport({
               <div className="relative mt-1 h-5 overflow-hidden">
                 {barEl}
                 {markers}
+                <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 w-0.5 bg-accent" style={{ left: `${pct}%` }} />
               </div>
               </div>
             </div>
@@ -312,6 +351,7 @@ export function Transport({
           <div
             key={clip.id}
             data-reorder-row
+            data-track-id={clip.id}
             className={`group flex h-5 items-center rounded pointer-coarse:h-11 ${isSelected ? "bg-primary-soft" : ""} ${motion.className}`}
             style={motion.style}
           >
@@ -340,11 +380,13 @@ export function Transport({
           </div>
         );
       })}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-1 bottom-0 w-0.5 bg-accent"
-        style={{ left: `calc(${LABEL_W} + (100% - ${LABEL_W}) * ${pct / 100})` }}
-      />
+      {!stacked && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-1 bottom-0 w-0.5 bg-accent"
+          style={{ left: `calc(${LABEL_W} + (100% - ${LABEL_W}) * ${pct / 100})` }}
+        />
+      )}
     </div>
   );
 
@@ -366,13 +408,9 @@ export function Transport({
         <span className="w-28">{readout}</span>
         {speedAndLoop}
       </div>
-      <div className="flex items-center gap-2">
-        <span style={{ width: `calc(${LABEL_W} - 8px)` }} className="shrink-0" aria-hidden="true" />
-        {scrubber}
-      </div>
       <div className="flex">
         <span style={{ width: LABEL_W }} className="shrink-0" aria-hidden="true" />
-        <Ruler duration={duration} onSeek={onSeek} />
+        <Ruler duration={duration} now={now} onSeek={onSeek} />
       </div>
       {tracks}
     </div>

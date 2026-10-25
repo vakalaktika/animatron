@@ -18,7 +18,7 @@ const SQRT2 = Math.SQRT2;
 
 const FONT_STYLE: Record<TextClip["font"], CSSProperties> = {
   sans: { fontFamily: "var(--font-work-sans), Arial, sans-serif", fontWeight: 500, letterSpacing: "0.01em" },
-  serif: { fontFamily: "var(--font-gelasio), Georgia, serif", fontWeight: 600, letterSpacing: "-0.01em" },
+  serif: { fontFamily: "var(--font-fraunces), Georgia, serif", fontWeight: 600, letterSpacing: "-0.01em" },
 };
 
 const SHADOW: Record<TextClip["container"]["shape"], string> = {

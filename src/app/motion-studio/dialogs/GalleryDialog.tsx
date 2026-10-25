@@ -82,7 +82,7 @@ export function GalleryDialog({
                 <Select variant="compact" aria-label="Frame size" className="w-full" value={frame} onChange={(e) => setFrame(Number(e.target.value))}>
                   {FRAME_SIZES.map((f, i) => (
                     <option key={f.label} value={i}>
-                      {f.label}
+                      {f.width} × {f.height}
                     </option>
                   ))}
                 </Select>

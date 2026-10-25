@@ -79,13 +79,13 @@ export function SquiggleStudio() {
           <AtomMark className="text-primary" />
           {wide ? "Animatron" : "Squiggle Studio"}
         </h1>
-        {wide && <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">Squiggle Studio · draw a line, then send it to the canvas as a ribbon, a flight path or a picture</span>}
+        {wide && <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">Squiggle Studio</span>}
       </header>
 
       <div className={`flex min-h-0 flex-1 ${wide ? "flex-row" : "flex-col"}`}>
         <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-4">
           <div className={wide ? "flex flex-wrap items-center gap-x-2 gap-y-3" : "grid grid-cols-4 gap-2"}>
-            {wide && <p className="atm-help mr-auto">Draw on the paper. Each line becomes a squiggle you can send to the canvas.</p>}
+            {wide && <span className="mr-auto" />}
             <Button variant="outline" size="xs" onClick={undo} disabled={noStrokes}>
               Undo
             </Button>

@@ -81,20 +81,22 @@ export function ExportDialog({ open, onClose, docName, duration, canRecord, onRe
           {share?.copied ? "Copied" : share?.url ? "Copy again" : "Copy link"}
         </Button>
       </Row>
-      {share?.url && !share.copied && (
-        <input
-          readOnly
-          aria-label="Share link"
-          className="-mt-2 mb-2 w-full rounded-sm border border-border-control bg-surface px-2 py-1.5 font-mono text-xs text-ink"
-          value={share.url}
-          onFocus={(e) => e.currentTarget.select()}
-        />
-      )}
-      {share?.error && (
-        <p role="alert" className="-mt-2 mb-2 rounded-md bg-error-soft px-3 py-2 text-sm text-ink">
-          {share.error}
-        </p>
-      )}
+      <div className="-mt-2 mb-2 min-h-9 sm:pl-14">
+        {share?.url && (
+          <input
+            readOnly
+            aria-label="Share link"
+            className="w-full rounded-sm border border-border-control bg-surface px-2 py-1.5 font-mono text-xs text-ink"
+            value={share.url}
+            onFocus={(e) => e.currentTarget.select()}
+          />
+        )}
+        {share?.error && (
+          <p role="alert" className="rounded-md bg-error-soft px-3 py-2 text-sm text-ink">
+            {share.error}
+          </p>
+        )}
+      </div>
       <Row icon={<FileIcon />} title="Save a file" blurb="A JSON file of the composition, to keep, back up, or drop back into the studio later.">
         <Button size="sm" variant="outline" onClick={onDownloadJson}>
           Download JSON

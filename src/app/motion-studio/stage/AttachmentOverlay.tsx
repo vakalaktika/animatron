@@ -10,9 +10,11 @@ interface Props {
   time: MotionValue<number>;
   selected: Clip;
   zoom: number;
+  /** Name the children; off while the path editor's numbered dots are up, so nothing overprints. */
+  labels?: boolean;
 }
 
-const LEADER = "#2b6cb0";
+const LEADER = "var(--info)";
 
 /** Dashed line from a selected child's anchor to its parent's anchor, live with the clock. */
 function LeaderLine({ doc, time, selected, zoom }: Props) {
@@ -39,7 +41,7 @@ function LeaderLine({ doc, time, selected, zoom }: Props) {
 }
 
 /** Faint ring on one child of the selected parent, tracking its live anchor. */
-function ChildMark({ doc, time, child, zoom }: Omit<Props, "selected"> & { child: Clip }) {
+function ChildMark({ doc, time, child, zoom, labels = true }: Omit<Props, "selected"> & { child: Clip }) {
   const world = useTransform(time, (t) => transformAt(doc, child.id, t));
   const cx = useTransform(world, (w) => w.x);
   const cy = useTransform(world, (w) => w.y);
@@ -56,15 +58,17 @@ function ChildMark({ doc, time, child, zoom }: Omit<Props, "selected"> & { child
         strokeWidth={1.5 / zoom}
         strokeDasharray={`${4 / zoom} ${4 / zoom}`}
       />
-      <motion.text
-        x={labelX}
-        y={labelY}
-        fontSize={11 / zoom}
-        fill={LEADER}
-        style={{ fontFamily: "var(--font-work-sans), sans-serif" }}
-      >
-        {child.name}
-      </motion.text>
+      {labels && (
+        <motion.text
+          x={labelX}
+          y={labelY}
+          fontSize={11 / zoom}
+          fill={LEADER}
+          style={{ fontFamily: "var(--font-work-sans), sans-serif" }}
+        >
+          {child.name}
+        </motion.text>
+      )}
     </g>
   );
 }
@@ -82,7 +86,7 @@ export function AttachmentOverlay(props: Props) {
     <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
       {selected.parentId && <LeaderLine {...props} />}
       {children.map((child) => (
-        <ChildMark key={child.id} doc={doc} time={props.time} zoom={props.zoom} child={child} />
+        <ChildMark key={child.id} doc={doc} time={props.time} zoom={props.zoom} child={child} labels={props.labels} />
       ))}
     </svg>
   );

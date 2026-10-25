@@ -92,6 +92,7 @@ export function EditorStage({
     }
     const id = target.dataset.clipId;
     if (!id) return;
+    e.preventDefault();
     onSelect(id);
     const rest = restTransformAt(doc, id);
     drag.current = { id, anchor: { x: rest.x, y: rest.y }, startX: e.clientX, startY: e.clientY, targets: snapTargets(doc, id) };
@@ -149,11 +150,13 @@ export function EditorStage({
           {!clean && selected?.type === "text" && selected.tail.mode === "manual" && (
             <TailHandle doc={doc} clip={selected} time={time} zoom={zoom} onChange={onChangeClip} />
           )}
-          {!clean && selected && <AttachmentOverlay doc={doc} time={time} selected={selected} zoom={zoom} />}
+          {!clean && selected && (
+            <AttachmentOverlay doc={doc} time={time} selected={selected} zoom={zoom} labels={selected.type !== "sprite" && selected.type !== "ribbon"} />
+          )}
           {!clean && selected && selected.type !== "sprite" && (
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#2b6cb0]"
+              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-info"
               style={{ left: selected.x, top: selected.y }}
             />
           )}

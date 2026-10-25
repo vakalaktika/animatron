@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
-import { docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
+import { clipEnd, docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
 import type { Clip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
 import { ExportDialog } from "./dialogs/ExportDialog";
@@ -564,6 +564,22 @@ export function MotionStudio() {
     return () => window.removeEventListener("keydown", onKey);
   }, [clock, addWaypoint, removeWaypoint, selectedPoint, selected, undo, redo, duplicateClip, addClip, doc, removeClip, moveClip, clean, dialog, codePreview, notify]);
 
+  // Choosing a clip from the list or the stage shows it: if the playhead is
+  // outside its time range it would be invisible, so park the clock where it
+  // appears before anything can be dragged blind.
+  const revealClip = useCallback(
+    (id: string | null) => {
+      setSelectedId(id);
+      const clip = id ? doc.clips.find((c) => c.id === id) : null;
+      if (!clip) return;
+      const t = clock.time.get();
+      if (t < clip.start || t > clipEnd(clip)) {
+        clock.pause();
+        clock.seek(Math.min(clipEnd(clip), clip.start + 0.3));
+      }
+    },
+    [doc.clips, clock],
+  );
   const transportProps = {
     doc,
     time: clock.time,
@@ -580,7 +596,7 @@ export function MotionStudio() {
     },
     onSpeed: setSpeed,
     onLoop: setLoop,
-    onSelect: setSelectedId,
+    onSelect: revealClip,
     selectedPoint,
     onSelectWaypoint: (clipId: string, index: number) => {
       setSelectedId(clipId);
@@ -596,7 +612,7 @@ export function MotionStudio() {
 
   // Choosing a clip from the list opens its settings wherever they live.
   const pickClip = (id: string | null) => {
-    setSelectedId(id);
+    revealClip(id);
     setMobileTab("edit");
     setLandscapeDrawer((open) => (open ? "edit" : open));
   };
@@ -610,7 +626,7 @@ export function MotionStudio() {
       doc={doc}
       time={clock.time}
       selectedId={selectedId}
-      onSelect={setSelectedId}
+      onSelect={revealClip}
       onMoveClip={moveClip}
       onMovePoint={movePoint}
       selectedPoint={selectedPoint}
@@ -626,14 +642,26 @@ export function MotionStudio() {
               </Button>
             </div>
           )
-        ) : mode === "desktop" ? (
-          <div data-stage-overlay className="absolute top-4 left-4 z-10">
-            {addToolbar("rail")}
-          </div>
         ) : (
-          <div data-stage-overlay className="absolute right-3 bottom-3 z-10">
-            {addToolbar("sheet")}
-          </div>
+          <>
+            {doc.clips.length === 0 && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-8">
+                <p className="max-w-xs text-center text-base leading-6 text-ink-secondary">
+                  An empty canvas. Add text, a shape, a picture or a ribbon with <strong className="font-semibold text-ink">+</strong>
+                  {mode === "desktop" ? " on the left" : " below"}, or open <strong className="font-semibold text-ink">Compositions</strong> for a ready-made start.
+                </p>
+              </div>
+            )}
+            {mode === "desktop" ? (
+              <div data-stage-overlay className="absolute top-4 left-4 z-10">
+                {addToolbar("rail")}
+              </div>
+            ) : (
+              <div data-stage-overlay className="absolute right-3 bottom-3 z-10">
+                {addToolbar("sheet")}
+              </div>
+            )}
+          </>
         )
       }
     />
@@ -758,11 +786,6 @@ export function MotionStudio() {
     ) : (
       <>
         <CanvasPanel doc={doc} onChangeDoc={(next) => setDoc(next, "canvas")} />
-        {doc.clips.length === 0 && (
-          <p className="mt-6 rounded-md border border-dashed border-border-control p-4 text-sm leading-5 text-ink-secondary">
-            An empty canvas. Use <strong className="font-semibold text-ink">+</strong> {mode === "desktop" ? "on the left of the canvas" : "over the canvas"} to add text, a shape, a picture or a ribbon, or open <strong className="font-semibold text-ink">Compositions</strong> for a ready-made start.
-          </p>
-        )}
         {mode !== "desktop" && (
           <div className="mt-6 flex flex-wrap gap-2 border-t border-hairline pt-4">
             <Link href="/squiggle" className="atm-button-type inline-flex min-h-11 items-center gap-2 rounded-md border border-border-control px-3 text-[12.5px] leading-none text-ink">

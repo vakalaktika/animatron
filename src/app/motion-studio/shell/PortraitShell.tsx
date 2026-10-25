@@ -23,7 +23,7 @@ export function PortraitShell({ title, phoneActions, stage, playback, tracks, cl
   const panel = (id: MobileTab) => ({ role: "tabpanel", id: panelId(id), "aria-labelledby": tabId(id) });
 
   return (
-    <div className="flex h-dvh flex-col bg-surface font-body text-ink">
+    <div className="flex h-dvh flex-col overflow-hidden bg-surface font-body text-ink">
       <header className="flex min-h-12 min-w-0 items-center gap-2 border-b border-border-strong bg-surface-raised pt-[env(safe-area-inset-top)] pr-1 pl-3">
         <h1 className="flex shrink-0 items-center">
           <AtomMark className="text-primary" />

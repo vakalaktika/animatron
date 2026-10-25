@@ -79,7 +79,7 @@ function ShapePicker({ onPick }: { onPick: (kind: ShapeKind, fill: string) => vo
             aria-checked={fill === c}
             aria-label={`Colour ${c}`}
             onClick={() => setFill(c)}
-            className={`h-8 w-8 rounded-full border-2 transition-transform duration-150 ${fill === c ? "scale-110 border-ink" : "border-transparent hover:scale-105"}`}
+            className={`h-8 w-8 rounded-full border-2 transition-transform duration-150 ${fill === c ? "scale-110 border-ink" : "border-border-strong hover:scale-105"}`}
             style={{ backgroundColor: c }}
           />
         ))}

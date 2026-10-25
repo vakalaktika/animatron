@@ -9,8 +9,8 @@ interface Props {
   mac: boolean;
 }
 
-const TIPS = [
-  ["Pick anything on the canvas", "Click it, then change it on the right. Drag it to move it; it snaps to the middle and to other layers. Hold Alt to skip snapping."],
+const tips = (mac: boolean): [string, string][] => [
+  ["Pick anything on the canvas", `Tap or click it, then change it in the settings panel. Drag it to move it; it snaps to the middle and to other layers. Hold ${mac ? "Option" : "Alt"} to skip snapping.`],
   ["Shape a path", "Select a picture or ribbon and drag its numbered dots. Press W to drop a new point wherever the picture is right now."],
   ["Make something ride along", "In Position and timing, open \"Follow another clip\". Text can even ride the tip of a ribbon as it draws."],
   ["Change when things happen", "Drag a bar on the timeline left or right, or set Starts at in the panel."],
@@ -41,7 +41,7 @@ export function HelpDialog({ open, onClose, mac }: Props) {
             Good to know
           </h3>
           <ol className="flex flex-col gap-4">
-            {TIPS.map(([title, body], i) => (
+            {tips(mac).map(([title, body], i) => (
               <li key={title} className="flex gap-3">
                 <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-soft font-sans text-[12px] font-semibold text-primary">
                   {i + 1}

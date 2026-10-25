@@ -60,7 +60,7 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint, selectedPoint, 
   return (
     <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
       <motion.g transform={frame}>
-      <path d={d} fill="none" stroke="#2b6cb0" strokeWidth={2 / zoom} strokeDasharray={`${8 / zoom} ${6 / zoom}`} />
+      <path d={d} fill="none" stroke="var(--info)" strokeWidth={2 / zoom} strokeDasharray={`${8 / zoom} ${6 / zoom}`} />
       {points.map((p, i) => (
         <g key={i}>
           {i === selectedPoint && (
@@ -77,7 +77,7 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint, selectedPoint, 
             cx={clip.x + p.x}
             cy={clip.y + p.y}
             r={handleRadius}
-            fill={markEnd && i === points.length - 1 ? "#c33a26" : "#2b6cb0"}
+            fill={markEnd && i === points.length - 1 ? "var(--accent)" : "var(--info)"}
             stroke="#fff"
             strokeWidth={2 / zoom}
             style={{ cursor: "move", pointerEvents: "all" }}
@@ -90,7 +90,7 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint, selectedPoint, 
             x={clip.x + p.x + handleRadius * 1.4}
             y={clip.y + p.y - handleRadius * 0.6}
             fontSize={12 / zoom}
-            fill="#2b6cb0"
+            fill="var(--info)"
             style={{ pointerEvents: "none", fontFamily: "var(--font-work-sans), sans-serif" }}
           >
             {i + 1}
