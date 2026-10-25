@@ -170,3 +170,47 @@ export function flightFromSquiggle(
 export function artworkFromSquiggle(svg: string, label: string, stage: Pick<StageConfig, "width" | "height">): SpriteClip | null {
   return svgSpriteFrom(svg, label, stage, { start: 0 });
 }
+
+/**
+ * A line drawn straight onto the canvas becomes a ribbon where it was drawn:
+ * no fitting, just thinned to waypoints and anchored on its first point.
+ * Draw time scales with its length.
+ */
+export function ribbonFromStroke(points: Point[], colors?: string[], band = 10): RibbonClip | null {
+  if (points.length < 2) return null;
+  const length = polylineLength(points);
+  if (length < 20) return null;
+  const waypoints = dropCrowdedEnd(resample(points, waypointStep(length)), 10);
+  const [ax, ay] = waypoints[0];
+  return makeRibbon({
+    name: "Drawn ribbon",
+    start: 0,
+    x: ax,
+    y: ay,
+    points: waypoints.map(([x, y]) => ({ x: x - ax, y: y - ay })),
+    ...(colors ? { colors: colors.slice() } : {}),
+    band,
+    duration: Math.min(MAX_DURATION, Math.max(MIN_DURATION, length / SPEED)),
+  });
+}
+
+/**
+ * A line drawn onto the canvas becomes the selected picture's flight path:
+ * it lands where the line ends, travelling at the squiggle flight speed.
+ */
+export function pathFromStroke(clip: SpriteClip, points: Point[]): SpriteClip | null {
+  if (points.length < 2) return null;
+  const length = polylineLength(points);
+  if (length < 20) return null;
+  const step = waypointStep(length);
+  const waypoints = dropCrowdedEnd(resample(points, step), step / 2);
+  const [ax, ay] = waypoints[waypoints.length - 1];
+  return {
+    ...clip,
+    loop: false,
+    x: ax,
+    y: ay,
+    path: waypoints.map(([x, y]) => ({ x: x - ax, y: y - ay })),
+    duration: Math.min(MAX_DURATION, Math.max(MIN_DURATION, length / SPEED)),
+  };
+}

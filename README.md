@@ -10,7 +10,9 @@ Live app: https://vakalaktika.github.io/animatron/
 - **Edit** by picking it: drag it on the canvas (it snaps to the centre and to other layers; hold Alt to skip), drag the numbered dots to reshape a path, or change it in the panel on the right. Every panel leads with the basics and tucks the fine-tuning under *Fine-tune*.
 - **Undo** anything with ⌘Z / Ctrl+Z. Arrow keys nudge, Delete removes, ⌘D duplicates, ⌘C / ⌘V copy and paste. Press **?** for the full list.
 - **Compositions** keeps every piece you work on in this browser, with live thumbnails, plus the templates and a blank canvas in any frame.
-- **Share** copies a link that carries the whole composition, records a WebM through the browser, downloads JSON, or shows the React component for developers.
+- **Resize and turn** anything with the corner handles and the turn handle above it; shift-click to pick several layers and move or delete them together. Drag the right end of a timeline bar to make a clip longer or shorter.
+- **Draw** with the pen in the add bar: a line on the canvas becomes a ribbon where you drew it, or the flight path of the picture you picked first.
+- **Share** copies a link that carries the whole composition, renders an MP4 frame by frame in the browser (no screen capture), downloads JSON, or shows the React component for developers.
 
 ## Development
 

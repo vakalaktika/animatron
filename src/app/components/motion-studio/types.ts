@@ -66,6 +66,10 @@ export interface ClipBase {
   x: number;
   y: number;
   scale: number;
+  /** Degrees clockwise the whole clip is turned, on top of any animated heading. Unset = 0. */
+  rotation?: number;
+  /** 0..1 overall opacity, multiplied with any animated fade. Unset = 1. */
+  opacity?: number;
   /** Clip this one rides on. Position and scale are always inherited. */
   parentId: string | null;
   /** Also inherit the parent's rotation (a wing on a bird: yes; a bubble on a bird: no). */

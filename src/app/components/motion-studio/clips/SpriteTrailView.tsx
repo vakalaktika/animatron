@@ -26,7 +26,7 @@ interface Props {
 export function SpriteTrailView({ doc, clip, time }: Props) {
   const bands = trailBands(clip);
   const window = useTransform(time, (t) => trailWindow(clip, t));
-  const opacity = useTransform(time, (t) => trailOpacity(clip, t));
+  const opacity = useTransform(time, (t) => trailOpacity(clip, t) * (clip.opacity ?? 1));
   const frame = useTransform(time, (t) => {
     const w = parentTransformAt(doc, clip.id, t);
     return `translate(${w.x} ${w.y}) scale(${w.scaleX} ${w.scaleY}) rotate(${w.rotation})`;

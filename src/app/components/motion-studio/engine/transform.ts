@@ -85,18 +85,26 @@ function textLocal(clip: TextClip, t: number): WorldTransform {
   return { x: clip.x, y: clip.y, rotation: 0, scaleX: s, scaleY: s, opacity };
 }
 
+/** The clip's own turn and opacity, applied over whatever its animation does. */
+function styled(clip: Clip, local: WorldTransform): WorldTransform {
+  const rotation = clip.rotation ?? 0;
+  const opacity = clip.opacity ?? 1;
+  if (rotation === 0 && opacity === 1) return local;
+  return { ...local, rotation: local.rotation + rotation, opacity: local.opacity * opacity };
+}
+
 /** The clip's placement with no animation applied: where it sits when settled. */
 export function restLocal(clip: Clip): WorldTransform {
-  return { x: clip.x, y: clip.y, rotation: 0, scaleX: clip.scale, scaleY: clip.scale, opacity: 1 };
+  return styled(clip, { x: clip.x, y: clip.y, rotation: 0, scaleX: clip.scale, scaleY: clip.scale, opacity: 1 });
 }
 
 /** The clip's own animated placement at time `t`, ignoring any parent. */
 export function localTransformAt(clip: Clip, t: number): WorldTransform {
   switch (clip.type) {
     case "sprite":
-      return spriteLocal(clip, t);
+      return styled(clip, spriteLocal(clip, t));
     case "text":
-      return textLocal(clip, t);
+      return styled(clip, textLocal(clip, t));
     case "logo":
     case "lottie":
     case "ribbon":

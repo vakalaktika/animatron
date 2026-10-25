@@ -283,6 +283,26 @@
   }
 }
 
+/*
+ * Trim handle on the end of a timeline bar: a thin grip that darkens on
+ * hover so the bar reads as stretchable, which is what its shape promises.
+ */
+.t-trim {
+  background: linear-gradient(to right, transparent 0, transparent 40%, rgba(255, 255, 255, 0.55) 40%, rgba(255, 255, 255, 0.55) 60%, transparent 60%);
+  opacity: 0;
+  transition: opacity var(--duration-quick) var(--ease-out);
+}
+.group:hover .t-trim,
+.t-trim:focus-visible,
+.t-trim:active {
+  opacity: 1;
+}
+@media (pointer: coarse) {
+  .t-trim {
+    opacity: 1;
+  }
+}
+
 /* A see-through canvas sits on a checkerboard so "transparent" is visible. */
 .atm-checker {
   background-color: var(--surface-raised);

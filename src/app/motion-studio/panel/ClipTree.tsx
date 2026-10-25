@@ -10,7 +10,10 @@ import { TREE_INDENT, useTreeDrag } from "./useTreeDrag";
 interface Props {
   doc: StudioDoc;
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  /** `additive` (shift held) adds the layer to the selection instead of replacing it. */
+  onSelect: (id: string, additive?: boolean) => void;
+  /** Layers selected alongside the main one. */
+  extraIds?: ReadonlySet<string>;
   /** The pinned Canvas row: shows the canvas settings. */
   onSelectCanvas: () => void;
   onRename: (clip: Clip, name: string) => void;
@@ -75,6 +78,7 @@ const ROW_ACTION =
 export function ClipTree({
   doc,
   selectedId,
+  extraIds,
   onSelect,
   onSelectCanvas,
   onRename,
@@ -140,6 +144,7 @@ export function ClipTree({
           const moving = held || riding;
           const receiving = dragging && target?.parentId === clip.id;
           const selected = selectedId === clip.id;
+          const extra = !selected && !!extraIds?.has(clip.id);
           const rowClass = [
             "t-drag-row",
             held && "is-dragging",
@@ -160,7 +165,7 @@ export function ClipTree({
               key={clip.id}
               data-tree-row
               className={`group flex min-h-10 items-center gap-1 rounded-md pr-1 text-sm transition-colors duration-150 ${
-                selected ? "bg-primary-soft" : "hover:bg-surface-sunken"
+                selected ? "bg-primary-soft" : extra ? "bg-primary-soft/50" : "hover:bg-surface-sunken"
               } ${clip.enabled ? "" : "text-ink-muted"} ${rowClass}`}
               style={style}
             >
@@ -215,7 +220,7 @@ export function ClipTree({
                   className="min-w-0 flex-1 truncate py-2 text-left"
                   aria-current={selected ? "true" : undefined}
                   title={`${clip.name} · ${clipKind(clip)}. Double-click to rename.`}
-                  onClick={() => onSelect(clip.id)}
+                  onClick={(e) => onSelect(clip.id, e.shiftKey)}
                   onDoubleClick={() => setRenamingId(clip.id)}
                 >
                   {clip.name}

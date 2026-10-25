@@ -11,9 +11,12 @@ import { GalleryDialog } from "./dialogs/GalleryDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
 import { clipComponentCode, docComponentCode, HANDOFF_NOTES } from "./export/codegen";
 import { downloadBlob, downloadText, startTabRecording, type Recording } from "./export/recorder";
+import { canRenderOffline } from "./export/renderer";
+import { VideoExporter } from "./export/VideoExporter";
 import { deleteClip, deltaInParentFrame, dropClip, nudgeClip, reparentClip } from "./lib/attach";
+import { ancestorChain } from "@/app/components/motion-studio/engine/hierarchy";
 import { copyClip, copyOf, heldClip } from "./lib/clipboard";
-import { artworkFromSquiggle, flightFromSquiggle, ribbonFromSquiggle, takeHandoff } from "./lib/handoff";
+import { artworkFromSquiggle, flightFromSquiggle, pathFromStroke, ribbonFromSquiggle, ribbonFromStroke, takeHandoff } from "./lib/handoff";
 import { canRedo, canUndo, createHistory, record, redo as redoHistory, reset as resetHistory, undo as undoHistory, type History } from "./lib/history";
 import { normalizeOrder, moveAmongSiblings, type DropTarget } from "./lib/tree";
 import { reorder } from "./lib/order";
@@ -97,11 +100,16 @@ export function MotionStudio() {
   const redo = useCallback(() => setHistory(redoHistory), []);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Shift-click builds a group: these move, nudge and delete with the main
+  // selection but only the main one has its settings open.
+  const [extraIds, setExtraIds] = useState<ReadonlySet<string>>(() => new Set());
   // The clip just added by a "+" button: its text field gets focus once.
   const [freshId, setFreshId] = useState<string | null>(null);
   const [speed, setSpeed] = useState(1);
   const [loop, setLoop] = useState(false);
   const [clean, setClean] = useState(false);
+  // The pen: strokes on the canvas become ribbons, or the selected picture's path.
+  const [drawing, setDrawing] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastSeq = useRef(0);
   const notify = useCallback((text: string, extra: Partial<Omit<ToastMessage, "id" | "text">> = {}) => {
@@ -110,7 +118,8 @@ export function MotionStudio() {
   }, []);
   const dismissToast = useCallback((id: number) => setToast((t) => (t?.id === id ? null : t)), []);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "failed">("saved");
-  const [dialog, setDialog] = useState<"gallery" | "export" | "help" | null>(null);
+  const [dialog, setDialog] = useState<"gallery" | "export" | "help" | "render" | null>(null);
+  const canRender = typeof window !== "undefined" && canRenderOffline();
   // Phone portrait: which panel the bottom tab bar shows under the stage.
   const [mobileTab, setMobileTab] = useState<MobileTab>("timeline");
   // Portrait: panels hidden so the stage fills the screen.
@@ -145,6 +154,9 @@ export function MotionStudio() {
   const clock = useStudioClock(duration, { autoplay: true, loop: loop || hasLoopingClip, speed });
 
   const selected = doc.clips.find((c) => c.id === selectedId) ?? null;
+  const extras = useMemo(() => new Set([...extraIds].filter((id) => id !== selectedId && doc.clips.some((c) => c.id === id))), [extraIds, selectedId, doc.clips]);
+  /** Every selected clip, main one first. */
+  const selectionIds = useMemo(() => (selectedId ? [selectedId, ...extras] : []), [selectedId, extras]);
   // The waypoint being edited, remembered with its clip so switching clips clears it.
   const [pointSelection, setPointSelection] = useState<{ clipId: string; index: number } | null>(null);
   const selectedPoint =
@@ -176,8 +188,17 @@ export function MotionStudio() {
   // its parent's frame, so the delta is mapped through the parent's transform
   // at the current clock time before it is applied.
   const moveClip = useCallback(
-    (id: string, delta: Vec2) => setDoc((d) => nudgeClip(d, id, delta, clock.time.get()), `move:${id}`),
-    [clock.time, setDoc],
+    (id: string, delta: Vec2) => {
+      // A grouped drag moves every selected clip once: a clip whose ancestor
+      // is also selected rides along already.
+      const ids = selectionIds.includes(id) ? selectionIds : [id];
+      setDoc((d) => {
+        const group = new Set(ids);
+        const movers = ids.filter((cid) => !ancestorChain(d, cid).slice(1).some((a) => group.has(a.id)));
+        return movers.reduce((acc, cid) => nudgeClip(acc, cid, delta, clock.time.get()), d);
+      }, `move:${ids.join("+")}`);
+    },
+    [clock.time, setDoc, selectionIds],
   );
 
   const reparent = useCallback(
@@ -187,13 +208,15 @@ export function MotionStudio() {
 
   const removeClip = useCallback(
     (id: string) => {
-      const clip = doc.clips.find((c) => c.id === id);
-      if (!clip) return;
-      setDoc((d) => deleteClip(d, id));
-      if (selectedId === id) setSelectedId(null);
-      notify(`Deleted “${clip.name}”`, { action: { label: "Undo", run: undo } });
+      const ids = selectionIds.includes(id) ? selectionIds : [id];
+      const clips = ids.map((cid) => doc.clips.find((c) => c.id === cid)).filter((c): c is Clip => !!c);
+      if (clips.length === 0) return;
+      setDoc((d) => clips.reduce((acc, c) => deleteClip(acc, c.id), d));
+      if (ids.includes(selectedId ?? "")) setSelectedId(null);
+      setExtraIds(new Set());
+      notify(clips.length === 1 ? `Deleted “${clips[0].name}”` : `Deleted ${clips.length} layers`, { action: { label: "Undo", run: undo } });
     },
-    [doc.clips, selectedId, setDoc, notify, undo],
+    [doc.clips, selectedId, selectionIds, setDoc, notify, undo],
   );
 
   const movePoint = useCallback((clipId: string, index: number, stageDelta: Vec2) => {
@@ -555,20 +578,32 @@ export function MotionStudio() {
         const delta = e.key === "ArrowLeft" ? { x: -step, y: 0 } : e.key === "ArrowRight" ? { x: step, y: 0 } : e.key === "ArrowUp" ? { x: 0, y: -step } : { x: 0, y: step };
         moveClip(selected.id, delta);
       } else if (e.key === "Escape") {
-        if (clean) setClean(false);
+        if (drawing) setDrawing(false);
+        else if (clean) setClean(false);
+        else if (extras.size > 0) setExtraIds(new Set());
         else if (selectedPoint !== null) setPointSelection(null);
         else setSelectedId(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clock, addWaypoint, removeWaypoint, selectedPoint, selected, undo, redo, duplicateClip, addClip, doc, removeClip, moveClip, clean, dialog, codePreview, notify]);
+  }, [clock, addWaypoint, removeWaypoint, selectedPoint, selected, undo, redo, duplicateClip, addClip, doc, removeClip, moveClip, clean, drawing, extras, dialog, codePreview, notify]);
 
   // Choosing a clip from the list or the stage shows it: if the playhead is
   // outside its time range it would be invisible, so park the clock where it
   // appears before anything can be dragged blind.
   const revealClip = useCallback(
-    (id: string | null) => {
+    (id: string | null, additive = false) => {
+      if (additive && id && selectedId && id !== selectedId) {
+        setExtraIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+          return next;
+        });
+        return;
+      }
+      if (!additive) setExtraIds(new Set());
       setSelectedId(id);
       const clip = id ? doc.clips.find((c) => c.id === id) : null;
       if (!clip) return;
@@ -578,7 +613,7 @@ export function MotionStudio() {
         clock.seek(Math.min(clipEnd(clip), clip.start + 0.3));
       }
     },
-    [doc.clips, clock],
+    [doc.clips, clock, selectedId],
   );
   const transportProps = {
     doc,
@@ -607,32 +642,70 @@ export function MotionStudio() {
       if (clip?.type === "sprite") updateClip(retimeWaypoint(clip, index, travel));
     },
     onSetStart: setClipStart,
+    onChangeClip: updateClip,
     onReorder: reorderClips,
   };
 
   // Choosing a clip from the list opens its settings wherever they live.
-  const pickClip = (id: string | null) => {
-    revealClip(id);
+  const pickClip = (id: string | null, additive = false) => {
+    revealClip(id, additive);
+    if (additive) return;
     setMobileTab("edit");
     setLandscapeDrawer((open) => (open ? "edit" : open));
   };
 
   const addToolbar = (layout: "rail" | "sheet") => (
-    <AddToolbar layout={layout} onAdd={addByType} onAddShape={addShape} onImport={(f) => void importFile(f)} />
+    <AddToolbar
+      layout={layout}
+      onAdd={addByType}
+      onAddShape={addShape}
+      onImport={(f) => void importFile(f)}
+      drawing={drawing}
+      onToggleDraw={() => {
+        setDrawing((d) => !d);
+        if (!drawing) {
+          clock.pause();
+          notify(selected?.type === "sprite" ? `Draw a path for “${selected.name}”. Esc stops drawing.` : "Draw on the canvas to make a ribbon. Pick a picture first to draw its path instead. Esc stops drawing.");
+        }
+      }}
+    />
   );
+
+  /** A finished pen stroke: the selected picture's new path, or a new ribbon. */
+  const finishStroke = (points: [number, number][]) => {
+    setDrawing(false);
+    if (selected?.type === "sprite") {
+      const flown = pathFromStroke(selected, points);
+      if (!flown) return;
+      updateClip(flown);
+      setPointSelection(null);
+      clock.replay();
+      notify(`“${selected.name}” now follows your line.`, { action: { label: "Undo", run: undo } });
+      return;
+    }
+    const ribbon = ribbonFromStroke(points);
+    if (!ribbon) return;
+    addClip(ribbon);
+    clock.replay();
+  };
 
   const stage = (
     <EditorStage
       doc={doc}
       time={clock.time}
       selectedId={selectedId}
+      extraIds={extras}
       onSelect={revealClip}
       onMoveClip={moveClip}
       onMovePoint={movePoint}
       selectedPoint={selectedPoint}
       onSelectPoint={selectPoint}
       onChangeClip={updateClip}
+      onScaleClip={(id, scale) => setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === id ? { ...c, scale } : c)) }), `scale:${id}`)}
+      onRotateClip={(id, rotation) => setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === id ? { ...c, rotation } : c)) }), `rotate:${id}`)}
       clean={clean}
+      drawing={drawing}
+      onDraw={finishStroke}
       overlay={
         clean ? (
           !recording && (
@@ -694,7 +767,7 @@ export function MotionStudio() {
           className="atm-button-type inline-flex min-h-10 items-center gap-2 rounded-md border border-border-control px-3 text-[12.5px] leading-none text-ink transition-[background-color,box-shadow] duration-200 hover:bg-surface-raised hover:shadow-pop"
         >
           <SquiggleIcon width={18} height={18} />
-          Draw
+          Squiggles
         </Link>
         <Button size="sm" icon={<ShareIcon width={18} height={18} />} onClick={() => setDialog("export")}>
           Share
@@ -723,6 +796,7 @@ export function MotionStudio() {
       <ClipTree
         doc={doc}
         selectedId={selectedId}
+        extraIds={extras}
         onSelect={pickClip}
         onSelectCanvas={() => pickClip(null)}
         onRename={(clip, name) => updateClip({ ...clip, name })}
@@ -752,6 +826,11 @@ export function MotionStudio() {
             return <Glyph width={20} height={20} className="shrink-0 text-primary" />;
           })()}
           <h2 className="min-w-0 flex-1 truncate font-display text-lg font-semibold">{selected.name}</h2>
+          {extras.size > 0 && (
+            <span className="shrink-0 rounded-full bg-primary-soft px-2 py-0.5 font-sans text-[11px] font-semibold tracking-[0.04em] text-ink" title="Shift-click adds layers to the selection; they move and delete together.">
+              +{extras.size} more
+            </span>
+          )}
         </div>
         <ClipControls
           key={selected.id}
@@ -841,6 +920,8 @@ export function MotionStudio() {
         onClose={() => setDialog(null)}
         docName={doc.name}
         duration={duration / speed}
+        canRender={canRender}
+        onRender={() => setDialog("render")}
         canRecord={canRecord}
         onRecord={() => void record_()}
         onShareLink={makeShareLink}
@@ -856,6 +937,18 @@ export function MotionStudio() {
         }}
       />
       <HelpDialog open={dialog === "help"} onClose={() => setDialog(null)} mac={mac} />
+      {dialog === "render" && (
+        <VideoExporter
+          doc={doc}
+          duration={duration}
+          fileStem={slug(doc.name)}
+          onDone={(message) => {
+            setDialog(null);
+            notify(message);
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
       {codePreview && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-surface-inverse/60 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={codePreview.title}>
           <div className="flex max-h-full w-full max-w-4xl flex-col rounded-lg border border-border-strong bg-surface-raised shadow-lg">

@@ -9,6 +9,7 @@ import { DragHandle, MoveButtons } from "./reorderChrome";
 import { PauseIcon, PlayIcon, ReplayIcon } from "./icons";
 import { rowMotion, useReorderDrag } from "./useReorderDrag";
 import { WaypointMarkers } from "./WaypointMarkers";
+import { canTrim, trimClip } from "../lib/trim";
 
 interface Props {
   doc: StudioDoc;
@@ -32,6 +33,8 @@ interface Props {
   onRetimeWaypoint: (clipId: string, index: number, travel: number) => void;
   /** Same effect as the clip's Start slider. */
   onSetStart: (id: string, start: number) => void;
+  /** The end of a bar was dragged: the clip with its length changed. */
+  onChangeClip: (clip: Clip) => void;
   /** Row order is stacking order: later rows render on top of earlier ones. */
   onReorder: (from: number, to: number) => void;
   /**
@@ -151,6 +154,7 @@ export function Transport({
   onLoop,
   onSelect,
   onSetStart,
+  onChangeClip,
   onReorder,
   selectedPoint = null,
   onSelectWaypoint,
@@ -190,6 +194,30 @@ export function Transport({
   const onBarUp = () => {
     barDrag.current = null;
     setDraggingBar(null);
+  };
+
+  // Right-edge trim: the clip as it was at pickup, and the pointer's start.
+  const trimDrag = useRef<{ clip: Clip; startX: number } | null>(null);
+  const secondsPerPixel = () => {
+    const track = trackRef.current;
+    if (!track || duration <= 0) return 0;
+    const labelWidth = parseFloat(getComputedStyle(track).getPropertyValue("--label-w")) || 0;
+    return duration / (track.getBoundingClientRect().width - labelWidth);
+  };
+  const onTrimDown = (clip: Clip) => (e: ReactPointerEvent<HTMLSpanElement>) => {
+    e.stopPropagation();
+    onSelect(clip.id);
+    trimDrag.current = { clip, startX: e.clientX };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onTrimMove = (e: ReactPointerEvent<HTMLSpanElement>) => {
+    const d = trimDrag.current;
+    if (!d) return;
+    const delta = (e.clientX - d.startX) * secondsPerPixel();
+    onChangeClip(trimClip(d.clip, Math.round(delta / START_STEP) * START_STEP));
+  };
+  const onTrimUp = () => {
+    trimDrag.current = null;
   };
 
   const playButton = (
@@ -274,6 +302,26 @@ export function Transport({
         const { left, width, clipped } = barSpan(clip, duration);
         const isSelected = selectedId === clip.id;
         const motion = rowMotion(i, reorder.state);
+        const trimEl = canTrim(clip) ? (
+          <span
+            role="slider"
+            tabIndex={0}
+            aria-label={`${clip.name} length`}
+            aria-valuemin={0}
+            aria-valuenow={Number((clipEnd(clip) - clip.start).toFixed(2))}
+            aria-valuetext={`${(clipEnd(clip) - clip.start).toFixed(2)} seconds long`}
+            className={`t-trim absolute z-[1] w-2.5 cursor-col-resize touch-none rounded-r-full pointer-coarse:w-4 ${stacked ? "top-0 h-full" : "top-0.5 h-4 pointer-coarse:top-2 pointer-coarse:h-7"}`}
+            style={{ left: `calc(${left + width}% - ${10}px)` }}
+            onPointerDown={onTrimDown(clip)}
+            onPointerMove={onTrimMove}
+            onPointerUp={onTrimUp}
+            onPointerCancel={onTrimUp}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowLeft") onChangeClip(trimClip(clip, -START_STEP));
+              if (e.key === "ArrowRight") onChangeClip(trimClip(clip, START_STEP));
+            }}
+          />
+        ) : null;
         const barEl = (
         <span
           role="slider"
@@ -340,6 +388,7 @@ export function Transport({
               </div>
               <div className="relative mt-1 h-5 overflow-hidden">
                 {barEl}
+                {trimEl}
                 {markers}
                 <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 w-0.5 bg-accent" style={{ left: `${pct}%` }} />
               </div>
@@ -375,6 +424,7 @@ export function Transport({
             </div>
             <div className="relative h-full min-w-0 flex-1 overflow-hidden">
               {barEl}
+              {trimEl}
               {markers}
             </div>
           </div>
@@ -401,7 +451,8 @@ export function Transport({
   }
 
   return (
-    <div className="space-y-3 bg-surface-raised px-4 py-3 [--label-w:190px]">
+    <div className="bg-surface-raised px-4 pb-3 [--label-w:190px]">
+      <div className="sticky top-0 z-[2] -mx-4 space-y-3 bg-surface-raised px-4 pt-3 pb-2">
       <div className="flex flex-wrap items-center gap-3">
         {playButton}
         {replayButton}
@@ -412,7 +463,8 @@ export function Transport({
         <span style={{ width: LABEL_W }} className="shrink-0" aria-hidden="true" />
         <Ruler duration={duration} now={now} onSeek={onSeek} />
       </div>
-      {tracks}
+      </div>
+      <div className="pt-1">{tracks}</div>
     </div>
   );
 }
