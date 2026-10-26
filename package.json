@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/precache.mjs",
     "start": "next dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
