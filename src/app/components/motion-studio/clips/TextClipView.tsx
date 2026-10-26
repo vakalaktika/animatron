@@ -1,11 +1,12 @@
 "use client";
 
 import { motion, useTransform, type MotionValue } from "motion/react";
-import type { CSSProperties } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { LOGO_RAINBOW } from "../assets/logoPaths";
-import { clamp01, EASE_PRESETS, lerp } from "../engine/easing";
-import { resolveTail, type ResolvedTail } from "../engine/text";
-import type { StudioDoc, TextClip } from "../types";
+import { clamp01, EASE_PRESETS } from "../engine/easing";
+import { caretAfter, glyphLook, glyphProgress, resolveTail, revealTransform, type ResolvedTail } from "../engine/text";
+import { flowRibbon, flowSeats, type GlyphSeat } from "../engine/textFlow";
+import type { RibbonClip, StudioDoc, TextClip } from "../types";
 
 interface Props {
   clip: TextClip;
@@ -15,6 +16,8 @@ interface Props {
 
 const RAINBOW_RULE = `linear-gradient(90deg, ${LOGO_RAINBOW.join(", ")})`;
 const SQRT2 = Math.SQRT2;
+/** Floor on the clip scale divided out of flowing glyph seats. */
+const MIN_FLOW_SCALE = 0.01;
 
 const FONT_STYLE: Record<TextClip["font"], CSSProperties> = {
   sans: { fontFamily: "var(--font-work-sans), Arial, sans-serif", fontWeight: 500, letterSpacing: "0.01em" },
@@ -29,40 +32,36 @@ const SHADOW: Record<TextClip["container"]["shape"], string> = {
   thought: "shadow-md",
 };
 
-function letterDelay(clip: TextClip, index: number, count: number): number {
-  const center = (count - 1) / 2;
-  const order =
-    clip.direction === "center"
-      ? Math.abs(index - center)
-      : clip.direction === "left"
-        ? index
-        : count - 1 - index;
-  return order * clip.letterStagger;
+interface GlyphProps {
+  clip: TextClip;
+  time: MotionValue<number>;
+  index: number;
+  count: number;
+  letter: string;
+  accent: boolean;
 }
 
-function Letter({
-  clip,
-  index,
-  count,
-  letter,
-  accent,
-  time,
-}: Omit<Props, "doc"> & { index: number; count: number; letter: string; accent: boolean }) {
-  const at = clip.start + letterDelay(clip, index, count);
-  const progress = useTransform(time, (t) =>
-    EASE_PRESETS.smoothOut(clamp01((t - at) / Math.max(0.001, clip.letterDuration))),
-  );
-  const y = useTransform(progress, (p) => lerp(8, 0, p));
-  const filter = useTransform(progress, (p) => `blur(${lerp(2, 0, p)}px)`);
+/**
+ * One glyph arriving per the clip's reveal. The outer box clips it for the
+ * mask reveal (it slides up from behind its own slot) and carries the
+ * typing caret on its right edge.
+ */
+function Glyph({ clip, time, index, count, letter, accent }: GlyphProps) {
+  const look = useTransform(time, (t) => glyphLook(clip.reveal, glyphProgress(clip, index, count, t)));
+  const opacity = useTransform(look, (l) => l.opacity);
+  const transform = useTransform(look, (l) => (l.drop || l.rise ? `translateY(${l.drop * 100}%) translateY(${l.rise}px)` : "none"));
+  const filter = useTransform(look, (l) => (l.blur > 0 ? `blur(${l.blur}px)` : "none"));
+  const caret = useTransform(time, (t) => (caretAfter(clip, count, t) === index ? 1 : 0));
 
   return (
-    <motion.span
-      aria-hidden="true"
-      className="inline-block"
-      style={{ color: accent ? clip.accentColor : undefined, opacity: progress, y, filter }}
-    >
-      {letter === " " ? " " : letter}
-    </motion.span>
+    <span aria-hidden="true" className={`relative inline-block ${clip.reveal === "mask" ? "overflow-hidden" : ""}`}>
+      <motion.span className="inline-block" style={{ color: accent ? clip.accentColor : undefined, opacity, transform, filter }}>
+        {letter === " " ? "\u00a0" : letter}
+      </motion.span>
+      {clip.reveal === "typewriter" && (
+        <motion.span className="absolute bottom-[0.12em] right-[-0.08em] top-[0.12em] w-[0.06em] bg-current" style={{ opacity: caret }} />
+      )}
+    </span>
   );
 }
 
@@ -122,18 +121,28 @@ function ThoughtTail({ tail, fill, stroke }: { tail: ResolvedTail; fill: string;
   );
 }
 
+/** Index of the first glyph in the highlighted ending (the count when there is none). */
+function accentStart(clip: TextClip, letters: string[]): number {
+  return clip.accentSuffix && clip.text.endsWith(clip.accentSuffix)
+    ? letters.length - Array.from(clip.accentSuffix).length
+    : letters.length;
+}
+
 /**
  * Text with an optional container and tail. Drawn so the clip origin is the
  * tail tip when a tail shows, otherwise the top centre of the box. Pop and
- * fade reveals are part of the clip's transform in the engine; the letter
- * reveal animates each glyph here.
+ * fade reveals are part of the clip's transform in the engine; the other
+ * reveals animate each glyph here. Text flowing along its ribbon parent is
+ * laid out glyph by glyph instead (see `FlowingText`).
  */
 export function TextClipView({ clip, doc, time }: Props) {
+  const ribbon = flowRibbon(doc, clip);
+  return ribbon ? <FlowingText clip={clip} ribbon={ribbon} time={time} /> : <TextBlock clip={clip} doc={doc} time={time} />;
+}
+
+function TextBlock({ clip, doc, time }: Props) {
   const letters = Array.from(clip.text);
-  const accentStart =
-    clip.accentSuffix && clip.text.endsWith(clip.accentSuffix)
-      ? letters.length - Array.from(clip.accentSuffix).length
-      : letters.length;
+  const accent = accentStart(clip, letters);
   const ruleAt = clip.start + clip.ruleDelay;
   const ruleProgress = useTransform(time, (t) =>
     EASE_PRESETS.smoothOut(clamp01((t - ruleAt) / Math.max(0.001, clip.ruleDuration))),
@@ -161,15 +170,9 @@ export function TextClipView({ clip, doc, time }: Props) {
     >
       <p className="flex" style={{ ...FONT_STYLE[clip.font], fontSize: clip.fontSize, color: clip.color }}>
         <span className="sr-only">{clip.text}</span>
-        {clip.reveal === "letters"
-          ? letters.map((letter, i) => (
-              <Letter key={i} clip={clip} index={i} count={letters.length} letter={letter} accent={i >= accentStart} time={time} />
-            ))
-          : letters.map((letter, i) => (
-              <span key={i} aria-hidden="true" style={{ color: i >= accentStart ? clip.accentColor : undefined }}>
-                {letter === " " ? " " : letter}
-              </span>
-            ))}
+        {letters.map((letter, i) => (
+          <Glyph key={i} clip={clip} index={i} count={letters.length} letter={letter} accent={i >= accent} time={time} />
+        ))}
       </p>
       {clip.rule && (
         <motion.span
@@ -187,5 +190,90 @@ export function TextClipView({ clip, doc, time }: Props) {
       {tail && container.shape === "thought" && <ThoughtTail tail={tail} fill={container.fill} stroke={container.stroke} />}
       {tail && container.shape !== "thought" && <SpeechTail tail={tail} fill={container.fill} stroke={container.stroke} />}
     </div>
+  );
+}
+
+interface FlowProps {
+  clip: TextClip;
+  ribbon: RibbonClip;
+  time: MotionValue<number>;
+}
+
+/**
+ * Text set along its ribbon parent. The clip's frame sits on the ribbon's
+ * anchor (engine/transform.ts), so each glyph is placed at its seat divided
+ * by the clip's own scale and turned to the ribbon there. Glyph widths come
+ * from an invisible row of the same glyphs, re-measured once web fonts load.
+ * Every glyph is a direct child of the clip element so the selection box
+ * wraps the run itself; the hidden row has no size and is skipped.
+ */
+function FlowingText({ clip, ribbon, time }: FlowProps) {
+  const letters = Array.from(clip.text);
+  const accent = accentStart(clip, letters);
+  const rowRef = useRef<HTMLSpanElement>(null);
+  const [widths, setWidths] = useState<number[] | null>(null);
+
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    let live = true;
+    const measure = () => {
+      if (live) setWidths(Array.from(row.children, (c) => (c as HTMLElement).offsetWidth));
+    };
+    measure();
+    document.fonts?.ready.then(measure);
+    return () => {
+      live = false;
+    };
+  }, [clip.text, clip.font, clip.fontSize]);
+
+  const seats = useTransform(time, (t) => (widths ? flowSeats(clip, ribbon, widths, t) : []));
+  const pop = useTransform(time, (t) => revealTransform(clip, t).scale);
+  const font: CSSProperties = { ...FONT_STYLE[clip.font], fontSize: clip.fontSize, color: clip.color };
+
+  return (
+    <>
+      <span className="pointer-events-none invisible absolute left-0 top-0 h-0 w-0 overflow-hidden whitespace-nowrap" style={font}>
+        <span className="sr-only visible">{clip.text}</span>
+        <span ref={rowRef} aria-hidden="true">
+          {letters.map((letter, i) => (
+            <span key={i} className="inline-block">
+              {letter === " " ? "\u00a0" : letter}
+            </span>
+          ))}
+        </span>
+      </span>
+      {widths &&
+        letters.map((letter, i) => (
+          <SeatedGlyph key={i} index={i} seats={seats} pop={pop} scale={clip.scale} style={font}>
+            <Glyph clip={clip} index={i} count={letters.length} letter={letter} accent={i >= accent} time={time} />
+          </SeatedGlyph>
+        ))}
+    </>
+  );
+}
+
+interface SeatedGlyphProps {
+  index: number;
+  seats: MotionValue<GlyphSeat[]>;
+  pop: MotionValue<number>;
+  /** The clip's own scale, divided out so the seat lands on the ribbon. */
+  scale: number;
+  style: CSSProperties;
+  children: ReactNode;
+}
+
+function SeatedGlyph({ index, seats, pop, scale, style, children }: SeatedGlyphProps) {
+  const s = Math.max(MIN_FLOW_SCALE, scale);
+  const transform = useTransform(() => {
+    const seat = seats.get()[index];
+    if (!seat) return "none";
+    return `translate(${seat.x / s}px, ${seat.y / s}px) translate(-50%, -50%) rotate(${seat.angle}deg) scale(${pop.get()})`;
+  });
+  const opacity = useTransform(seats, (all) => (all[index]?.onPath ? 1 : 0));
+  return (
+    <motion.span aria-hidden="true" className="absolute left-0 top-0 whitespace-nowrap" style={{ ...style, transform, opacity }}>
+      {children}
+    </motion.span>
   );
 }

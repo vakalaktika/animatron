@@ -119,7 +119,8 @@ export function containerSection(clip: TextClip, onChange: (c: TextClip) => void
 /** How the text arrives, plus the rainbow rule. */
 export function revealSection(clip: TextClip, onChange: (c: TextClip) => void): PanelSection {
   const set = setter(clip, onChange);
-  const hasMore = clip.reveal !== "fade" || clip.rule;
+  const typed = clip.reveal === "typewriter";
+  const hasMore = clip.reveal === "letters" || clip.reveal === "pop" || clip.rule;
   return {
     id: "reveal",
     title: "Entrance",
@@ -130,12 +131,17 @@ export function revealSection(clip: TextClip, onChange: (c: TextClip) => void): 
           value={clip.reveal}
           options={[
             { value: "letters", label: "Letter by letter" },
+            { value: "typewriter", label: "Typing" },
+            { value: "blur", label: "Coming into focus" },
+            { value: "mask", label: "Sliding up" },
             { value: "pop", label: "Popping in" },
             { value: "fade", label: "Fading in" },
           ]}
           onChange={(v) => set("reveal", v)}
         />
-        {clip.reveal === "letters" ? (
+        {typed ? (
+          <NumField label="Gap between letters" unit="s" value={clip.letterStagger} min={0.01} max={0.3} step={0.005} onChange={(v) => set("letterStagger", v)} />
+        ) : clip.reveal === "letters" ? (
           <ChipField
             label="Starting from"
             value={clip.direction}

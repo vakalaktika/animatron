@@ -11,7 +11,7 @@ People who want a short, polished animation without learning an animation tool: 
 ## What makes it different
 
 - Direct manipulation on the canvas: drag anything, drag the numbered dots to shape a path, and the playhead follows the point you are editing.
-- Layers can ride other layers: text can sit on the tip of a ribbon as it draws itself in.
+- Layers can ride other layers: text can sit on the tip of a ribbon as it draws itself in, or be written along the ribbon's curve.
 - Hand-drawn squiggles become ribbons, flight paths or pictures.
 - Everything lives in the browser. No account, no server, nothing uploaded; compositions autosave locally and travel as a link or a JSON file.
 

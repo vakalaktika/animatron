@@ -4,6 +4,7 @@ import { ancestorChain } from "./hierarchy";
 import { ribbonHead, ribbonPointAt } from "./ribbon";
 import { spriteActiveDuration, spritePath, spriteProgress, waypointValuesAt } from "./spriteTiming";
 import { revealTransform } from "./text";
+import { flowsOnRibbon } from "./textFlow";
 import { LANDING_SQUASH_SECONDS } from "./timing";
 
 /**
@@ -125,8 +126,16 @@ export function localTransformAt(clip: Clip, t: number): WorldTransform {
  * at time `t` (or sits at the end when asked for the rest pose). With
  * `followRotation` it also turns with the ribbon's heading there, folded so
  * it never hangs upside down.
+ *
+ * Text flowing along the ribbon is laid out glyph by glyph in the ribbon's
+ * own frame (engine/textFlow.ts), so its frame stays on the ribbon's anchor:
+ * `x` / `y` become a slide along and a lift off the line, and the pop
+ * reveal scales each glyph in place rather than the whole run.
  */
 export function seatOnRibbon(clip: Clip, parent: Clip | undefined, local: WorldTransform, t: number, rest: boolean): WorldTransform {
+  if (flowsOnRibbon(clip, parent)) {
+    return { ...local, x: 0, y: 0, scaleX: clip.scale, scaleY: clip.scale };
+  }
   if (!parent || parent.type !== "ribbon" || clip.along === null || clip.along === undefined) return local;
   const fraction = clip.along === "front" ? (rest ? 1 : ribbonHead(parent, t)) : clip.along;
   const seat = ribbonPointAt(parent, fraction);
@@ -166,7 +175,9 @@ function worldFrom(doc: StudioDoc, clipId: string, t: number, local: LocalFn): W
   let world = IDENTITY;
   for (let i = chain.length - 1; i >= 0; i--) {
     const seated = seatOnRibbon(chain[i], chain[i + 1], local(chain[i], t), t, local === restLocal);
-    world = composeTransforms(world, seated, chain[i].followRotation);
+    // Flowing text is drawn in the ribbon's frame, so it always turns with it.
+    const follow = chain[i].followRotation || flowsOnRibbon(chain[i], chain[i + 1]);
+    world = composeTransforms(world, seated, follow);
   }
   return world;
 }
