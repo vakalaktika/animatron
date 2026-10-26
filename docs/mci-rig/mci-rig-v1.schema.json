@@ -1,0 +1,311 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mid-century Ink Rig 1",
+  "type": "object",
+  "properties": {
+    "format": {
+      "const": "mid-century-ink-rig"
+    },
+    "version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "canvas": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "additionalProperties": true
+    },
+    "svg": {
+      "type": "string",
+      "maxLength": 2000000
+    },
+    "bones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,79}$"
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,79}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,79}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rest": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -10000000,
+                "maximum": 10000000
+              },
+              "y": {
+                "type": "number",
+                "minimum": -10000000,
+                "maximum": 10000000
+              },
+              "rotation": {
+                "type": "number",
+                "minimum": -10000000,
+                "maximum": 10000000
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "rotation"
+            ],
+            "additionalProperties": true
+          },
+          "length": {
+            "type": "number",
+            "minimum": 0
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "min": {
+                "type": "number",
+                "minimum": -10000000,
+                "maximum": 10000000
+              },
+              "max": {
+                "type": "number",
+                "minimum": -10000000,
+                "maximum": 10000000
+              }
+            },
+            "required": [
+              "min",
+              "max"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "parentId",
+          "rest",
+          "length"
+        ],
+        "additionalProperties": true
+      },
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,79}$"
+          },
+          "svgId": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,79}$"
+          },
+          "boneId": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,79}$"
+          },
+          "bindMatrix": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": -10000000,
+              "maximum": 10000000
+            },
+            "minItems": 6,
+            "maxItems": 6
+          }
+        },
+        "required": [
+          "id",
+          "svgId",
+          "boneId",
+          "bindMatrix"
+        ],
+        "additionalProperties": true
+      },
+      "minItems": 1,
+      "maxItems": 256
+    },
+    "slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,79}$"
+          },
+          "boneId": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,79}$"
+          },
+          "x": {
+            "type": "number",
+            "minimum": -10000000,
+            "maximum": 10000000
+          },
+          "y": {
+            "type": "number",
+            "minimum": -10000000,
+            "maximum": 10000000
+          },
+          "rotation": {
+            "type": "number",
+            "minimum": -10000000,
+            "maximum": 10000000
+          }
+        },
+        "required": [
+          "id",
+          "boneId",
+          "x",
+          "y",
+          "rotation"
+        ],
+        "additionalProperties": true
+      },
+      "maxItems": 128
+    },
+    "animations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,79}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 600
+          },
+          "loop": {
+            "type": "boolean"
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "boneId": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,79}$"
+                },
+                "keys": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "time": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "x": {
+                        "type": "number",
+                        "minimum": -10000000,
+                        "maximum": 10000000
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": -10000000,
+                        "maximum": 10000000
+                      },
+                      "rotation": {
+                        "type": "number",
+                        "minimum": -10000000,
+                        "maximum": 10000000
+                      },
+                      "easing": {
+                        "enum": [
+                          "linear",
+                          "hold"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "time",
+                      "x",
+                      "y",
+                      "rotation",
+                      "easing"
+                    ],
+                    "additionalProperties": true
+                  },
+                  "minItems": 1,
+                  "maxItems": 10000
+                }
+              },
+              "required": [
+                "boneId",
+                "keys"
+              ],
+              "additionalProperties": true
+            },
+            "maxItems": 128
+          }
+        },
+        "required": [
+          "id",
+          "duration",
+          "loop",
+          "tracks"
+        ],
+        "additionalProperties": true
+      },
+      "maxItems": 64
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "format",
+    "version",
+    "canvas",
+    "svg",
+    "bones",
+    "bindings",
+    "animations"
+  ],
+  "additionalProperties": true
+}

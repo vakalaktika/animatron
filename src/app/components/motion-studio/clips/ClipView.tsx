@@ -6,6 +6,7 @@ import type { Clip, StudioDoc } from "../types";
 import { LogoClipView } from "./LogoClipView";
 import { LottieClipView } from "./LottieClipView";
 import { RibbonClipView } from "./RibbonClipView";
+import { RigClipView } from "./RigClipView";
 import { SpriteClipView } from "./SpriteClipView";
 import { SpriteTrailView } from "./SpriteTrailView";
 import { TextClipView } from "./TextClipView";
@@ -21,6 +22,8 @@ function ClipArt({ clip, doc, time }: { clip: Clip; doc: StudioDoc; time: Motion
       return <TextClipView clip={clip} doc={doc} time={time} />;
     case "lottie":
       return <LottieClipView clip={clip} time={time} />;
+    case "rig":
+      return <RigClipView clip={clip} time={time} />;
     case "ribbon":
       // Drawn as a sibling in the parent frame (see below), not inside the transform.
       return null;

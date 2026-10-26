@@ -1,5 +1,5 @@
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
-import { newId } from "../presets";
+import { newId } from "./id";
 
 /** How far a pasted or duplicated copy sits from the original, in stage px. */
 export const PASTE_OFFSET = 24;

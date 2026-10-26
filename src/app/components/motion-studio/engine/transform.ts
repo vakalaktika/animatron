@@ -1,4 +1,4 @@
-import type { Clip, SpriteClip, StudioDoc, TextClip, Vec2 } from "../types";
+import type { Clip, RigClip, SpriteClip, StudioDoc, TextClip, Vec2 } from "../types";
 import { clamp01, lerp } from "./easing";
 import { ancestorChain } from "./hierarchy";
 import { ribbonHead, ribbonPointAt } from "./ribbon";
@@ -85,6 +85,11 @@ function textLocal(clip: TextClip, t: number): WorldTransform {
   return { x: clip.x, y: clip.y, rotation: 0, scaleX: s, scaleY: s, opacity };
 }
 
+/** A rig is simply absent before its start, then stands (or plays) in place. */
+function rigLocal(clip: RigClip, t: number): WorldTransform {
+  return { x: clip.x, y: clip.y, rotation: 0, scaleX: clip.scale, scaleY: clip.scale, opacity: t < clip.start ? 0 : 1 };
+}
+
 /** The clip's own turn and opacity, applied over whatever its animation does. */
 function styled(clip: Clip, local: WorldTransform): WorldTransform {
   const rotation = clip.rotation ?? 0;
@@ -105,6 +110,8 @@ export function localTransformAt(clip: Clip, t: number): WorldTransform {
       return styled(clip, spriteLocal(clip, t));
     case "text":
       return styled(clip, textLocal(clip, t));
+    case "rig":
+      return styled(clip, rigLocal(clip, t));
     case "logo":
     case "lottie":
     case "ribbon":

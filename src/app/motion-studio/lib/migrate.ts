@@ -1,12 +1,14 @@
 import { loopMemberIds } from "@/app/components/motion-studio/engine/hierarchy";
 import { AUTO_TAIL_LENGTH, AUTO_TAIL_POSITION } from "@/app/components/motion-studio/engine/text";
 import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
+import { tidyPose, validateRig } from "@/app/components/motion-studio/engine/rig";
 import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
 import {
   DOC_VERSION,
   type Clip,
   type LineStyle,
   type RibbonClip,
+  type RigClip,
   type SpriteClip,
   type SpriteTrail,
   type StudioDoc,
@@ -149,7 +151,23 @@ export function normalizeClip(raw: Clip | LegacyBubble): Clip {
     const { mode: _mode, cometSeconds: _comet, ...legacy } = raw as RibbonClip & LegacyLine;
     return { ...legacy, style: lineStyleFrom(raw as LegacyLine), parentId, followRotation };
   }
+  if (raw.type === "rig") {
+    // The rig asset itself is checked by `normalizeDoc` (whole documents) or
+    // `parseImport` (a lone clip file); here only the clip's own fields are
+    // filled in, so a hand-edited file still opens.
+    const legacy = raw as Omit<RigClip, "pose" | "animationId"> & Partial<Pick<RigClip, "pose" | "animationId">>;
+    const animations = Array.isArray(legacy.rig?.animations) ? legacy.rig.animations : [];
+    const animationId = typeof legacy.animationId === "string" && animations.some((a) => a?.id === legacy.animationId) ? legacy.animationId : null;
+    const pose = legacy.pose && typeof legacy.pose === "object" && !Array.isArray(legacy.pose) ? legacy.pose : {};
+    return { ...legacy, animationId, pose, parentId, followRotation };
+  }
   return { ...raw, parentId, followRotation };
+}
+
+/** A rig clip whose asset fails the contract cannot be drawn; it is dropped with a note rather than crashing the studio. */
+function rigIsSound(clip: Clip): boolean {
+  if (clip.type !== "rig") return true;
+  return validateRig(clip.rig).ok;
 }
 
 /**
@@ -160,7 +178,14 @@ export function normalizeClip(raw: Clip | LegacyBubble): Clip {
  */
 export function normalizeDoc(raw: RawDoc): Normalized {
   const warnings: string[] = [];
-  const clips = raw.clips.map(normalizeClip);
+  const clips = raw.clips
+    .map(normalizeClip)
+    .filter((c) => {
+      if (rigIsSound(c)) return true;
+      warnings.push(`"${c.name}" had a rig this studio can't read; removed.`);
+      return false;
+    })
+    .map((c) => (c.type === "rig" ? { ...c, pose: tidyPose(c.rig, c.pose) } : c));
   const ids = new Set(clips.map((c) => c.id));
   const withParents = clips.map((c) => {
     if (c.parentId && !ids.has(c.parentId)) {

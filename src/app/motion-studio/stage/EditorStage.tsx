@@ -8,6 +8,8 @@ import type { Clip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types
 import { SNAP_SCREEN_PX, snapPoint, snapTargets, type SnapGuide, type SnapTargets } from "../lib/snap";
 import { AttachmentOverlay } from "./AttachmentOverlay";
 import { PathEditor } from "./PathEditor";
+import type { RigHandle, RigMode } from "../lib/rigEdit";
+import { RigEditor } from "./RigEditor";
 import { SelectionBox } from "./SelectionBox";
 import { TailHandle } from "./TailHandle";
 
@@ -37,6 +39,13 @@ interface Props {
   onDraw?: (points: [number, number][]) => void;
   /** Floating controls drawn over the stage area (the add rail, the preview exit). */
   overlay?: ReactNode;
+  /** Skeleton editing for a selected rig: which bone, what a drag does, and where it went. */
+  rig: {
+    mode: RigMode;
+    selectedBone: string | null;
+    onSelectBone: (id: string | null) => void;
+    onDragHandle: (clipId: string, boneId: string, handle: RigHandle, point: Vec2) => void;
+  };
 }
 
 interface Drag {
@@ -75,6 +84,7 @@ export function EditorStage({
   drawing = false,
   onDraw,
   overlay,
+  rig,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const stroke = useRef<[number, number][] | null>(null);
@@ -198,13 +208,26 @@ export function EditorStage({
               onSelectPoint={onSelectPoint}
             />
           )}
+          {!clean && selected?.type === "rig" && (
+            <RigEditor
+              doc={doc}
+              clip={selected}
+              time={time}
+              zoom={zoom}
+              stageEl={() => (canvasBoxRef.current?.firstElementChild as HTMLElement | null) ?? null}
+              mode={rig.mode}
+              selectedBone={rig.selectedBone}
+              onSelectBone={rig.onSelectBone}
+              onDragHandle={(boneId, handle, point) => rig.onDragHandle(selected.id, boneId, handle, point)}
+            />
+          )}
           {!clean && selected?.type === "text" && selected.tail.mode === "manual" && (
             <TailHandle doc={doc} clip={selected} time={time} zoom={zoom} onChange={onChangeClip} />
           )}
           {!clean && selected && (
             <AttachmentOverlay doc={doc} time={time} selected={selected} zoom={zoom} labels={selected.type !== "sprite" && selected.type !== "ribbon"} />
           )}
-          {!clean && selected && selected.type !== "sprite" && (
+          {!clean && selected && selected.type !== "sprite" && selected.type !== "rig" && (
             <div
               aria-hidden="true"
               className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-info"

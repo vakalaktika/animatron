@@ -4,7 +4,7 @@ import { useEffect, useState, type ComponentType, type CSSProperties, type SVGPr
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { treeRows, type DropTarget } from "../lib/tree";
 import { ClipActionSheet } from "./ClipActionSheet";
-import { CanvasIcon, ChevronIcon, DuplicateIcon, EyeIcon, EyeOffIcon, FileIcon, GripIcon, MoreIcon, RingsIcon, SpriteIcon, SquiggleIcon, TextIcon, TrashIcon, VideoIcon, WingIcon } from "./icons";
+import { BonesIcon, CanvasIcon, ChevronIcon, DuplicateIcon, EyeIcon, EyeOffIcon, FileIcon, GripIcon, MoreIcon, RingsIcon, SpriteIcon, SquiggleIcon, TextIcon, TrashIcon, VideoIcon, WingIcon } from "./icons";
 import { TREE_INDENT, useTreeDrag } from "./useTreeDrag";
 
 interface Props {
@@ -43,6 +43,8 @@ export function clipIcon(clip: Clip): IconComponent {
       return RingsIcon;
     case "lottie":
       return FileIcon;
+    case "rig":
+      return BonesIcon;
     case "sprite":
       return clip.source.kind === "chippy" ? WingIcon : clip.source.kind === "video" ? VideoIcon : SpriteIcon;
   }
@@ -58,6 +60,8 @@ export function clipKind(clip: Clip): string {
       return "logo";
     case "lottie":
       return "animation";
+    case "rig":
+      return "rigged character";
     case "sprite":
       return clip.source.kind === "chippy" ? "character" : clip.source.kind === "svg" ? "artwork" : clip.source.kind === "video" ? "video" : "picture";
   }

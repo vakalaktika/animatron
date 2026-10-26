@@ -1,5 +1,6 @@
 import type { Clip, SpriteClip, StudioDoc, SvgTextRun } from "@/app/components/motion-studio/types";
-import { makeSpeechText, makeText, newId } from "../presets";
+import { makeSpeechText, makeText } from "../presets";
+import { newId } from "./id";
 
 type SvgSource = Extract<SpriteClip["source"], { kind: "svg" }>;
 

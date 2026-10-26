@@ -1,11 +1,14 @@
 import {
   DOC_VERSION,
+  RIG_FORMAT,
   type Clip,
   type LogoClip,
   type LottieClip,
   type RibbonClip,
+  type RigClip,
   type SpriteClip,
   type SpriteSource,
+  type StageConfig,
   type StudioDoc,
   type SvgTextRun,
   type TextClip,
@@ -14,7 +17,9 @@ import {
 import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
 import { arrivalTime, DEFAULT_COAT_COLORS, DEFAULT_RIBBON_COLORS } from "@/app/components/motion-studio/engine/ribbon";
 import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
+import { newId } from "./lib/id";
 import { normalizeClip, normalizeDoc, PLAIN_TEXT_DEFAULTS, type Normalized, type RawDoc } from "./lib/migrate";
+import { rigClipFrom } from "./lib/rigImport";
 
 // Storage key stays on v1: saved documents of any version are migrated on read.
 export const STORAGE_KEY = "motion-studio.presets.v1";
@@ -26,7 +31,6 @@ export const FRAME_SIZES = [
   { name: "Site hero", label: "1440 x 900 (site hero)", width: 1440, height: 900 },
 ] as const;
 
-export const newId = () => Math.random().toString(36).slice(2, 9);
 
 export function makeLogo(over: Partial<LogoClip> = {}): LogoClip {
   return {
@@ -556,6 +560,7 @@ function isClip(value: unknown): value is Clip {
 export type ImportResult =
   | ({ kind: "doc" } & Normalized)
   | { kind: "clip"; clip: Clip }
+  | { kind: "rig"; clip: RigClip }
   | { kind: "error"; message: string };
 
 /**
@@ -564,14 +569,27 @@ export type ImportResult =
  * repair is reported in `warnings`. A lone clip arrives detached, since its
  * parent isn't in the file.
  */
-export function parseImport(json: unknown): ImportResult {
+export function parseImport(json: unknown, stage: Pick<StageConfig, "width" | "height"> = { width: 1920, height: 1080 }): ImportResult {
   if (typeof json !== "object" || json === null) return { kind: "error", message: "Not a JSON object" };
   const v = json as Record<string, unknown>;
+  // A Mid-century Ink rig is its own format, never a studio document: it
+  // becomes one rigged layer, or is refused with the reason.
+  if (v.format === RIG_FORMAT) {
+    const rig = rigClipFrom(json, stage);
+    return rig.ok ? { kind: "rig", clip: rig.clip } : { kind: "error", message: rig.message };
+  }
   if (typeof v.version === "number" && v.version >= 1 && v.version <= DOC_VERSION && Array.isArray(v.clips) && typeof v.stage === "object") {
     if (!v.clips.every(isClip)) return { kind: "error", message: "A clip in this file is malformed" };
     return { kind: "doc", ...normalizeDoc(json as RawDoc) };
   }
   if (v.version !== undefined) return { kind: "error", message: `This file is version ${String(v.version)}; the studio reads up to ${DOC_VERSION}` };
-  if (isClip(json)) return { kind: "clip", clip: { ...normalizeClip(json), id: newId(), parentId: null } };
+  if (isClip(json)) {
+    // A saved rig layer carries its asset; the asset must pass the contract like any rig file.
+    if (json.type === "rig") {
+      const rig = rigClipFrom((json as { rig?: unknown }).rig, stage);
+      if (!rig.ok) return { kind: "error", message: rig.message };
+    }
+    return { kind: "clip", clip: { ...normalizeClip(json), id: newId(), parentId: null } };
+  }
   return { kind: "error", message: "Unrecognized file: expected a studio document, a clip, or a Lottie" };
 }

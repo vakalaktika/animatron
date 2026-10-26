@@ -8,6 +8,7 @@ import { buildSections } from "./sections/logo";
 import { lineSection } from "./sections/line";
 import { playbackSection } from "./sections/lottie";
 import { ribbonPointsSection, ribbonSection } from "./sections/ribbon";
+import { rigAnimationSection, skeletonSection, type RigActions } from "./sections/rig";
 import { placementSection } from "./sections/placement";
 import { flapSection, landingSection, motionSection, pathSection, type WaypointControls } from "./sections/sprite";
 import { containerSection, revealSection, textSection } from "./sections/text";
@@ -25,6 +26,8 @@ interface Props {
   artwork: ArtworkActions;
   /** Waypoint selection and add / remove, shared with the stage and the W key. */
   waypoints: WaypointControls;
+  /** Rig posing and joint editing state, shared with the stage. */
+  rig: RigActions;
 }
 
 /**
@@ -33,13 +36,16 @@ interface Props {
  * remembered per section id, so putting Reveal first sticks for any clip
  * that has a Reveal section.
  */
-export function ClipControls({ doc, clip, onChange, onReparent, focusText = false, artwork, waypoints }: Props) {
+export function ClipControls({ doc, clip, onChange, onReparent, focusText = false, artwork, waypoints, rig }: Props) {
   const caps = capabilities(clip);
   const sections: (PanelSection | null)[] = [
     // What the thing says comes before where it sits.
     caps.text && textSection(caps.text, onChange, focusText),
     // A video's own settings come first: the file is the point of the layer.
     caps.video && videoSection(caps.video, onChange, doc.stage),
+    // A rig's clips come first: which one plays decides what you see.
+    caps.rig && rigAnimationSection(caps.rig, onChange, rig),
+    caps.rig && skeletonSection(caps.rig, onChange, rig),
     placementSection(doc, clip, onChange, onReparent),
     caps.reveal && revealSection(caps.reveal, onChange),
     caps.container && containerSection(caps.container, onChange),

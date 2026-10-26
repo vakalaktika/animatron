@@ -356,6 +356,16 @@ export const SpriteIcon = (p: SVGProps<SVGSVGElement>) => (
   </Icon>
 );
 
+/** A bone with a joint at each end: a rigged character. */
+export const BonesIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <circle cx="6" cy="6" r="2.5" />
+    <circle cx="18" cy="18" r="2.5" />
+    <path d="M7.8 7.8l8.4 8.4" />
+    <path d="M12 7.5l4.5 4.5" />
+  </Icon>
+);
+
 /** A pencil: draw by hand. */
 export const PencilIcon = (p: SVGProps<SVGSVGElement>) => (
   <Icon {...p}>

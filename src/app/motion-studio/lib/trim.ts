@@ -1,3 +1,4 @@
+import { activeAnimation, RIG_LIMITS, setAnimationDuration } from "@/app/components/motion-studio/engine/rig";
 import type { Clip } from "@/app/components/motion-studio/types";
 
 /** Shortest a trimmed clip can get, in seconds. */
@@ -12,6 +13,7 @@ const round = (v: number) => Number(v.toFixed(2));
  * Lotties play their own length and the logo build is a fixed choreography.
  */
 export function canTrim(clip: Clip): boolean {
+  if (clip.type === "rig") return activeAnimation(clip) !== null;
   return clip.type === "sprite" || clip.type === "ribbon" || clip.type === "text";
 }
 
@@ -31,6 +33,12 @@ export function trimClip<T extends Clip>(clip: T, delta: number): T {
       return { ...clip, duration: round(clamp(clip.duration + delta, MIN_TRIM, MAX_TRIM)) };
     case "ribbon":
       return { ...clip, duration: round(clamp(clip.duration + delta, MIN_TRIM, MAX_TRIM)) };
+    case "rig": {
+      // A rig clip's length rescales its key times with it (the rig contract's rule).
+      const anim = activeAnimation(clip);
+      if (!anim) return clip;
+      return { ...clip, rig: setAnimationDuration(clip.rig, anim.id, round(clamp(anim.duration + delta, MIN_TRIM, RIG_LIMITS.duration))) };
+    }
     case "text": {
       if (clip.reveal !== "letters") return { ...clip, revealDuration: round(clamp(clip.revealDuration + delta, 0.1, MAX_TRIM)) };
       const letters = Array.from(clip.text).length;

@@ -19,6 +19,7 @@ const tips = (mac: boolean): [string, string][] => [
   ["Make something ride along", "In Position and timing, open \"Follow another clip\". Text can even ride the tip of a ribbon as it draws."],
   ["Change when things happen", "Drag a bar on the timeline to move it, or drag its right end to make it longer or shorter."],
   ["Add video and sound", "Drop in an MP4 or MOV with the picture tool: a landscape one becomes the backdrop. Add one music or voice track with the Sound tool; it plays in the preview and is baked into rendered videos."],
+  ["Pose a rigged character", "Drop in a Mid-century Ink rig (.mci.json) with the picture tool. Drag a joint on the canvas to bend a limb or a bone tip to turn it; with a clip playing, each move becomes a key at the playhead. Save rig writes the master back out for Agent Torres."],
   ["Save as MP4 or GIF", "Share renders the file right here, even with the tab in the background. A see-through canvas can come out as a transparent GIF or WebM."],
   ["Nothing is lost", "Every change can be undone, and each composition autosaves in this browser. Find them all under Compositions."],
 ];
