@@ -9,6 +9,7 @@ import { frameIndex, frameLabel, TEMPLATES } from "../templates";
 import { ChipField } from "../panel/fields";
 import { MiniPreview } from "../panel/MiniPreview";
 import { DuplicateIcon, PlusIcon, TrashIcon } from "../panel/icons";
+import { AccountStrip, type AccountControls } from "./AccountStrip";
 import { Dialog } from "./Dialog";
 
 interface Props {
@@ -22,6 +23,8 @@ interface Props {
   onDuplicateProject: (id: string) => void;
   onDeleteProject: (id: string) => void;
   onRenameProject: (id: string, name: string) => void;
+  /** Signing in and syncing, when the cloud is set up. */
+  account: AccountControls;
 }
 
 /** Size chips: every frame by its plain name, plus all of them. */
@@ -64,6 +67,7 @@ export function GalleryDialog({
   onDuplicateProject,
   onDeleteProject,
   onRenameProject,
+  account,
 }: Props) {
   const [hover, setHover] = useState<string | null>(null);
   const [frame, setFrame] = useState(0);
@@ -82,6 +86,7 @@ export function GalleryDialog({
 
   return (
     <Dialog open={open} onClose={onClose} title="Compositions" description="Start from a template or pick up where you left off." size="full">
+      <AccountStrip {...account} />
       <section aria-labelledby="gallery-templates">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <h3 id="gallery-templates" className="atm-section-label">

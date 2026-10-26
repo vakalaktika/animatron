@@ -35,6 +35,9 @@ import {
 } from "./lib/projects";
 import { hasMedia, hydrateClipMedia, hydrateMedia, inlineClipMedia, inlineMedia, pruneMedia } from "./lib/mediaDoc";
 import { docFromHash, shareUrl } from "./lib/share";
+import { SHORT_SHARE_PARAM } from "./lib/cloud";
+import { useCloud } from "./lib/useCloud";
+import { useCloudSync } from "./lib/useCloudSync";
 import { makeShape, type ShapeKind } from "./lib/shapes";
 import { svgSpriteFrom } from "./lib/svgSprite";
 import { attachedTextFor, detachRun, restoreRun, setRunText } from "./lib/textRuns";
@@ -132,7 +135,7 @@ export function MotionStudio() {
   // The first-run tour: shown once, replayable from Help.
   const [tour, setTour] = useState(false);
   useEffect(() => {
-    if (tourSeen() || window.location.hash.startsWith("#share=")) return;
+    if (tourSeen() || window.location.hash.startsWith("#share=") || new URLSearchParams(window.location.search).has(SHORT_SHARE_PARAM)) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of localStorage on mount
     const timer = window.setTimeout(() => setTour(true), 900);
     return () => window.clearTimeout(timer);
@@ -170,6 +173,9 @@ export function MotionStudio() {
     }, SAVE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [doc]);
+
+  const cloud = useCloud();
+  const { syncNow, removeRemote } = useCloudSync({ cloud, store, storeRef, doc, setStore, replaceDoc, notify });
 
   const duration = useMemo(() => docDuration(doc), [doc]);
   // A composition with a looping clip keeps running so loaders never freeze.
@@ -302,6 +308,18 @@ export function MotionStudio() {
   // opens as a new project so the current work stays in the gallery. This
   // has to be an effect, not a lazy state initializer: it changes state the
   // first render already committed.
+  const openArrival = useCallback(
+    (shared: StudioDoc) => {
+      const next = addProject(storeRef.current, shared);
+      saveProjects(next);
+      setStore(next);
+      replaceDoc(shared);
+      setSelectedId(null);
+      notify(`Opened “${shared.name}” from a link. It is now one of your compositions.`);
+      clock.replay();
+    },
+    [replaceDoc, notify, clock],
+  );
   const arrivalsTaken = useRef(false);
   useEffect(() => {
     if (arrivalsTaken.current) return;
@@ -310,13 +328,7 @@ export function MotionStudio() {
     const shared = typeof window !== "undefined" ? docFromHash(window.location.hash) : null;
     if (shared) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      const next = addProject(storeRef.current, shared);
-      saveProjects(next);
-      setStore(next);
-      replaceDoc(shared);
-      setSelectedId(null);
-      notify(`Opened “${shared.name}” from a link. It is now one of your compositions.`);
-      clock.replay();
+      openArrival(shared);
       return;
     }
     // Files left behind by compositions deleted in an earlier visit.
@@ -335,7 +347,37 @@ export function MotionStudio() {
     setSelectedId(clip.id);
     /* eslint-enable react-hooks/set-state-in-effect */
     clock.replay();
-  }, [clock, doc.stage, setDoc, replaceDoc, notify]);
+  }, [clock, doc.stage, setDoc, openArrival]);
+
+  // A short link (?s=…) names a composition kept in the cloud: fetch it and
+  // open it as a new project, as a long link does. The address keeps the
+  // parameter until it opens, so a reload retries after a failure.
+  const shortArrival = useRef(false);
+  useEffect(() => {
+    if (shortArrival.current) return;
+    const id = new URLSearchParams(window.location.search).get(SHORT_SHARE_PARAM);
+    if (!id) return;
+    shortArrival.current = true;
+    if (!cloud.enabled) {
+      notify("This short link needs the cloud, which isn't set up on this copy of the studio.", { sticky: true });
+      return;
+    }
+    notify("Opening the shared composition…");
+    cloud
+      .openShare(id)
+      .then((shared) => {
+        if (!shared) {
+          notify("That link doesn't lead to a composition. It may have been removed.", { sticky: true });
+          return;
+        }
+        const params = new URLSearchParams(window.location.search);
+        params.delete(SHORT_SHARE_PARAM);
+        const rest = params.toString();
+        window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : "") + window.location.hash);
+        openArrival(shared);
+      })
+      .catch((err: unknown) => notify(err instanceof Error ? err.message : "Could not open the link.", { sticky: true }));
+  }, [cloud, notify, openArrival]);
 
   const addByType = (type: AddKind) => {
     const cx = doc.stage.width / 2;
@@ -562,6 +604,7 @@ export function MotionStudio() {
   const deleteProject = (id: string) => {
     const wasCurrent = id === storeRef.current.currentId;
     const next = changeStore((s) => removeProject(s, id));
+    removeRemote(id);
     void pruneMedia(next, wasCurrent ? undefined : doc);
     if (!wasCurrent) return;
     // The open composition was deleted: fall back to the latest, or a fresh Welcome.
@@ -618,8 +661,15 @@ export function MotionStudio() {
     }
   };
 
-  const makeShareLink = () => {
+  const makeShareLink = async (): Promise<{ ok: true; url: string } | { ok: false; reason: string }> => {
     if (hasMedia(doc)) return { ok: false as const, reason: "Video and sound files are too big for a link. Download the composition as a JSON file instead; the media travels inside it." };
+    if (cloud.enabled) {
+      try {
+        return { ok: true, url: await cloud.shortLink(doc) };
+      } catch (err) {
+        return { ok: false, reason: err instanceof Error ? err.message : "Could not make the link. Try again, or download a JSON file." };
+      }
+    }
     const result = shareUrl(doc, window.location);
     if (result.ok) return result;
     return { ok: false as const, reason: "This composition has pictures in it, which are too big for a link. Download it as a JSON file instead." };
@@ -1067,6 +1117,15 @@ export function MotionStudio() {
         onNewBlank={(w, h) => openDoc(blankDoc(w, h))}
         onDuplicateProject={(id) => changeStore((s) => duplicateProject(s, id))}
         onDeleteProject={deleteProject}
+        account={{
+          enabled: cloud.enabled,
+          user: cloud.user,
+          pendingEmail: cloud.pendingEmail,
+          syncing: cloud.syncing,
+          onSendLink: cloud.sendLink,
+          onSignOut: () => cloud.signOut().catch((err: unknown) => notify(err instanceof Error ? err.message : "Could not sign out.")),
+          onSync: () => void syncNow(true),
+        }}
         onRenameProject={(id, name) => {
           if (id === store.currentId) setDoc((d) => ({ ...d, name }), "name");
           else changeStore((s) => renameProject(s, id, name));
@@ -1089,6 +1148,7 @@ export function MotionStudio() {
         canRecord={canRecord}
         onRecord={() => void record_()}
         onShareLink={makeShareLink}
+        shortLinks={cloud.enabled}
         onDownloadJson={() => {
           void inlineMedia(doc).then((full) => downloadText(JSON.stringify(full, null, 2), `${slug(doc.name)}.studio.json`, "application/json"));
         }}
