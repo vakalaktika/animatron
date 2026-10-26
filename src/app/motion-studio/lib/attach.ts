@@ -1,4 +1,5 @@
 import { descendantIds } from "@/app/components/motion-studio/engine/hierarchy";
+import { moveRestTo, propValue, setPropAt } from "@/app/components/motion-studio/engine/keys";
 import { flowDragDelta, flowRibbon } from "@/app/components/motion-studio/engine/textFlow";
 import {
   IDENTITY,
@@ -22,7 +23,7 @@ export function reparentClip(doc: StudioDoc, clipId: string, parentId: string | 
   const world = restTransformAt(doc, clipId);
   const frame = parentId ? restTransformAt(doc, parentId) : IDENTITY;
   const local = toLocalPoint(frame, world);
-  return replaceClip(doc, { ...clip, parentId, x: local.x, y: local.y });
+  return replaceClip(doc, { ...moveRestTo(clip, local.x, local.y), parentId });
 }
 
 /**
@@ -36,13 +37,14 @@ export function dropClip(doc: StudioDoc, clipId: string, target: DropTarget): St
 
 /**
  * Removes a clip. Its children are detached in place: their absolute rest
- * position is baked into `x` / `y`, so the stage looks the same afterwards.
+ * position is baked into `x` / `y` (or their position keys), so the stage
+ * looks the same afterwards.
  */
 export function deleteClip(doc: StudioDoc, clipId: string): StudioDoc {
   const detachedChildren = doc.clips.map((c) => {
     if (c.parentId !== clipId) return c;
     const world = restTransformAt(doc, c.id);
-    return { ...c, parentId: null, x: world.x, y: world.y };
+    return { ...moveRestTo(c, world.x, world.y), parentId: null };
   });
   return { ...doc, clips: detachedChildren.filter((c) => c.id !== clipId) };
 }
@@ -51,7 +53,8 @@ export function deleteClip(doc: StudioDoc, clipId: string): StudioDoc {
  * Moves a clip by a stage-space delta. For an attached clip the delta is
  * converted into the parent's frame at time `t`, so dragging on the stage
  * feels the same whether or not the parent is scaled or banked. Text flowing
- * along a ribbon slides along it and lifts off it instead.
+ * along a ribbon slides along it and lifts off it instead. A keyframed
+ * position gets a key at `t`.
  */
 export function nudgeClip(doc: StudioDoc, clipId: string, delta: Vec2, t: number): StudioDoc {
   const clip = doc.clips.find((c) => c.id === clipId);
@@ -59,7 +62,10 @@ export function nudgeClip(doc: StudioDoc, clipId: string, delta: Vec2, t: number
   const inParent = clip.parentId ? toLocalDelta(transformAt(doc, clip.parentId, t), delta) : delta;
   const ribbon = clip.type === "text" ? flowRibbon(doc, clip) : null;
   const local = ribbon && clip.type === "text" ? flowDragDelta(clip, ribbon, inParent, t) : inParent;
-  return replaceClip(doc, { ...clip, x: clip.x + local.x, y: clip.y + local.y });
+  // A keyframed position keys the move at `t`; otherwise the clip's own x / y move.
+  // An axis the move does not touch is left alone, so it gets no stray key.
+  const movedX = local.x === 0 ? clip : setPropAt(clip, "x", t, propValue(clip, "x", t) + local.x);
+  return replaceClip(doc, local.y === 0 ? movedX : setPropAt(movedX, "y", t, propValue(clip, "y", t) + local.y));
 }
 
 /** Same conversion as `nudgeClip`, for callers that move something other than the anchor (path points). */

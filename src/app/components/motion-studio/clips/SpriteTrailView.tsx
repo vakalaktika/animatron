@@ -2,9 +2,11 @@
 
 import { motion, useTransform, type MotionValue } from "motion/react";
 import { lineNeedsShape } from "../engine/line";
+import { propValue } from "../engine/keys";
 import { parentTransformAt } from "../engine/transform";
 import { trailBands, trailCenterline, trailOpacity, trailShift, trailSubject, trailWindow } from "../engine/trail";
 import type { SpriteClip, StudioDoc } from "../types";
+import { SvgFrame } from "./SvgFrame";
 import { RainbowDashes } from "./RainbowDashes";
 import { ShapedLineView } from "./ShapedLineView";
 
@@ -26,10 +28,13 @@ interface Props {
 export function SpriteTrailView({ doc, clip, time }: Props) {
   const bands = trailBands(clip);
   const window = useTransform(time, (t) => trailWindow(clip, t));
-  const opacity = useTransform(time, (t) => trailOpacity(clip, t) * (clip.opacity ?? 1));
+  const opacity = useTransform(time, (t) => trailOpacity(clip, t) * propValue(clip, "opacity", t));
+  // The bands bake in the clip's own x / y; keyframes on them shift the bands by the difference.
   const frame = useTransform(time, (t) => {
     const w = parentTransformAt(doc, clip.id, t);
-    return `translate(${w.x} ${w.y}) scale(${w.scaleX} ${w.scaleY}) rotate(${w.rotation})`;
+    const dx = propValue(clip, "x", t) - clip.x;
+    const dy = propValue(clip, "y", t) - clip.y;
+    return `translate(${w.x} ${w.y}) scale(${w.scaleX} ${w.scaleY}) rotate(${w.rotation}) translate(${dx} ${dy})`;
   });
 
   if (bands.length === 0) return null;
@@ -41,7 +46,7 @@ export function SpriteTrailView({ doc, clip, time }: Props) {
       style={{ opacity }}
       aria-hidden="true"
     >
-      <motion.g transform={frame}>
+      <SvgFrame transform={frame}>
         {lineNeedsShape(clip.trail.style) ? (
           <ShapedLineView
             line={trailCenterline(clip)}
@@ -55,7 +60,7 @@ export function SpriteTrailView({ doc, clip, time }: Props) {
         ) : (
           <RainbowDashes bands={bands} window={window} fade={false} />
         )}
-      </motion.g>
+      </SvgFrame>
     </motion.svg>
   );
 }

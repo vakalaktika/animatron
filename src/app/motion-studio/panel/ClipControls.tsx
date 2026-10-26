@@ -1,5 +1,6 @@
 "use client";
 
+import type { MotionValue } from "motion/react";
 import { capabilities } from "@/app/components/motion-studio/engine/capabilities";
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { PanelGroup, type PanelSection } from "./PanelGroup";
@@ -28,6 +29,8 @@ interface Props {
   waypoints: WaypointControls;
   /** Rig posing and joint editing state, shared with the stage. */
   rig: RigActions;
+  /** The studio clock: keyframed fields read and key at the playhead. */
+  time: MotionValue<number>;
 }
 
 /**
@@ -36,7 +39,7 @@ interface Props {
  * remembered per section id, so putting Reveal first sticks for any clip
  * that has a Reveal section.
  */
-export function ClipControls({ doc, clip, onChange, onReparent, focusText = false, artwork, waypoints, rig }: Props) {
+export function ClipControls({ doc, clip, onChange, onReparent, focusText = false, artwork, waypoints, rig, time }: Props) {
   const caps = capabilities(clip);
   const sections: (PanelSection | null)[] = [
     // What the thing says comes before where it sits.
@@ -46,7 +49,7 @@ export function ClipControls({ doc, clip, onChange, onReparent, focusText = fals
     // A rig's clips come first: which one plays decides what you see.
     caps.rig && rigAnimationSection(caps.rig, onChange, rig),
     caps.rig && skeletonSection(caps.rig, onChange, rig),
-    placementSection(doc, clip, onChange, onReparent),
+    placementSection(doc, clip, onChange, onReparent, time),
     caps.reveal && revealSection(caps.reveal, onChange),
     caps.container && containerSection(caps.container, onChange),
     caps.motion && motionSection(caps.motion, onChange),

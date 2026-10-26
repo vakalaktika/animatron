@@ -11,8 +11,10 @@ import {
   ribbonSubject,
   ribbonWindow,
 } from "../engine/ribbon";
+import { propValue } from "../engine/keys";
 import { parentTransformAt } from "../engine/transform";
 import type { RibbonClip, StudioDoc } from "../types";
+import { SvgFrame } from "./SvgFrame";
 import { RainbowDashes, RainbowSolid } from "./RainbowDashes";
 import { ShapedLineView } from "./ShapedLineView";
 
@@ -41,10 +43,13 @@ export function RibbonClipView({ doc, clip, time }: Props) {
   const sweepWindow = useTransform(coatState, (c) => ({ tail: 0, length: c.sweeping?.progress ?? 0 }));
   const sweepIsCoat = useTransform(coatState, (c) => (c.sweeping && c.sweeping.colors === clip.coat.colors ? 1 : 0));
   const sweepIsOwn = useTransform(coatState, (c) => (c.sweeping && c.sweeping.colors === clip.colors ? 1 : 0));
-  const opacity = useTransform(time, (t) => ribbonOpacity(clip, t) * (clip.opacity ?? 1));
+  const opacity = useTransform(time, (t) => ribbonOpacity(clip, t) * propValue(clip, "opacity", t));
+  // The bands bake in the clip's own x / y; keyframes on them shift the bands by the difference.
   const frame = useTransform(time, (t) => {
     const w = parentTransformAt(doc, clip.id, t);
-    return `translate(${w.x} ${w.y}) scale(${w.scaleX} ${w.scaleY}) rotate(${w.rotation})`;
+    const dx = propValue(clip, "x", t) - clip.x;
+    const dy = propValue(clip, "y", t) - clip.y;
+    return `translate(${w.x} ${w.y}) scale(${w.scaleX} ${w.scaleY}) rotate(${w.rotation}) translate(${dx} ${dy})`;
   });
 
   if (own.length === 0) return null;
@@ -57,7 +62,7 @@ export function RibbonClipView({ doc, clip, time }: Props) {
       style={{ opacity }}
       aria-hidden="true"
     >
-      <motion.g transform={frame}>
+      <SvgFrame transform={frame}>
         {lineNeedsShape(clip.style) ? (
           <ShapedLineView
             line={ribbonCenterline(clip)}
@@ -83,7 +88,7 @@ export function RibbonClipView({ doc, clip, time }: Props) {
             </motion.g>
           </>
         )}
-      </motion.g>
+      </SvgFrame>
     </motion.svg>
   );
 }

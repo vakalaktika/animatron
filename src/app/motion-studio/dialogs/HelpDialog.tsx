@@ -17,6 +17,7 @@ const tips = (mac: boolean): [string, string][] => [
   ["Draw a line", "Pick the pen in the add bar and draw on the canvas: a ribbon appears where you drew. Pick a picture first and your line becomes its flight path."],
   ["Shape a path", "Select a picture or ribbon and drag its numbered dots. Press W to drop a new point wherever the picture is right now."],
   ["Make something ride along", "In Position and timing, open \"Follow another clip\". Text can even ride the tip of a ribbon as it draws, or turn on \"Write along the ribbon\" to bend its letters along the curve."],
+  ["Animate anything with keyframes", "In Position and timing, press the diamond beside X, Y, Size, Turn or Opacity to key it at the playhead. Move the playhead, change the value, and it animates between the two. Drag the diamonds on the timeline to retime them."],
   ["Change when things happen", "Drag a bar on the timeline to move it, or drag its right end to make it longer or shorter."],
   ["Add video and sound", "Drop in an MP4 or MOV with the picture tool: a landscape one becomes the backdrop. Add one music or voice track with the Sound tool; it plays in the preview and is baked into rendered videos."],
   ["Pose a rigged character", "Drop in a Mid-century Ink rig (.mci.json) with the picture tool. Drag a joint on the canvas to bend a limb or a bone tip to turn it; with a clip playing, each move becomes a key at the playhead. Save rig writes the master back out for Agent Torres."],

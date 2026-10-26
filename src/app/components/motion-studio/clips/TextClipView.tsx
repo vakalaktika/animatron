@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode }
 import { LOGO_RAINBOW } from "../assets/logoPaths";
 import { clamp01, EASE_PRESETS } from "../engine/easing";
 import { caretAfter, glyphLook, glyphProgress, resolveTail, revealTransform, type ResolvedTail } from "../engine/text";
+import { propValue } from "../engine/keys";
 import { flowRibbon, flowSeats, type GlyphSeat } from "../engine/textFlow";
 import type { RibbonClip, StudioDoc, TextClip } from "../types";
 
@@ -229,6 +230,7 @@ function FlowingText({ clip, ribbon, time }: FlowProps) {
 
   const seats = useTransform(time, (t) => (widths ? flowSeats(clip, ribbon, widths, t) : []));
   const pop = useTransform(time, (t) => revealTransform(clip, t).scale);
+  const size = useTransform(time, (t) => propValue(clip, "scale", t));
   const font: CSSProperties = { ...FONT_STYLE[clip.font], fontSize: clip.fontSize, color: clip.color };
 
   return (
@@ -245,7 +247,7 @@ function FlowingText({ clip, ribbon, time }: FlowProps) {
       </span>
       {widths &&
         letters.map((letter, i) => (
-          <SeatedGlyph key={i} index={i} seats={seats} pop={pop} scale={clip.scale} style={font}>
+          <SeatedGlyph key={i} index={i} seats={seats} pop={pop} size={size} style={font}>
             <Glyph clip={clip} index={i} count={letters.length} letter={letter} accent={i >= accent} time={time} />
           </SeatedGlyph>
         ))}
@@ -257,17 +259,17 @@ interface SeatedGlyphProps {
   index: number;
   seats: MotionValue<GlyphSeat[]>;
   pop: MotionValue<number>;
-  /** The clip's own scale, divided out so the seat lands on the ribbon. */
-  scale: number;
+  /** The clip's own size, divided out so the seat lands on the ribbon. */
+  size: MotionValue<number>;
   style: CSSProperties;
   children: ReactNode;
 }
 
-function SeatedGlyph({ index, seats, pop, scale, style, children }: SeatedGlyphProps) {
-  const s = Math.max(MIN_FLOW_SCALE, scale);
+function SeatedGlyph({ index, seats, pop, size, style, children }: SeatedGlyphProps) {
   const transform = useTransform(() => {
     const seat = seats.get()[index];
     if (!seat) return "none";
+    const s = Math.max(MIN_FLOW_SCALE, size.get());
     return `translate(${seat.x / s}px, ${seat.y / s}px) translate(-50%, -50%) rotate(${seat.angle}deg) scale(${pop.get()})`;
   });
   const opacity = useTransform(seats, (all) => (all[index]?.onPath ? 1 : 0));

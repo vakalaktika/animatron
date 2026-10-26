@@ -1,7 +1,8 @@
 "use client";
 
-import { useAnimationFrame } from "motion/react";
+import { useAnimationFrame, type MotionValue } from "motion/react";
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { propValue } from "@/app/components/motion-studio/engine/keys";
 import type { Clip } from "@/app/components/motion-studio/types";
 
 interface Box {
@@ -13,6 +14,8 @@ interface Box {
 
 interface Props {
   clip: Clip;
+  /** The studio clock: a keyframed size or turn is read at the playhead. */
+  time: MotionValue<number>;
   zoom: number;
   /** The StageCanvas root: box coordinates are measured relative to it. */
   stageEl: () => HTMLElement | null;
@@ -57,7 +60,9 @@ const same = (a: Box | null, b: Box | null) =>
  * handle above. It follows the live rendering every frame, so it tracks a
  * picture mid-flight as well as a word standing still.
  */
-export function SelectionBox({ clip, zoom, stageEl, onScale, onRotate, canRotate }: Props) {
+export function SelectionBox({ clip, time, zoom, stageEl, onScale, onRotate, canRotate }: Props) {
+  const scale = propValue(clip, "scale", time.get());
+  const rotation = propValue(clip, "rotation", time.get());
   const [box, setBox] = useState<Box | null>(null);
   const boxRef = useRef<Box | null>(null);
   const gesture = useRef<{ kind: "scale" | "rotate"; startValue: number; startDistance: number; startAngle: number; cx: number; cy: number } | null>(null);
@@ -89,7 +94,7 @@ export function SelectionBox({ clip, zoom, stageEl, onScale, onRotate, canRotate
     const p = pointerStage(e);
     gesture.current = {
       kind,
-      startValue: kind === "scale" ? clip.scale : (clip.rotation ?? 0),
+      startValue: kind === "scale" ? scale : rotation,
       startDistance: Math.max(1, Math.hypot(p.x - cx, p.y - cy)),
       startAngle: Math.atan2(p.y - cy, p.x - cx),
       cx,
@@ -121,8 +126,8 @@ export function SelectionBox({ clip, zoom, stageEl, onScale, onRotate, canRotate
       role="slider"
       tabIndex={-1}
       aria-label={label}
-      aria-valuenow={Math.round(clip.scale * 100)}
-      aria-valuetext={`${Math.round(clip.scale * 100)}% size`}
+      aria-valuenow={Math.round(scale * 100)}
+      aria-valuetext={`${Math.round(scale * 100)}% size`}
       className="absolute rounded-[2px] border bg-surface-raised border-info shadow-sm"
       style={{ left: left - h / 2, top: top - h / 2, width: h, height: h, cursor, borderWidth: Math.max(1, 1.5 / zoom) }}
       onPointerDown={begin("scale")}
@@ -154,8 +159,8 @@ export function SelectionBox({ clip, zoom, stageEl, onScale, onRotate, canRotate
             role="slider"
             tabIndex={-1}
             aria-label="Turn"
-            aria-valuenow={Math.round(clip.rotation ?? 0)}
-            aria-valuetext={`${Math.round(clip.rotation ?? 0)} degrees`}
+            aria-valuenow={Math.round(rotation)}
+            aria-valuetext={`${Math.round(rotation)} degrees`}
             className="absolute rounded-full border bg-surface-raised border-info shadow-sm"
             style={{ left: cx - h / 2, top: box.y - ROTATE_GAP / zoom - h / 2, width: h, height: h, cursor: "grab", borderWidth: Math.max(1, 1.5 / zoom) }}
             onPointerDown={begin("rotate")}
