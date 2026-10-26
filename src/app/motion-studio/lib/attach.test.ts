@@ -180,3 +180,13 @@ describe("keyframes from files", () => {
     expect("keys" in normalizeClip(text("b"))).toBe(false);
   });
 });
+
+describe("untrusted documents", () => {
+  test("a picture pointing at the web instead of carrying its data is removed, with a warning", () => {
+    const remote = { id: "r", name: "Tracker", type: "sprite", source: { kind: "image", dataUrl: "https://example.com/pixel.png", label: "p", aspect: 1 } };
+    const inline = { id: "i", name: "Kept", type: "sprite", source: { kind: "image", dataUrl: "data:image/png;base64,AAAA", label: "p", aspect: 1 } };
+    const { doc: fixed, warnings } = normalizeDoc({ ...doc([]), clips: [remote, inline] as unknown as Clip[] });
+    expect(fixed.clips.map((c) => c.id)).toEqual(["i"]);
+    expect(warnings.join(" ")).toContain("Tracker");
+  });
+});

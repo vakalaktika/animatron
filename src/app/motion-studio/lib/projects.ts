@@ -89,12 +89,17 @@ export function saveProjects(store: ProjectStore): string | null {
   }
 }
 
-/** Puts `doc` in the current project's slot (creating the slot when there is none). */
+/**
+ * Puts `doc` in the current project's slot (creating the slot when there is
+ * none). The edit time moves only when the document actually changed (every
+ * edit makes a new object), so opening a composition doesn't count as
+ * editing it: sync relies on that to tell the newer copy.
+ */
 export function upsertCurrent(store: ProjectStore, doc: StudioDoc, now = new Date().toISOString()): ProjectStore {
   const id = store.currentId ?? newId();
   const exists = store.projects.some((p) => p.id === id);
   const projects = exists
-    ? store.projects.map((p) => (p.id === id ? { ...p, doc, updatedAt: now } : p))
+    ? store.projects.map((p) => (p.id === id && p.doc !== doc ? { ...p, doc, updatedAt: now } : p))
     : [...store.projects, { id, doc, updatedAt: now }];
   return { currentId: id, projects };
 }
@@ -111,8 +116,8 @@ export function removeProject(store: ProjectStore, id: string): ProjectStore {
   return { currentId, projects };
 }
 
-export function renameProject(store: ProjectStore, id: string, name: string): ProjectStore {
-  return { ...store, projects: store.projects.map((p) => (p.id === id ? { ...p, doc: { ...p.doc, name } } : p)) };
+export function renameProject(store: ProjectStore, id: string, name: string, now = new Date().toISOString()): ProjectStore {
+  return { ...store, projects: store.projects.map((p) => (p.id === id ? { ...p, doc: { ...p.doc, name }, updatedAt: now } : p)) };
 }
 
 export function duplicateProject(store: ProjectStore, id: string, now = new Date().toISOString()): ProjectStore {
