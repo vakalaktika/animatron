@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { ColorInput, Select, Slider, TextInput, Toggle } from "@/app/components/shared-components";
 import { ChevronIcon } from "./icons";
 
@@ -183,11 +183,24 @@ export function ChipField<T extends string>({
   onChange: (v: T) => void;
   options: { value: T; label: string }[];
 }) {
+  // One tab stop for the group; arrow keys move between chips and choose,
+  // the way a native radio group behaves.
+  const current = Math.max(
+    0,
+    options.findIndex((o) => o.value === value),
+  );
+  const step = (e: KeyboardEvent<HTMLButtonElement>, delta: number) => {
+    e.preventDefault();
+    const i = (current + delta + options.length) % options.length;
+    onChange(options[i].value);
+    const chips = e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role=radio]");
+    chips?.[i]?.focus();
+  };
   return (
     <fieldset className="min-w-0">
       <legend className="mb-2 block atm-label">{label}</legend>
       <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1.5">
-        {options.map((o) => {
+        {options.map((o, i) => {
           const on = o.value === value;
           return (
             <button
@@ -195,7 +208,12 @@ export function ChipField<T extends string>({
               type="button"
               role="radio"
               aria-checked={on}
+              tabIndex={i === current ? 0 : -1}
               onClick={() => onChange(o.value)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowRight" || e.key === "ArrowDown") step(e, 1);
+                else if (e.key === "ArrowLeft" || e.key === "ArrowUp") step(e, -1);
+              }}
               className={`atm-chip min-h-8 rounded-full border px-3 font-sans text-[12px] font-semibold tracking-[0.02em] pointer-coarse:min-h-10 ${
                 on ? "border-primary bg-primary-soft text-ink" : "border-border-control text-ink-secondary hover:bg-surface-sunken hover:text-ink"
               }`}

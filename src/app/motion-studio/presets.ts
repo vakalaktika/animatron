@@ -18,11 +18,12 @@ import { normalizeClip, normalizeDoc, PLAIN_TEXT_DEFAULTS, type Normalized, type
 
 // Storage key stays on v1: saved documents of any version are migrated on read.
 export const STORAGE_KEY = "motion-studio.presets.v1";
+/** The offered frames. `name` is the plain word for one (a gallery chip); `label` spells out the size too (a select). */
 export const FRAME_SIZES = [
-  { label: "1920 x 1080 (video)", width: 1920, height: 1080 },
-  { label: "1080 x 1080 (square post)", width: 1080, height: 1080 },
-  { label: "1080 x 1920 (story / reel)", width: 1080, height: 1920 },
-  { label: "1440 x 900 (site hero)", width: 1440, height: 900 },
+  { name: "Video", label: "1920 x 1080 (video)", width: 1920, height: 1080 },
+  { name: "Square post", label: "1080 x 1080 (square post)", width: 1080, height: 1080 },
+  { name: "Story / reel", label: "1080 x 1920 (story / reel)", width: 1080, height: 1920 },
+  { name: "Site hero", label: "1440 x 900 (site hero)", width: 1440, height: 900 },
 ] as const;
 
 export const newId = () => Math.random().toString(36).slice(2, 9);
@@ -501,11 +502,12 @@ export function loaderPreset(): StudioDoc {
   };
 }
 
-export const BUILT_IN_PRESETS: { label: string; make: () => StudioDoc }[] = [
-  { label: "Welcome", make: welcomePreset },
-  { label: "Ribbon ride", make: ribbonRidePreset },
-  { label: "End cap", make: endCapPreset },
-  { label: "Chippy loader", make: loaderPreset },
+/** The original four compositions; `templates.ts` adds the starter gallery after them. */
+export const BUILT_IN_PRESETS: { label: string; blurb: string; make: () => StudioDoc }[] = [
+  { label: "Welcome", blurb: "A ribbon draws in, the title rides its tip, a comet loops.", make: welcomePreset },
+  { label: "Ribbon ride", blurb: "A wave ribbon with a rider that lands and a loop.", make: ribbonRidePreset },
+  { label: "End cap", blurb: "Rings spring in, the bird arrives, a bubble speaks.", make: endCapPreset },
+  { label: "Chippy loader", blurb: "A tidy loop for a loading screen.", make: loaderPreset },
 ];
 
 export interface SavedPreset {
