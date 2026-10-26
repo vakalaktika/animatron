@@ -21,6 +21,7 @@ import { spriteActiveDuration } from "../engine/spriteTiming";
 import { svgDataUrl } from "../engine/svgText";
 import { IDLE_FLAP_SECONDS } from "../engine/timing";
 import type { SpriteClip } from "../types";
+import { VideoArt } from "./VideoArt";
 
 interface Props {
   clip: SpriteClip;
@@ -90,6 +91,7 @@ export function SpriteClipView({ clip, time }: Props) {
   const isChippy = source.kind === "chippy";
   const aspect = source.kind === "chippy" ? CHIPPY_VIEWBOX.height / CHIPPY_VIEWBOX.width : source.aspect;
   const src = source.kind === "image" ? source.dataUrl : source.kind === "svg" ? svgDataUrl(source) : null;
+  const video = source.kind === "video" ? source : null;
   const width = clip.width;
   const height = width * aspect;
   const anchor = isChippy ? CHIPPY_ANCHOR : { x: 0.5, y: 0.5 };
@@ -102,6 +104,8 @@ export function SpriteClipView({ clip, time }: Props) {
     >
       {isChippy ? (
         <ChippyArt clip={clip} time={time} />
+      ) : video ? (
+        <VideoArt clip={clip} source={video} time={time} width={width} height={height} />
       ) : src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

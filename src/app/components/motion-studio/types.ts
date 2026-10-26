@@ -15,6 +15,8 @@ export type EaseName =
   | "inOut"
   | "flight"
   | "backOut"
+  | "anticipate"
+  | "snap"
   | "custom";
 
 export interface Ease {
@@ -128,6 +130,26 @@ export type SpriteSource =
       label: string;
       aspect: number;
       textRuns: SvgTextRun[];
+    }
+  | {
+      /**
+       * A video file, kept in the browser's media store (see lib/media.ts)
+       * and referenced by id: a doc stays small enough for localStorage.
+       * Plays from the clip start, muted (the composition's sound comes
+       * from its own track), and holds its last frame after `playFor`.
+       */
+      kind: "video";
+      mediaId: string;
+      label: string;
+      aspect: number;
+      /** Length of the file in seconds. */
+      length: number;
+      /** Seconds into the file where playback starts. */
+      trimStart: number;
+      /** Seconds the video shows for, from the clip start. */
+      playFor: number;
+      /** Fill the stage as a background rather than travel as a picture. */
+      cover: boolean;
     };
 
 /**
@@ -383,6 +405,27 @@ export interface StageConfig {
   transparent: boolean;
 }
 
+/**
+ * The composition's one sound: a music bed or voice-over kept in the media
+ * store. It starts on the shared clock at `offset`, `trimStart` seconds into
+ * the file, and plays to the end of the composition or the file, whichever
+ * comes first. Rendered videos carry it; the preview plays it in step.
+ */
+export interface AudioTrack {
+  mediaId: string;
+  name: string;
+  /** Length of the file in seconds. */
+  length: number;
+  /** Seconds on the clock when the sound starts. */
+  offset: number;
+  /** Seconds into the file where playback starts. */
+  trimStart: number;
+  /** 0..1 */
+  volume: number;
+  /** Seconds of fade at the end of the composition; 0 cuts. */
+  fadeOut: number;
+}
+
 export const DOC_VERSION = 2;
 
 export interface StudioDoc {
@@ -390,4 +433,5 @@ export interface StudioDoc {
   name: string;
   stage: StageConfig;
   clips: Clip[];
+  audio?: AudioTrack | null;
 }

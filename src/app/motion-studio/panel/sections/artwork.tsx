@@ -2,7 +2,7 @@
 
 import type { SpriteClip } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
-import { TextField } from "../fields";
+import { BUTTON_ROW, ChipField, NumField, TextField } from "../fields";
 import type { PanelSection } from "../PanelGroup";
 
 export interface ArtworkActions {
@@ -65,6 +65,57 @@ export function rasterSection(clip: SpriteClip, actions: ArtworkActions): PanelS
         <Button size="xs" variant="outline" onClick={() => actions.onAddAttachedText(clip)}>
           + Text that follows this picture
         </Button>
+      </>
+    ),
+  };
+}
+
+/** A video: where in the file it starts, how long it shows, and how it fills its box. */
+export function videoSection(clip: SpriteClip, onChange: (c: SpriteClip) => void, stage: { width: number; height: number }): PanelSection {
+  const source = clip.source.kind === "video" ? clip.source : null;
+  if (!source) return { id: "video", title: "Video", content: null };
+  const set = (patch: Partial<typeof source>) => onChange({ ...clip, source: { ...source, ...patch } });
+  const longest = Math.max(0.2, (source.length || 600) - source.trimStart);
+  return {
+    id: "video",
+    title: "Video",
+    content: (
+      <>
+        <NumField label="Start in the file at" unit="s" value={source.trimStart} min={0} max={Math.max(0, (source.length || 600) - 0.2)} step={0.1} onChange={(v) => set({ trimStart: v, playFor: Math.min(source.playFor, Math.max(0.2, (source.length || 600) - v)) })} />
+        <NumField label="Show for" unit="s" value={source.playFor} min={0.2} max={Math.min(600, longest)} step={0.1} onChange={(v) => set({ playFor: v })} />
+        <ChipField
+          label="Fit"
+          value={source.cover ? "cover" : "contain"}
+          options={[
+            { value: "cover", label: "Fill the box" },
+            { value: "contain", label: "Show it all" },
+          ]}
+          onChange={(v) => set({ cover: v === "cover" })}
+        />
+        <div className={BUTTON_ROW}>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() =>
+              onChange({
+                ...clip,
+                x: stage.width / 2,
+                y: stage.height / 2,
+                width: stage.width,
+                scale: 1,
+                rotation: 0,
+                path: [
+                  { x: 0, y: 0 },
+                  { x: 0, y: 0 },
+                ],
+                source: { ...source, cover: true, aspect: stage.height / stage.width },
+              })
+            }
+          >
+            Fill the canvas
+          </Button>
+        </div>
+        <p className="atm-help">The video plays without sound. Add music or a voice-over with the Sound tool; it is one track for the whole piece.</p>
       </>
     ),
   };

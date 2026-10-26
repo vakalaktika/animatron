@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ComponentType, type ReactNode, type SVGProps } from "react";
 import { Button } from "@/app/components/shared-components";
 import { SHAPE_COLORS, SHAPES, type ShapeKind } from "../lib/shapes";
 import { Dialog } from "../dialogs/Dialog";
-import { BubbleIcon, ChevronLeftIcon, ImageIcon, PencilIcon, PlusIcon, RingsIcon, ShapesIcon, SquiggleIcon, TextIcon, WingIcon } from "./icons";
+import { BubbleIcon, ChevronLeftIcon, ImageIcon, MusicIcon, PencilIcon, PlusIcon, RingsIcon, ShapesIcon, SquiggleIcon, TextIcon, WingIcon } from "./icons";
 
 export type AddKind = "text" | "bubble" | "ribbon" | "chippy" | "logo";
 
@@ -20,7 +20,7 @@ interface Props {
 }
 
 interface Tool {
-  id: AddKind | "shape" | "import" | "draw";
+  id: AddKind | "shape" | "import" | "sound" | "draw";
   label: string;
   hint: string;
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
@@ -30,14 +30,16 @@ const TOOLS: Tool[] = [
   { id: "text", label: "Text", hint: "A line of text that reveals itself", Icon: TextIcon },
   { id: "bubble", label: "Speech bubble", hint: "Text in a bubble that points at something", Icon: BubbleIcon },
   { id: "shape", label: "Shape", hint: "A circle, star, arrow and friends", Icon: ShapesIcon },
-  { id: "import", label: "Picture or animation", hint: "PNG, JPG, SVG or a Lottie file", Icon: ImageIcon },
+  { id: "import", label: "Picture or video", hint: "PNG, JPG, SVG, GIF, MP4, MOV or a Lottie file", Icon: ImageIcon },
+  { id: "sound", label: "Sound", hint: "Music or a voice-over for the whole piece (MP3, WAV, M4A)", Icon: MusicIcon },
   { id: "ribbon", label: "Ribbon", hint: "A rainbow line that draws itself in", Icon: SquiggleIcon },
   { id: "draw", label: "Draw", hint: "Sketch on the canvas: a ribbon, or a path for the picture you picked (Esc to stop)", Icon: PencilIcon },
   { id: "chippy", label: "Chippy", hint: "The bird, flying along a path", Icon: WingIcon },
   { id: "logo", label: "Logo rings", hint: "Rings spring in and a letter traces", Icon: RingsIcon },
 ];
 
-const ACCEPT = ".json,.svg,.png,.jpg,.jpeg,.webp,.gif";
+const ACCEPT = ".json,.svg,.png,.jpg,.jpeg,.webp,.gif,.mp4,.m4v,.mov,.webm";
+const ACCEPT_SOUND = ".mp3,.wav,.m4a,.aac,.ogg,.oga,.flac,audio/*";
 
 /** The shapes, each drawn once as a small SVG tile. */
 function ShapeTile({ kind, fill }: { kind: ShapeKind; fill: string }) {
@@ -112,6 +114,7 @@ export function AddToolbar({ onAdd, onAddShape, onImport, drawing, onToggleDraw,
   const [sheetOpen, setSheetOpen] = useState(false);
   const [shapesOpen, setShapesOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const soundRef = useRef<HTMLInputElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
 
   // The shapes popover on the rail closes on an outside click or Escape.
@@ -136,6 +139,10 @@ export function AddToolbar({ onAdd, onAddShape, onImport, drawing, onToggleDraw,
       fileRef.current?.click();
       return;
     }
+    if (tool.id === "sound") {
+      soundRef.current?.click();
+      return;
+    }
     if (tool.id === "shape") {
       setShapesOpen(true);
       return;
@@ -155,21 +162,17 @@ export function AddToolbar({ onAdd, onAddShape, onImport, drawing, onToggleDraw,
     setSheetOpen(false);
   };
 
+  const onPicked = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) onImport(file);
+    e.target.value = "";
+    setSheetOpen(false);
+  };
   const fileInput = (
-    <input
-      ref={fileRef}
-      type="file"
-      accept={ACCEPT}
-      className="sr-only"
-      tabIndex={-1}
-      aria-hidden="true"
-      onChange={(e) => {
-        const file = e.target.files?.[0];
-        if (file) onImport(file);
-        e.target.value = "";
-        setSheetOpen(false);
-      }}
-    />
+    <>
+      <input ref={fileRef} type="file" accept={ACCEPT} className="sr-only" tabIndex={-1} aria-hidden="true" onChange={onPicked} />
+      <input ref={soundRef} type="file" accept={ACCEPT_SOUND} className="sr-only" tabIndex={-1} aria-hidden="true" onChange={onPicked} />
+    </>
   );
 
   if (layout === "rail") {

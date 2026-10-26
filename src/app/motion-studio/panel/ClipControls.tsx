@@ -3,7 +3,7 @@
 import { capabilities } from "@/app/components/motion-studio/engine/capabilities";
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { PanelGroup, type PanelSection } from "./PanelGroup";
-import { outlinedSvgSection, rasterSection, textRunsSection, type ArtworkActions } from "./sections/artwork";
+import { outlinedSvgSection, rasterSection, textRunsSection, videoSection, type ArtworkActions } from "./sections/artwork";
 import { buildSections } from "./sections/logo";
 import { lineSection } from "./sections/line";
 import { playbackSection } from "./sections/lottie";
@@ -38,6 +38,8 @@ export function ClipControls({ doc, clip, onChange, onReparent, focusText = fals
   const sections: (PanelSection | null)[] = [
     // What the thing says comes before where it sits.
     caps.text && textSection(caps.text, onChange, focusText),
+    // A video's own settings come first: the file is the point of the layer.
+    caps.video && videoSection(caps.video, onChange, doc.stage),
     placementSection(doc, clip, onChange, onReparent),
     caps.reveal && revealSection(caps.reveal, onChange),
     caps.container && containerSection(caps.container, onChange),

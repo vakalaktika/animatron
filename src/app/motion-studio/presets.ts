@@ -5,6 +5,7 @@ import {
   type LottieClip,
   type RibbonClip,
   type SpriteClip,
+  type SpriteSource,
   type StudioDoc,
   type SvgTextRun,
   type TextClip,
@@ -183,6 +184,34 @@ export function makeImageSprite(
     ease: { name: "smoothOut" },
     bank: 0,
     fadeIn: 0.3,
+    ...over,
+  });
+}
+
+/**
+ * A video on the stage. As a background it fills the frame from the first
+ * moment and stays put; otherwise it arrives like a picture does.
+ */
+export function makeVideoSprite(
+  source: Omit<Extract<SpriteSource, { kind: "video" }>, "kind" | "cover">,
+  stage: { width: number; height: number },
+  background: boolean,
+  over: Partial<SpriteClip> = {},
+): SpriteClip {
+  const still = [
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+  ];
+  const aspect = background ? stage.height / stage.width : source.aspect;
+  return makeImageSprite("", source.label, aspect, {
+    source: { kind: "video", ...source, aspect, cover: background },
+    width: background ? stage.width : Math.min(640, stage.width * 0.5),
+    x: stage.width / 2,
+    y: stage.height / 2,
+    start: 0,
+    ...(background ? { path: still } : {}),
+    duration: background ? 0.2 : 1.2,
+    fadeIn: background ? 0 : 0.3,
     ...over,
   });
 }

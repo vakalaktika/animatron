@@ -34,7 +34,9 @@ export function clipDuration(clip: Clip): number {
         : clip.trail.style.motion === "paint"
           ? clip.trail.fadeOut
           : lineDuration(clip.trail.style, trailSubject(clip)) - active;
-      return active + Math.max(perch, trail);
+      // A video shows for its own length, travel or not.
+      const video = clip.source.kind === "video" ? clip.source.playFor : 0;
+      return Math.max(active + Math.max(perch, trail), video);
     }
     case "text": {
       const ruleEnd = clip.rule ? clip.ruleDelay + clip.ruleDuration : 0;
@@ -81,4 +83,13 @@ export function clipEnd(clip: Clip): number {
 export function docDuration(doc: StudioDoc, tail = 1): number {
   const ends = doc.clips.filter((c) => c.enabled).map(clipEnd);
   return ends.length ? Math.max(...ends) + tail : tail;
+}
+
+/** Seconds the sound plays for on the clock, within a composition of `duration`. */
+export function audioSpan(doc: StudioDoc, duration: number): { start: number; end: number } | null {
+  const a = doc.audio;
+  if (!a) return null;
+  const available = Math.max(0, a.length - a.trimStart);
+  const end = Math.min(duration, a.offset + available);
+  return end > a.offset ? { start: a.offset, end } : null;
 }

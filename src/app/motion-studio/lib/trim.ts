@@ -23,6 +23,12 @@ export function canTrim(clip: Clip): boolean {
 export function trimClip<T extends Clip>(clip: T, delta: number): T {
   switch (clip.type) {
     case "sprite":
+      // A video's bar is how long it plays; a picture's is its travel.
+      if (clip.source.kind === "video") {
+        const longest = Math.max(MIN_TRIM, clip.source.length > 0 ? clip.source.length - clip.source.trimStart : 600);
+        return { ...clip, source: { ...clip.source, playFor: round(clamp(clip.source.playFor + delta, MIN_TRIM, Math.min(longest, 600))) } };
+      }
+      return { ...clip, duration: round(clamp(clip.duration + delta, MIN_TRIM, MAX_TRIM)) };
     case "ribbon":
       return { ...clip, duration: round(clamp(clip.duration + delta, MIN_TRIM, MAX_TRIM)) };
     case "text": {

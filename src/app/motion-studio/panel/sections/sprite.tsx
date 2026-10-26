@@ -1,24 +1,16 @@
 "use client";
 
-import { EASE_LABELS } from "@/app/components/motion-studio/engine/easing";
 import { spriteTiming, WAYPOINT_DEFAULTS } from "@/app/components/motion-studio/engine/spriteTiming";
-import type { Ease, SpriteClip, Waypoint } from "@/app/components/motion-studio/types";
+import type { SpriteClip, Waypoint } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
-import { BUTTON_ROW, ChipField, MoreFields, NumField, ToggleField } from "../fields";
+import { EaseField } from "../EaseField";
+import { BUTTON_ROW, MoreFields, NumField, ToggleField } from "../fields";
 import type { PanelSection } from "../PanelGroup";
 import { setter } from "./setter";
-
-/** The easings in the order a person reaches for them; "custom" lives under fine-tune. */
-const EASE_CHIPS = (["smoothOut", "inOut", "flight", "backOut", "linear"] as Ease["name"][]).map((value) => ({
-  value,
-  label: EASE_LABELS[value],
-}));
-const DEFAULT_BEZIER: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
 
 /** Size, timing, easing, bank, flip, fade, loop. */
 export function motionSection(clip: SpriteClip, onChange: (c: SpriteClip) => void): PanelSection {
   const set = setter(clip, onChange);
-  const custom = clip.ease.name === "custom";
   return {
     id: "motion",
     title: "Motion",
@@ -27,40 +19,9 @@ export function motionSection(clip: SpriteClip, onChange: (c: SpriteClip) => voi
         <NumField label="Width" unit="px" value={clip.width} min={40} max={1200} step={1} onChange={(v) => set("width", v)} />
         <NumField label="Travel time" unit="s" value={clip.duration} min={0.2} max={12} onChange={(v) => set("duration", v)} />
         <ToggleField label="Loop around the path forever" value={clip.loop} onChange={(v) => set("loop", v)} />
-        {!clip.loop && (
-          <ChipField
-            label="Pace"
-            value={custom ? "smoothOut" : clip.ease.name}
-            options={EASE_CHIPS}
-            onChange={(name) => set("ease", { ...clip.ease, name })}
-          />
-        )}
+        {!clip.loop && <EaseField value={clip.ease} onChange={(ease) => set("ease", ease)} />}
         <MoreFields>
-          {!clip.loop && (
-            <>
-              <NumField label="Size at takeoff" unit="×" value={clip.scaleFrom} min={0.1} max={2} onChange={(v) => set("scaleFrom", v)} />
-              <ToggleField label="Custom pace curve" value={custom} onChange={(v) => set("ease", v ? { name: "custom", custom: clip.ease.custom ?? DEFAULT_BEZIER } : { name: "smoothOut" })} />
-              {custom && (
-                <div className="grid grid-cols-4 gap-2">
-                  {(clip.ease.custom ?? DEFAULT_BEZIER).map((v, i) => (
-                    <input
-                      key={i}
-                      type="number"
-                      step={0.01}
-                      aria-label={`Curve ${["x1", "y1", "x2", "y2"][i]}`}
-                      className="rounded-sm border border-border-control bg-surface-raised px-1.5 py-1 text-xs tabular-nums focus:outline-none focus:border-primary"
-                      value={v}
-                      onChange={(e) => {
-                        const next = [...(clip.ease.custom ?? DEFAULT_BEZIER)] as [number, number, number, number];
-                        next[i] = Number(e.target.value);
-                        set("ease", { name: "custom", custom: next });
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+          {!clip.loop && <NumField label="Size at takeoff" unit="×" value={clip.scaleFrom} min={0.1} max={2} onChange={(v) => set("scaleFrom", v)} />}
           <NumField label="Lean into turns" value={clip.bank} min={0} max={1} onChange={(v) => set("bank", v)} />
           <ToggleField label="Face the way it travels" value={clip.autoFlip} onChange={(v) => set("autoFlip", v)} />
           <NumField label="Fade in over" unit="s" value={clip.fadeIn} min={0} max={2} onChange={(v) => set("fadeIn", v)} />
