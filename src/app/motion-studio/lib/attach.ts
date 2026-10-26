@@ -1,4 +1,5 @@
 import { descendantIds } from "@/app/components/motion-studio/engine/hierarchy";
+import { flowDragDelta, flowRibbon } from "@/app/components/motion-studio/engine/textFlow";
 import {
   IDENTITY,
   restTransformAt,
@@ -49,12 +50,15 @@ export function deleteClip(doc: StudioDoc, clipId: string): StudioDoc {
 /**
  * Moves a clip by a stage-space delta. For an attached clip the delta is
  * converted into the parent's frame at time `t`, so dragging on the stage
- * feels the same whether or not the parent is scaled or banked.
+ * feels the same whether or not the parent is scaled or banked. Text flowing
+ * along a ribbon slides along it and lifts off it instead.
  */
 export function nudgeClip(doc: StudioDoc, clipId: string, delta: Vec2, t: number): StudioDoc {
   const clip = doc.clips.find((c) => c.id === clipId);
   if (!clip) return doc;
-  const local = clip.parentId ? toLocalDelta(transformAt(doc, clip.parentId, t), delta) : delta;
+  const inParent = clip.parentId ? toLocalDelta(transformAt(doc, clip.parentId, t), delta) : delta;
+  const ribbon = clip.type === "text" ? flowRibbon(doc, clip) : null;
+  const local = ribbon && clip.type === "text" ? flowDragDelta(clip, ribbon, inParent, t) : inParent;
   return replaceClip(doc, { ...clip, x: clip.x + local.x, y: clip.y + local.y });
 }
 

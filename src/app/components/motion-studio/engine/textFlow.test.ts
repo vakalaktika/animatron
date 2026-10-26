@@ -1,7 +1,7 @@
 import type { Clip, RibbonClip, StudioDoc, TextClip } from "../types";
 import { DEFAULT_LINE_STYLE } from "./line";
 import { buildPath } from "./path";
-import { flowGlyphs, flowRibbon, flowSeats, flowsOnRibbon } from "./textFlow";
+import { flowDragDelta, flowGlyphs, flowRibbon, flowSeats, flowsOnRibbon } from "./textFlow";
 import { transformAt } from "./transform";
 
 const ribbon = (over: Partial<RibbonClip> = {}): RibbonClip => ({
@@ -157,9 +157,34 @@ describe("flowing text clips", () => {
 
   test("a point seat centres on it; the front trails the paint head", () => {
     const r = ribbon();
-    expect(flowSeats(words(), r, [10, 10], 0).map((s) => Math.round(s.x))).toEqual([195, 205]);
-    const front = words({ along: "front" });
+    const plain = { scale: 1 };
+    expect(flowSeats(words(plain), r, [10, 10], 0).map((s) => Math.round(s.x))).toEqual([195, 205]);
+    const front = words({ ...plain, along: "front" });
     expect(flowSeats(front, r, [10, 10], 1).map((s) => Math.round(s.x))).toEqual([185, 195]);
     expect(flowSeats(front, r, [10, 10], 0).every((s) => !s.onPath)).toBe(true);
+  });
+
+  test("the clip's size spaces the glyphs as it sizes them", () => {
+    const seats = flowSeats(words({ scale: 2 }), ribbon(), [10, 10], 0);
+    expect(seats[1].x - seats[0].x).toBeCloseTo(20);
+  });
+
+  test("a lifted run stays level with its seat on the centreline through a bend", () => {
+    // A long straight, then a tight turn down: lifting to the inside shortens the line after the seat only.
+    const r = ribbon({ points: [{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 450, y: 50 }, { x: 450, y: 400 }] });
+    const centre = flowSeats(words({ scale: 1, along: 0.3 }), r, [2], 0)[0];
+    const lifted = flowSeats(words({ scale: 1, along: 0.3, y: 40 }), r, [2], 0)[0];
+    expect(lifted.x).toBeCloseTo(centre.x, 0);
+    expect(lifted.y - centre.y).toBeCloseTo(40, 0);
+  });
+
+  test("a drag slides along the ribbon and lifts off it, whichever way it runs", () => {
+    const down = ribbon({ points: [{ x: 0, y: 0 }, { x: 0, y: 400 }] });
+    const d = flowDragDelta(words(), down, { x: 0, y: 30 }, 0);
+    expect(d.x).toBeCloseTo(30);
+    expect(d.y).toBeCloseTo(0);
+    const side = flowDragDelta(words(), down, { x: -10, y: 0 }, 0);
+    expect(side.x).toBeCloseTo(0);
+    expect(side.y).toBeCloseTo(10);
   });
 });

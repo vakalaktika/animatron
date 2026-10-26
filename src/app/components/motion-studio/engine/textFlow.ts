@@ -1,6 +1,6 @@
 import type { Clip, RibbonClip, StudioDoc, TextClip, Vec2 } from "../types";
 import type { PathSampler } from "./path";
-import { ribbonHead, ribbonPath } from "./ribbon";
+import { ribbonHead, ribbonPath, ribbonPointAt } from "./ribbon";
 
 /** Where one glyph of flowing text sits: its centre and heading, in the ribbon's anchor frame. */
 export interface GlyphSeat {
@@ -28,15 +28,25 @@ export type FlowAlign = "center" | "end";
 
 /** A polyline walked by distance: the line the glyphs actually sit on. */
 interface Track {
+  lift: number;
   points: Vec2[];
   /** Distance from the first point to each point. */
   cumulative: number[];
   length: number;
+  /** The same for the centreline it was lifted off, point for point. */
+  base: number[];
 }
 
-// Offset tracks are rebuilt only when the path or the lift changes. Paths
-// are cached per ribbon (engine/ribbon.ts), so the path is a sound key.
-const tracks = new WeakMap<PathSampler, Map<number, Track>>();
+// One offset track per path, rebuilt when the lift changes (a drag changes
+// it every frame, so older lifts are not kept). Paths are cached per ribbon
+// (engine/ribbon.ts), so the path is a sound key.
+const tracks = new WeakMap<PathSampler, Track>();
+
+const walk = (points: Vec2[]) => {
+  const out = [0];
+  for (let i = 1; i < points.length; i++) out.push(out[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y));
+  return out;
+};
 
 /**
  * The path's polyline pushed `lift` px along its normal (negative = left of
@@ -45,10 +55,8 @@ const tracks = new WeakMap<PathSampler, Map<number, Track>>();
  * the outside.
  */
 function offsetTrack(path: PathSampler, closed: boolean, lift: number): Track {
-  const byLift = tracks.get(path) ?? new Map<number, Track>();
-  tracks.set(path, byLift);
-  const cached = byLift.get(lift);
-  if (cached) return cached;
+  const cached = tracks.get(path);
+  if (cached && cached.lift === lift) return cached;
   const line = path.polyline;
   const n = line.length;
   const neighbour = (i: number) => (closed ? line[(i + n - 1) % n] : line[Math.max(0, i - 1)]);
@@ -62,11 +70,31 @@ function offsetTrack(path: PathSampler, closed: boolean, lift: number): Track {
     const ty = (b.y - a.y) / d;
     return { x: p.x - lift * ty, y: p.y + lift * tx };
   });
-  const cumulative = [0];
-  for (let i = 1; i < n; i++) cumulative.push(cumulative[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y));
-  const track = { points, cumulative, length: cumulative[n - 1] ?? 0 };
-  byLift.set(lift, track);
+  const cumulative = walk(points);
+  const track = { lift, points, cumulative, length: cumulative[n - 1] ?? 0, base: walk(line) };
+  tracks.set(path, track);
   return track;
+}
+
+/**
+ * Distance along the track level with fraction `pin` of the centreline, so
+ * a seat (and the paint head) means the same spot whether or not the text
+ * is lifted: the lifted line is longer or shorter through every bend.
+ */
+function pinDistance(track: Track, pin: number): number {
+  const { base, cumulative } = track;
+  if (base.length < 2) return 0;
+  const target = pin * base[base.length - 1];
+  let lo = 0;
+  let hi = base.length - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (base[mid] <= target) lo = mid;
+    else hi = mid;
+  }
+  const span = base[hi] - base[lo];
+  const u = span === 0 ? 0 : Math.min(1, Math.max(0, (target - base[lo]) / span));
+  return cumulative[lo] + (cumulative[hi] - cumulative[lo]) * u;
 }
 
 /** The point and heading `distance` along a track (clamped to its ends). */
@@ -91,7 +119,7 @@ function trackAt(track: Track, distance: number): { x: number; y: number; angle:
  * Lays a run of glyphs with the given advance widths along `path`, the way
  * text sits on a path: each glyph's centre on the line `lift` px off the
  * curve (negative = left of travel), turned to its tangent there. The run
- * is pinned at fraction `pin` of the path by its centre or its end, then
+ * is pinned level with fraction `pin` of the path by its centre or its end, then
  * slid `shift` px along it. A closed path wraps; on an open one, glyphs
  * past either end are marked off the path.
  */
@@ -107,7 +135,7 @@ export function flowGlyphs(
   const track = offsetTrack(path, closed, lift);
   const { length } = track;
   const total = widths.reduce((sum, w) => sum + w, 0);
-  let cursor = pin * length + shift - (align === "center" ? total / 2 : total);
+  let cursor = pinDistance(track, pin) + shift - (align === "center" ? total / 2 : total);
   return widths.map((w) => {
     const mid = cursor + w / 2;
     cursor += w;
@@ -117,9 +145,31 @@ export function flowGlyphs(
   });
 }
 
-/** The glyph seats of a flowing text clip at time `t` (riding the front follows the paint head). */
+/** Fraction of the ribbon a flowing clip is pinned at, at time `t`: its seat, or the paint head. */
+function flowPin(clip: TextClip, ribbon: RibbonClip, t: number): number {
+  if (clip.along === "front") return ribbonHead(ribbon, t);
+  return typeof clip.along === "number" ? clip.along : 0;
+}
+
+/**
+ * The glyph seats of a flowing text clip at time `t` (riding the front
+ * follows the paint head). `widths` are the glyphs' unscaled advances; the
+ * clip's size scales them, as it scales the glyphs drawn.
+ */
 export function flowSeats(clip: TextClip, ribbon: RibbonClip, widths: number[], t: number): GlyphSeat[] {
-  const front = clip.along === "front";
-  const pin = front ? ribbonHead(ribbon, t) : typeof clip.along === "number" ? clip.along : 0;
-  return flowGlyphs(ribbonPath(ribbon), ribbon.loop, pin, front ? "end" : "center", widths, clip.x, clip.y);
+  const align = clip.along === "front" ? "end" : "center";
+  const advances = widths.map((w) => w * clip.scale);
+  return flowGlyphs(ribbonPath(ribbon), ribbon.loop, flowPin(clip, ribbon, t), align, advances, clip.x, clip.y);
+}
+
+/**
+ * A drag of a flowing clip in the ribbon's frame, turned into its own
+ * terms: how far to slide along the ribbon (`x`) and lift off it (`y`),
+ * measured against the ribbon's heading at the seat.
+ */
+export function flowDragDelta(clip: TextClip, ribbon: RibbonClip, delta: Vec2, t: number): Vec2 {
+  const a = (ribbonPointAt(ribbon, flowPin(clip, ribbon, t)).angle * Math.PI) / 180;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  return { x: delta.x * cos + delta.y * sin, y: -delta.x * sin + delta.y * cos };
 }
