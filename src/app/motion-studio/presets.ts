@@ -18,11 +18,12 @@ import { normalizeClip, normalizeDoc, PLAIN_TEXT_DEFAULTS, type Normalized, type
 
 // Storage key stays on v1: saved documents of any version are migrated on read.
 export const STORAGE_KEY = "motion-studio.presets.v1";
+/** The offered frames. `name` is the plain word for one (a gallery chip); `label` spells out the size too (a select). */
 export const FRAME_SIZES = [
-  { label: "1920 x 1080 (video)", width: 1920, height: 1080 },
-  { label: "1080 x 1080 (square post)", width: 1080, height: 1080 },
-  { label: "1080 x 1920 (story / reel)", width: 1080, height: 1920 },
-  { label: "1440 x 900 (site hero)", width: 1440, height: 900 },
+  { name: "Video", label: "1920 x 1080 (video)", width: 1920, height: 1080 },
+  { name: "Square post", label: "1080 x 1080 (square post)", width: 1080, height: 1080 },
+  { name: "Story / reel", label: "1080 x 1920 (story / reel)", width: 1080, height: 1920 },
+  { name: "Site hero", label: "1440 x 900 (site hero)", width: 1440, height: 900 },
 ] as const;
 
 export const newId = () => Math.random().toString(36).slice(2, 9);

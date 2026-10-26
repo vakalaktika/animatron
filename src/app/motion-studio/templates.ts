@@ -1,7 +1,7 @@
 import { DOC_VERSION, type RibbonClip, type SpriteClip, type StudioDoc, type TextClip } from "@/app/components/motion-studio/types";
 import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
 import { arrivalTime } from "@/app/components/motion-studio/engine/ribbon";
-import { makeShape } from "./lib/shapes";
+import { makeShape, type ShapeKind } from "./lib/shapes";
 import { PLAIN_TEXT_DEFAULTS } from "./lib/migrate";
 import { BUILT_IN_PRESETS, FRAME_SIZES, makeRibbon, makeSvgSprite, makeText, ringPoints } from "./presets";
 
@@ -13,9 +13,14 @@ export interface Template {
   make: () => StudioDoc;
 }
 
+// Every clip here has a fixed id, like the presets: the server-rendered DOM
+// and the client state must agree after hydration, and a thumbnail's clock
+// needs a stable document.
+
 // The Atomic Age palette as literal colours: a document has to stand on its
 // own outside the app (JSON, share links, React handoff).
 const PAPER = "#f7f5ee";
+const CARD = "#faf7f4";
 const CREAM = "#f6efe3";
 const NIGHT = "#16283a";
 const INK = "#2a241d";
@@ -132,7 +137,7 @@ export function titleCardTemplate(): StudioDoc {
 /** A picture placeholder rises into a sun, a "New" tag pops, the name and a button follow. */
 export function productRevealTemplate(): StudioDoc {
   const sun = makeShape("circle", GOLD, VIDEO, { id: "product-sun", name: "Sun", x: 640, y: 540, width: 560, duration: 0.9, scaleFrom: 0.2, fadeIn: 0 });
-  const picture = makeShape("rounded", "#faf7f4", VIDEO, {
+  const picture = makeShape("rounded", CARD, VIDEO, {
     id: "product-picture",
     name: "Picture",
     x: 640,
@@ -154,7 +159,7 @@ export function productRevealTemplate(): StudioDoc {
 /** Three points land one after another, each with a dot that slides in ahead of it. */
 export function bulletBuildTemplate(): StudioDoc {
   const title = words({ id: "bullets-title", name: "Title", x: 960, y: 150, start: 0, text: "Three things to know", font: "serif", fontSize: 72, letterStagger: 0.03, letterDuration: 0.4 });
-  // Text is anchored at its centre, so lines of a similar length keep their left edges in step.
+  // Text is anchored at its centre, so lines of about the same length keep their left edges close.
   const lines = ["First, the big idea", "Then, why it matters", "Finally, what to do"];
   const rows = lines.flatMap((text, i) => {
     const y = 420 + i * 150;
@@ -282,13 +287,13 @@ export function storyCaptionTemplate(): StudioDoc {
 /** A reel opener on a night sky: the hook pops, three shapes drop in, the tease fades in. */
 export function reelHookTemplate(): StudioDoc {
   const hook = words({ id: "reel-hook", name: "Hook", x: 540, y: 700, start: 0.2, text: "Wait for it…", font: "serif", fontSize: 110, color: CREAM, reveal: "pop", revealDuration: 0.6, overshoot: 1.6 });
-  const drops: [string, string, number, number][] = [
+  const drops: [ShapeKind, string, number, number][] = [
     ["star", GOLD, 300, 1150],
     ["circle", RED, 540, 1250],
     ["heart", CREAM, 780, 1150],
   ];
   const shapes = drops.map(([kind, fill, x, y], i) =>
-    makeShape(kind as "star" | "circle" | "heart", fill, STORY, {
+    makeShape(kind, fill, STORY, {
       id: `reel-shape-${i + 1}`,
       name: `Shape ${i + 1}`,
       x,
@@ -349,7 +354,12 @@ export const STARTER_TEMPLATES: Template[] = [
 /** Everything the gallery offers: the originals, then the starters. */
 export const TEMPLATES: Template[] = [...BUILT_IN_PRESETS, ...STARTER_TEMPLATES];
 
-/** "1920 × 1080": the frame a document is set in, as the gallery's size chips name it. */
-export function frameLabel(doc: Pick<StudioDoc, "stage">): string {
-  return `${doc.stage.width} × ${doc.stage.height}`;
+/** "1920 × 1080": a frame spelled out, as the gallery prints it under each tile. */
+export function frameLabel(frame: Frame): string {
+  return `${frame.width} × ${frame.height}`;
+}
+
+/** Index into FRAME_SIZES of the frame a document is set in, or -1 for a custom size. */
+export function frameIndex(doc: Pick<StudioDoc, "stage">): number {
+  return FRAME_SIZES.findIndex((f) => f.width === doc.stage.width && f.height === doc.stage.height);
 }

@@ -24,7 +24,7 @@ describe("template frames", () => {
     const sprites = doc.clips.filter((c) => c.type === "sprite" && c.source.kind !== "chippy").length;
     const ribbons = doc.clips.filter((c) => c.type === "ribbon").length;
     expect(container.querySelectorAll("img").length).toBe(sprites);
-    expect(container.querySelectorAll("svg").length).toBeGreaterThanOrEqual(ribbons);
+    expect(container.querySelectorAll("[data-ribbon-for]").length).toBe(ribbons);
     unmount();
   });
 });

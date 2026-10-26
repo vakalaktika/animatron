@@ -5,7 +5,7 @@ import type { StudioDoc } from "@/app/components/motion-studio/types";
 import { Button, Select } from "@/app/components/shared-components";
 import { recentFirst, type Project } from "../lib/projects";
 import { FRAME_SIZES } from "../presets";
-import { frameLabel, TEMPLATES } from "../templates";
+import { frameIndex, frameLabel, TEMPLATES } from "../templates";
 import { ChipField } from "../panel/fields";
 import { MiniPreview } from "../panel/MiniPreview";
 import { DuplicateIcon, PlusIcon, TrashIcon } from "../panel/icons";
@@ -24,12 +24,15 @@ interface Props {
   onRenameProject: (id: string, name: string) => void;
 }
 
-/** Size chips: every frame, plus all of them. The value is the chip's own text. */
+/** Size chips: every frame by its plain name, plus all of them. */
 const ALL_SIZES = "All sizes";
-const SIZE_OPTIONS = [ALL_SIZES, ...FRAME_SIZES.map((f) => `${f.width} \u00D7 ${f.height}`)].map((value) => ({ value, label: value }));
+const SIZE_OPTIONS = [ALL_SIZES, ...FRAME_SIZES.map((f) => f.name)].map((value) => ({ value, label: value }));
 
 /** Each template with the frame it is set in, read once from a throwaway copy. */
-const CATALOG = TEMPLATES.map((t) => ({ ...t, frame: frameLabel(t.make()) }));
+const CATALOG = TEMPLATES.map((t) => {
+  const doc = t.make();
+  return { ...t, frame: frameLabel(doc.stage), frameIndex: frameIndex(doc) };
+});
 
 function when(iso: string): string {
   const d = new Date(iso);
@@ -67,12 +70,13 @@ export function GalleryDialog({
   const [size, setSize] = useState(ALL_SIZES);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const recent = recentFirst(projects);
-  const templates = CATALOG.filter((t) => size === ALL_SIZES || t.frame === size);
+  const sizeIndex = FRAME_SIZES.findIndex((f) => f.name === size);
+  const templates = sizeIndex < 0 ? CATALOG : CATALOG.filter((t) => t.frameIndex === sizeIndex);
 
   /** Picking a size also points the blank canvas at it. */
   const pickSize = (next: string) => {
     setSize(next);
-    const i = SIZE_OPTIONS.findIndex((o) => o.value === next) - 1;
+    const i = FRAME_SIZES.findIndex((f) => f.name === next);
     if (i >= 0) setFrame(i);
   };
 
@@ -85,6 +89,9 @@ export function GalleryDialog({
           </h3>
           <ChipField label="Size" value={size} options={SIZE_OPTIONS} onChange={pickSize} />
         </div>
+        <p className="sr-only" aria-live="polite">
+          {templates.length} {templates.length === 1 ? "template" : "templates"}
+        </p>
         <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
           <li>
             <div className={`${TILE} h-full justify-between border-dashed border-border-control`}>
@@ -96,7 +103,7 @@ export function GalleryDialog({
                 <Select variant="compact" aria-label="Frame size" className="w-full" value={frame} onChange={(e) => setFrame(Number(e.target.value))}>
                   {FRAME_SIZES.map((f, i) => (
                     <option key={f.label} value={i}>
-                      {f.width} × {f.height}
+                      {frameLabel(f)}
                     </option>
                   ))}
                 </Select>
@@ -112,7 +119,7 @@ export function GalleryDialog({
               <li key={key}>
                 <button
                   type="button"
-                  className={TILE}
+                  className={`${TILE} h-full`}
                   onMouseEnter={() => setHover(key)}
                   onMouseLeave={() => setHover((h) => (h === key ? null : h))}
                   onFocus={() => setHover(key)}
