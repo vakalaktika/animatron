@@ -178,6 +178,16 @@ function rigIsSound(clip: Clip): boolean {
 }
 
 /**
+ * A picture must travel inside the document as an image data URL. Anything
+ * else (a web address in a shared link) would be fetched the moment the
+ * composition opens, telling some server who opened it.
+ */
+function pictureIsInline(clip: Clip): boolean {
+  if (clip.type !== "sprite" || clip.source.kind !== "image") return true;
+  return typeof clip.source.dataUrl === "string" && clip.source.dataUrl.startsWith("data:image/");
+}
+
+/**
  * Migrates a document of any version to the current one, then repairs the
  * tree: parents that don't exist are dropped and clips on a parent loop are
  * detached. Import and localStorage are the only ways an old or broken
@@ -190,6 +200,11 @@ export function normalizeDoc(raw: RawDoc): Normalized {
     .filter((c) => {
       if (rigIsSound(c)) return true;
       warnings.push(`"${c.name}" had a rig this studio can't read; removed.`);
+      return false;
+    })
+    .filter((c) => {
+      if (pictureIsInline(c)) return true;
+      warnings.push(`"${c.name}" pointed at a picture elsewhere on the web instead of carrying it; removed.`);
       return false;
     })
     .map((c) => (c.type === "rig" ? { ...c, pose: tidyPose(c.rig, c.pose) } : c));

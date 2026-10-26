@@ -2,7 +2,7 @@
 
 import { useMotionValueEvent, type MotionValue } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import type { AnimationItem } from "lottie-web";
+import type { AnimationItem } from "lottie-web/build/player/lottie_light";
 import type { LottieClip } from "../types";
 
 interface Props {
@@ -22,7 +22,9 @@ export function LottieClipView({ clip, time }: Props) {
     if (!container) return;
     let item: AnimationItem | null = null;
     let cancelled = false;
-    import("lottie-web")
+    // The light build: SVG only and no expression support, so a Lottie file
+    // (which can arrive in a shared link) never runs code through eval.
+    import("lottie-web/build/player/lottie_light")
       .then((mod) => {
         if (cancelled) return;
         item = mod.default.loadAnimation({

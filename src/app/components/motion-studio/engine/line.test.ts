@@ -218,3 +218,12 @@ describe("line shape", () => {
     expect(colours.size).toBe(2);
   });
 });
+
+describe("chunksMarkup", () => {
+  test("escapes colours so a document can't break out of the attribute", async () => {
+    const { chunksMarkup } = await import("./lineShape");
+    const markup = chunksMarkup([{ d: "M0 0", color: '"/><img src=x onerror=alert(1)>', opacity: 1 }]);
+    expect(markup).not.toContain("<img");
+    expect(markup).toContain("&quot;/&gt;&lt;img");
+  });
+});

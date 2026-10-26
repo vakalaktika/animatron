@@ -26,7 +26,9 @@ interface Props {
   canRecord: boolean;
   onRecord: () => void;
   /** Resolves to the link, or a reason it couldn't be made. */
-  onShareLink: () => { ok: true; url: string } | { ok: false; reason: string };
+  onShareLink: () => Promise<{ ok: true; url: string } | { ok: false; reason: string }>;
+  /** Links are short and point at a copy kept in the cloud, rather than carrying the composition. */
+  shortLinks: boolean;
   onDownloadJson: () => void;
   onShowCode: () => void;
   onPreview: () => void;
@@ -50,8 +52,9 @@ function Row({ icon, title, blurb, children }: { icon: ReactNode; title: string;
  * Video records this tab through the browser's own capture, so the steps are
  * spelled out; the share link carries the whole composition in the URL.
  */
-export function ExportDialog({ open, onClose, docName, duration, canRender, canAlpha, transparent, stageWidth, hasSound, onRender, canRecord, onRecord, onShareLink, onDownloadJson, onShowCode, onPreview }: Props) {
+export function ExportDialog({ open, onClose, docName, duration, canRender, canAlpha, transparent, stageWidth, hasSound, onRender, canRecord, onRecord, onShareLink, shortLinks, onDownloadJson, onShowCode, onPreview }: Props) {
   const [share, setShare] = useState<{ url?: string; error?: string; copied?: boolean } | null>(null);
+  const [linking, setLinking] = useState(false);
   const [format, setFormat] = useState<RenderFormat>("mp4");
   const [gifWidth, setGifWidth] = useState(Math.min(720, stageWidth));
   const formats: { value: RenderFormat; label: string; hint: string }[] = [
@@ -65,7 +68,8 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
   const renderLabel = chosen === "gif" ? "Render GIF" : chosen === "webm" ? "Render WebM" : "Render MP4";
 
   const makeLink = async () => {
-    const result = onShareLink();
+    // A link already made is copied again rather than stored a second time.
+    const result = share?.url ? { ok: true as const, url: share.url } : await withBusy(onShareLink);
     if (!result.ok) {
       setShare({ error: result.reason });
       return;
@@ -79,6 +83,15 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
     }
     setShare({ url: result.url, copied });
   };
+
+  async function withBusy<T>(work: () => Promise<T>): Promise<T> {
+    setLinking(true);
+    try {
+      return await work();
+    } finally {
+      setLinking(false);
+    }
+  }
 
   return (
     <Dialog
@@ -165,9 +178,17 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
           .
         </p>
       )}
-      <Row icon={<ShareIcon />} title="Share a link" blurb="The whole composition travels in the link. Anyone who opens it gets their own copy to edit.">
-        <Button size="sm" variant={share?.url ? "outline" : "primary"} onClick={() => void makeLink()} icon={share?.copied ? <CheckIcon width={16} height={16} /> : undefined}>
-          {share?.copied ? "Copied" : share?.url ? "Copy again" : "Copy link"}
+      <Row
+        icon={<ShareIcon />}
+        title="Share a link"
+        blurb={
+          shortLinks
+            ? "A short link to a copy of the composition as it is now. Anyone who opens it gets their own copy to edit."
+            : "The whole composition travels in the link. Anyone who opens it gets their own copy to edit."
+        }
+      >
+        <Button size="sm" variant={share?.url ? "outline" : "primary"} disabled={linking} onClick={() => void makeLink()} icon={share?.copied ? <CheckIcon width={16} height={16} /> : undefined}>
+          {linking ? "Making the link…" : share?.copied ? "Copied" : share?.url ? "Copy again" : "Copy link"}
         </Button>
       </Row>
       <div className="-mt-2 mb-2 min-h-9 sm:pl-14">
