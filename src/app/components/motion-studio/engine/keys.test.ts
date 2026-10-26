@@ -7,6 +7,7 @@ import {
   placementAt,
   propKeyTimes,
   propValue,
+  moveRestTo,
   removePropKey,
   restValue,
   retimedPropKeyTime,
@@ -14,6 +15,7 @@ import {
   sanitizeKeys,
   setKeyEaseAt,
   setPropAt,
+  shiftPosition,
   upsertPropKey,
 } from "./keys";
 import { DEFAULT_LINE_STYLE } from "./line";
@@ -173,7 +175,35 @@ describe("editing keys", () => {
   });
 });
 
+describe("moving a keyed clip", () => {
+  test("shifting moves every position key, or the still value", () => {
+    const keyed = logo({ keys: { x: [{ time: 0, value: 0 }, { time: 1, value: 50 }] } });
+    const moved = shiftPosition(keyed, 10, 5);
+    expect(moved.keys?.x?.map((k) => k.value)).toEqual([10, 60]);
+    expect(moved.y).toBe(205);
+    expect(moved.x).toBe(100);
+  });
+
+  test("moving the rest re-bases the animation on its last key", () => {
+    const keyed = logo({ keys: { x: [{ time: 0, value: 0 }, { time: 1, value: 50 }] } });
+    expect(moveRestTo(keyed, 500, 0).keys?.x?.map((k) => k.value)).toEqual([450, 500]);
+  });
+});
+
 describe("sanitizeKeys", () => {
+  test("keeps known easings, rejects a malformed custom curve and caps key times", () => {
+    const keys = sanitizeKeys({
+      x: [
+        { time: 0, value: 0, ease: { name: "custom", custom: 5 } },
+        { time: 1, value: 0, ease: { name: "custom", custom: [0, 0, 1, 1] } },
+        { time: 2, value: 0, ease: { name: "wobble" } },
+        { time: 1e9, value: 0, ease: { name: "snap" } },
+      ],
+    });
+    expect(keys?.x?.map((k) => k.ease)).toEqual([{ name: "inOut" }, { name: "custom", custom: [0, 0, 1, 1] }, { name: "inOut" }, { name: "snap" }]);
+    expect(keys?.x?.[3].time).toBe(600);
+  });
+
   test("keeps only well-formed keys of known properties, sorted and deduplicated", () => {
     const keys = sanitizeKeys({
       x: [{ time: 2, value: 1 }, { time: -1, value: 0 }, { time: 2, value: 9 }, { time: "a", value: 1 }, null],

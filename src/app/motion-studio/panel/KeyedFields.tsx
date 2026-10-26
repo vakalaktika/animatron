@@ -66,8 +66,9 @@ export function KeyedNumField({ clip, prop, label, unit, min, max, step, time, o
     <button
       type="button"
       aria-pressed={onKey}
-      aria-label={onKey ? `Remove the keyframe for ${label} at ${seconds} s` : keys ? `Add a keyframe for ${label} at ${seconds} s` : `Animate ${label} with keyframes`}
-      title={onKey ? "Remove keyframe" : keys ? "Add keyframe here" : "Animate with keyframes"}
+      // Only an animated row follows the playhead, so only it names the time.
+      aria-label={keys ? `Keyframe for ${label} at ${seconds} s` : `Keyframe for ${label}`}
+      title={onKey ? "Remove this keyframe" : keys ? "Add a keyframe here" : "Animate with keyframes"}
       onClick={toggle}
       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-ink-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
     >
@@ -93,19 +94,29 @@ export function KeyedNumField({ clip, prop, label, unit, min, max, step, time, o
 
 const EASES: EaseName[] = ["inOut", "smoothOut", "linear", "flight", "backOut", "anticipate", "snap"];
 
-/** How the keys at the playhead travel to their next keys; shown only while the playhead sits on a key. */
+/**
+ * How the keys at the playhead travel to their next keys. Shown while the
+ * clip has keys, enabled while the playhead sits on one; it re-renders only
+ * when the playhead moves onto or off a key, not every frame.
+ */
 export function KeyEaseField({ clip, time, onChange }: { clip: Clip; time: MotionValue<number>; onChange: (next: Clip) => void }) {
-  const now = usePlayhead(time, true);
-  const local = keyTimeAt(clip, now);
-  const ease = keyEaseAt(clip, local);
-  if (!ease) return null;
-  const current = EASES.includes(ease.name) ? ease.name : "inOut";
+  const onKeyAt = (t: number) => (keyEaseAt(clip, keyTimeAt(clip, t)) ? keyTimeAt(clip, t) : null);
+  const [local, setLocal] = useState<number | null>(() => onKeyAt(time.get()));
+  useMotionValueEvent(time, "change", (t) => setLocal(onKeyAt(t)));
+  // A key added or moved under a still playhead.
+  useEffect(() => setLocal(keyEaseAt(clip, keyTimeAt(clip, time.get())) ? keyTimeAt(clip, time.get()) : null), [clip, time]);
+  const ease = local === null ? null : keyEaseAt(clip, local);
+  const current = ease && EASES.includes(ease.name) ? ease.name : "inOut";
   return (
-    <SelectField
-      label={`Keyframe at ${(clip.start + local).toFixed(2)} s eases on`}
-      value={current}
-      options={EASES.map((name) => ({ value: name, label: EASE_LABELS[name] }))}
-      onChange={(name) => onChange(setKeyEaseAt(clip, local, { name }))}
-    />
+    <div>
+      <SelectField
+        label="Keyframe easing"
+        value={current}
+        disabled={local === null}
+        options={EASES.map((name) => ({ value: name, label: EASE_LABELS[name] }))}
+        onChange={(name) => local !== null && onChange(setKeyEaseAt(clip, local, { name }))}
+      />
+      <p className="atm-help mt-1">{local === null ? "Move the playhead onto a keyframe to change how it eases to the next." : `How the keyframe at ${(clip.start + local).toFixed(2)} s eases to the next.`}</p>
+    </div>
   );
 }

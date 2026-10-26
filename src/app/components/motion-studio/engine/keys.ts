@@ -13,6 +13,8 @@ const SAME_TIME = 0.005;
 const keyTime = (local: number) => Math.max(0, Math.round(local * 100) / 100);
 /** Keys never get closer than this when retimed. */
 const MIN_GAP = 0.01;
+/** Latest a key can sit after its clip's start, in seconds (a file can say anything). */
+export const MAX_KEY_TIME = 600;
 
 /**
  * The properties this clip can keyframe. A ribbon's band geometry has no
@@ -144,6 +146,29 @@ export function setPropAt<T extends Clip>(clip: T, prop: KeyedProp, t: number, v
 /** Seconds from the clip start to clock time `t`, on the key grid: where a key set now lands. */
 export const keyTimeAt = (clip: Clip, t: number) => keyTime(t - clip.start);
 
+/**
+ * The clip shifted by (dx, dy) in its parent's frame: its own x / y, or
+ * every key of an animated x / y, so the animation keeps its shape.
+ */
+export function shiftPosition<T extends Clip>(clip: T, dx: number, dy: number): T {
+  const shift = (acc: T, prop: "x" | "y", d: number): T => {
+    if (d === 0) return acc;
+    const keys = propKeys(acc, prop);
+    return keys ? withTrack(acc, prop, keys.map((k) => ({ ...k, value: k.value + d }))) : { ...acc, [prop]: acc[prop] + d };
+  };
+  return shift(shift(clip, "x", dx), "y", dy);
+}
+
+/** The clip moved so it rests at (x, y): re-expressing it in another frame keeps any position animation intact. */
+export function moveRestTo<T extends Clip>(clip: T, x: number, y: number): T {
+  return shiftPosition(clip, x - restValue(clip, "x"), y - restValue(clip, "y"));
+}
+
+/** The clip with these properties' keys dropped (their own values stand). */
+export function clearPropKeys<T extends Clip>(clip: T, props: readonly KeyedProp[]): T {
+  return props.reduce((acc, prop) => withTrack(acc, prop, null), clip);
+}
+
 /** Every distinct key time of the clip (seconds from its start), ascending. */
 export function propKeyTimes(clip: Clip): number[] {
   const times: number[] = [];
@@ -176,7 +201,8 @@ export function retimedPropKeyTime(clip: Clip, time: number, to: number): number
     if (index > 0) lo = Math.max(lo, keys[index - 1].time + MIN_GAP);
     if (index < keys.length - 1) hi = Math.min(hi, keys[index + 1].time - MIN_GAP);
   }
-  return Number(Math.min(hi, Math.max(lo, to)).toFixed(3));
+  // On the same hundredth grid as new keys, so the panel finds them at the playhead.
+  return Math.min(hi, Math.max(lo, Math.round(to * 100) / 100));
 }
 
 /** The clip with every key at `time` moved to `to` (see `retimedPropKeyTime`). */
@@ -211,11 +237,23 @@ export function setKeyEaseAt<T extends Clip>(clip: T, local: number, ease: Ease)
 }
 
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const EASE_NAMES = new Set<string>(["linear", "smoothOut", "inOut", "flight", "backOut", "anticipate", "snap", "custom"]);
+
+/** An easing read from a file: a known name, and for a custom curve four finite control points. Otherwise the default. */
+function sanitizeEase(raw: unknown): Ease {
+  if (!raw || typeof raw !== "object") return DEFAULT_KEY_EASE;
+  const { name, custom } = raw as { name?: unknown; custom?: unknown };
+  if (typeof name !== "string" || !EASE_NAMES.has(name)) return DEFAULT_KEY_EASE;
+  if (name !== "custom") return { name: name as Ease["name"] };
+  return Array.isArray(custom) && custom.length === 4 && custom.every(finite)
+    ? { name: "custom", custom: [custom[0], custom[1], custom[2], custom[3]] }
+    : DEFAULT_KEY_EASE;
+}
 
 /**
  * Keys as read from a file or link: only the known properties, only keys
- * with a finite time (clamped to 0 or later) and value, sorted, one per
- * time. Anything else is dropped rather than trusted.
+ * with a finite time (clamped to 0..MAX_KEY_TIME) and value, a known
+ * easing, sorted, one per time. Anything else is dropped rather than trusted.
  */
 export function sanitizeKeys(raw: unknown): Clip["keys"] {
   if (!raw || typeof raw !== "object") return undefined;
@@ -225,7 +263,7 @@ export function sanitizeKeys(raw: unknown): Clip["keys"] {
     if (!Array.isArray(list)) continue;
     const keys = list
       .filter((k): k is PropKey => !!k && typeof k === "object" && finite((k as PropKey).time) && finite((k as PropKey).value))
-      .map((k) => ({ time: Math.max(0, k.time), value: k.value, ease: k.ease && typeof k.ease.name === "string" ? k.ease : DEFAULT_KEY_EASE }))
+      .map((k) => ({ time: Math.min(MAX_KEY_TIME, Math.max(0, k.time)), value: k.value, ease: sanitizeEase(k.ease) }))
       .sort((a, b) => a.time - b.time)
       .filter((k, i, all) => i === 0 || k.time - all[i - 1].time >= SAME_TIME);
     if (keys.length > 0) out[prop] = keys;

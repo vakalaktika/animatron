@@ -279,6 +279,7 @@ export function EditorStage({
           {!clean && selected && selected.type !== "ribbon" && (
             <SelectionBox
               clip={selected}
+              time={time}
               zoom={zoom}
               stageEl={() => (canvasBoxRef.current?.firstElementChild as HTMLElement | null) ?? null}
               onScale={(s) => onScaleClip(selected.id, s)}

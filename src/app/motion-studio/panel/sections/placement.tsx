@@ -2,7 +2,7 @@
 
 import { attachableParents } from "@/app/components/motion-studio/engine/hierarchy";
 import type { MotionValue } from "motion/react";
-import { hasKeys } from "@/app/components/motion-studio/engine/keys";
+import { clearPropKeys, hasKeys, setPropAt } from "@/app/components/motion-studio/engine/keys";
 import { arrivalTime } from "@/app/components/motion-studio/engine/ribbon";
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
@@ -33,10 +33,14 @@ export function placementSection(
   const setFlow = (flow: boolean) => {
     if (clip.type !== "text" || !ribbon) return;
     const lift = flow ? -Math.round((ribbon.band * ribbon.colors.length) / 2 + clip.fontSize * 0.7) : 0;
-    onChange({ ...clip, flow, x: 0, y: lift });
+    // x / y change meaning (offset vs slide and lift), so any keys on them go.
+    onChange({ ...clearPropKeys(clip, ["x", "y"]), flow, x: 0, y: lift });
   };
   const keyed = { clip, time, onChange };
-  const center = () => onChange({ ...clip, x: doc.stage.width / 2, y: doc.stage.height / 2 });
+  const center = () => {
+    const t = time.get();
+    onChange(setPropAt(setPropAt(clip, "x", t, doc.stage.width / 2), "y", t, doc.stage.height / 2));
+  };
   return {
     id: "placement",
     title: "Position and timing",

@@ -155,6 +155,24 @@ describe("normalize", () => {
   });
 });
 
+describe("keyed children", () => {
+  test("deleting a parent keeps a keyed child's animation where it was on stage", () => {
+    const parent = text("p", { x: 500, y: 0 });
+    const child = text("c", { parentId: "p", x: 0, y: 0, keys: { x: [{ time: 0, value: 0 }, { time: 2, value: 200 }] } });
+    const before = restTransformAt(doc([parent, child]), "c").x;
+    const after = find(deleteClip(doc([parent, child]), "p"), "c");
+    expect(after.keys?.x?.map((k) => k.value)).toEqual([500, 700]);
+    expect(restTransformAt(doc([after]), "c").x).toBeCloseTo(before);
+  });
+
+  test("reparenting a keyed clip re-bases its keys in the new frame", () => {
+    const parent = text("p", { x: 300, y: 0 });
+    const loose = text("c", { keys: { x: [{ time: 0, value: 100 }, { time: 2, value: 400 }] } });
+    const next = find(reparentClip(doc([parent, loose]), "c", "p"), "c");
+    expect(next.keys?.x?.map((k) => k.value)).toEqual([-200, 100]);
+  });
+});
+
 describe("keyframes from files", () => {
   test("normalizeClip keeps good keys and drops bad ones", () => {
     const raw = { ...text("a"), keys: { x: [{ time: 1, value: 3 }, { time: "x", value: 1 }], bogus: [] } } as unknown as Clip;

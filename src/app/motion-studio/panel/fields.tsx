@@ -140,16 +140,18 @@ export function SelectField<T extends string>({
   value,
   onChange,
   options,
+  disabled = false,
 }: {
   label: string;
   value: T;
   onChange: (v: T) => void;
   options: { value: T; label: string }[];
+  disabled?: boolean;
 }) {
   return (
     <label className="block">
       <span className="mb-2 block atm-label">{label}</span>
-      <Select variant="compact" className="w-full" value={value} onChange={(e) => onChange(e.target.value as T)}>
+      <Select variant="compact" className="w-full" value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as T)}>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}

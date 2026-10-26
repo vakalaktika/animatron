@@ -37,7 +37,7 @@ function mount(clip: Clip, at: number) {
 describe("KeyedNumField", () => {
   test("the diamond keys the current value at the playhead", () => {
     const { onChange } = mount(logo, 2.5);
-    fireEvent.click(screen.getByRole("button", { name: "Animate X with keyframes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Keyframe for X" }));
     expect(onChange.mock.calls[0][0].keys).toEqual({ x: [{ time: 1.5, value: 100, ease: { name: "inOut" } }] });
   });
 
@@ -48,7 +48,7 @@ describe("KeyedNumField", () => {
     expect(box).toHaveValue(100);
     act(() => time.set(3));
     expect(box).toHaveValue(200);
-    expect(screen.getByRole("button", { name: "Remove the keyframe for X at 3.00 s" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Keyframe for X at 3.00 s" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.change(box, { target: { value: "250" } });
     expect(onChange.mock.calls[0][0].keys.x[1]).toMatchObject({ time: 2, value: 250 });
   });

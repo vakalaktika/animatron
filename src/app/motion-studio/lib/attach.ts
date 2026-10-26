@@ -1,5 +1,5 @@
 import { descendantIds } from "@/app/components/motion-studio/engine/hierarchy";
-import { propValue, setPropAt } from "@/app/components/motion-studio/engine/keys";
+import { moveRestTo, propValue, setPropAt } from "@/app/components/motion-studio/engine/keys";
 import { flowDragDelta, flowRibbon } from "@/app/components/motion-studio/engine/textFlow";
 import {
   IDENTITY,
@@ -23,7 +23,7 @@ export function reparentClip(doc: StudioDoc, clipId: string, parentId: string | 
   const world = restTransformAt(doc, clipId);
   const frame = parentId ? restTransformAt(doc, parentId) : IDENTITY;
   const local = toLocalPoint(frame, world);
-  return replaceClip(doc, { ...clip, parentId, x: local.x, y: local.y });
+  return replaceClip(doc, { ...moveRestTo(clip, local.x, local.y), parentId });
 }
 
 /**
@@ -37,13 +37,14 @@ export function dropClip(doc: StudioDoc, clipId: string, target: DropTarget): St
 
 /**
  * Removes a clip. Its children are detached in place: their absolute rest
- * position is baked into `x` / `y`, so the stage looks the same afterwards.
+ * position is baked into `x` / `y` (or their position keys), so the stage
+ * looks the same afterwards.
  */
 export function deleteClip(doc: StudioDoc, clipId: string): StudioDoc {
   const detachedChildren = doc.clips.map((c) => {
     if (c.parentId !== clipId) return c;
     const world = restTransformAt(doc, c.id);
-    return { ...c, parentId: null, x: world.x, y: world.y };
+    return { ...moveRestTo(c, world.x, world.y), parentId: null };
   });
   return { ...doc, clips: detachedChildren.filter((c) => c.id !== clipId) };
 }

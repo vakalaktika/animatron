@@ -24,7 +24,8 @@ const BIG_STEP = 0.25;
  * arrow keys move every key at that time, never past a neighbour.
  */
 export function PropKeyMarkers({ clip, duration, onSeek, onRetime }: Props) {
-  const drag = useRef<{ time: number; startX: number; pxPerSecond: number } | null>(null);
+  // The lane's width is kept, not its seconds per pixel: dragging the last key out lengthens the timeline mid-drag.
+  const drag = useRef<{ time: number; startX: number; laneWidth: number } | null>(null);
   const times = propKeyTimes(clip);
   if (times.length === 0 || duration <= 0) return null;
   const pct = (seconds: number) => ((clip.start + seconds) / duration) * 100;
@@ -35,14 +36,14 @@ export function PropKeyMarkers({ clip, duration, onSeek, onRetime }: Props) {
     onSeek(clip.start + time);
     const lane = e.currentTarget.parentElement?.getBoundingClientRect();
     if (!lane) return;
-    drag.current = { time, startX: e.clientX, pxPerSecond: lane.width / duration };
+    drag.current = { time, startX: e.clientX, laneWidth: lane.width };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: PointerEvent<HTMLSpanElement>) => {
     const d = drag.current;
     if (!d) return;
     // Follow the keys to where they actually land (clamped between neighbours), so a drag never loses them.
-    const to = retimedPropKeyTime(clip, d.time, d.time + (e.clientX - d.startX) / d.pxPerSecond);
+    const to = retimedPropKeyTime(clip, d.time, d.time + ((e.clientX - d.startX) * duration) / d.laneWidth);
     if (Math.abs(to - d.time) < 0.005) return;
     onRetime(d.time, to);
     onSeek(clip.start + to);
