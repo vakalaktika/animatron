@@ -31,6 +31,7 @@ export function NumField({
   max,
   step = 0.01,
   unit,
+  adornment,
 }: {
   label: string;
   value: number;
@@ -40,12 +41,15 @@ export function NumField({
   step?: number;
   /** Short unit shown after the value: "s", "px", "°", "×". */
   unit?: string;
+  /** A small control on the label row, before the value box (a keyframe toggle). */
+  adornment?: ReactNode;
 }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="atm-label">{label}</span>
         <span className="flex items-center gap-1">
+          {adornment}
           <input
             type="number"
             aria-label={unit ? `${label} in ${unit}` : `${label} value`}

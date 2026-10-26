@@ -1,9 +1,10 @@
 "use client";
 
-import type { MotionValue } from "motion/react";
+import { motion, useTransform, type MotionValue } from "motion/react";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { propKeys } from "@/app/components/motion-studio/engine/keys";
 import { flowRibbon } from "@/app/components/motion-studio/engine/textFlow";
-import { restTransformAt } from "@/app/components/motion-studio/engine/transform";
+import { restTransformAt, transformAt } from "@/app/components/motion-studio/engine/transform";
 import { StageCanvas } from "@/app/components/motion-studio/StageCanvas";
 import type { Clip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import { SNAP_SCREEN_PX, snapPoint, snapTargets, type SnapGuide, type SnapTargets } from "../lib/snap";
@@ -49,6 +50,20 @@ interface Props {
   };
 }
 
+/** The selected clip's anchor, live with the clock so a keyframed or riding clip's dot stays on it. */
+function AnchorDot({ doc, clipId, time }: { doc: StudioDoc; clipId: string; time: MotionValue<number> }) {
+  const world = useTransform(time, (t) => transformAt(doc, clipId, t));
+  const left = useTransform(world, (w) => w.x);
+  const top = useTransform(world, (w) => w.y);
+  return (
+    <motion.div
+      aria-hidden="true"
+      className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-info"
+      style={{ left, top }}
+    />
+  );
+}
+
 interface Drag {
   id: string;
   /** Where the clip rests on stage when the drag began (its animated position may differ). */
@@ -58,11 +73,13 @@ interface Drag {
   startY: number;
   targets: SnapTargets;
   /**
-   * Text flowing along a ribbon: its frame stays on the ribbon's anchor
-   * however far it slides, so the drag tracks what it has applied (`moved`)
-   * instead of reading the clip's rest position back, and does not snap.
+   * Text flowing along a ribbon (its frame stays on the ribbon's anchor
+   * however far it slides) or a clip with a keyframed position (the drag
+   * keys it at the playhead, not its rest): the drag tracks what it has
+   * applied (`moved`) instead of reading the rest position back, and does
+   * not snap.
    */
-  flowing: boolean;
+  tracked: boolean;
   moved: Vec2;
 }
 
@@ -149,7 +166,8 @@ export function EditorStage({
     const rest = restTransformAt(doc, id);
     const clip = doc.clips.find((c) => c.id === id);
     const flowing = clip?.type === "text" && flowRibbon(doc, clip) !== null;
-    drag.current = { id, anchor: { x: rest.x, y: rest.y }, startX: e.clientX, startY: e.clientY, targets: snapTargets(doc, id), flowing, moved: { x: 0, y: 0 } };
+    const keyed = !!clip && (propKeys(clip, "x") !== null || propKeys(clip, "y") !== null);
+    drag.current = { id, anchor: { x: rest.x, y: rest.y }, startX: e.clientX, startY: e.clientY, targets: snapTargets(doc, id), tracked: flowing || keyed, moved: { x: 0, y: 0 } };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -165,8 +183,8 @@ export function EditorStage({
     const d = drag.current;
     if (!d) return;
     const wanted = { x: d.anchor.x + (e.clientX - d.startX) / zoom, y: d.anchor.y + (e.clientY - d.startY) / zoom };
-    const snapped = e.altKey || d.flowing ? { point: wanted, guides: [] } : snapPoint(wanted, d.targets, SNAP_SCREEN_PX / zoom);
-    const current = d.flowing ? { x: d.anchor.x + d.moved.x, y: d.anchor.y + d.moved.y } : restTransformAt(doc, d.id);
+    const snapped = e.altKey || d.tracked ? { point: wanted, guides: [] } : snapPoint(wanted, d.targets, SNAP_SCREEN_PX / zoom);
+    const current = d.tracked ? { x: d.anchor.x + d.moved.x, y: d.anchor.y + d.moved.y } : restTransformAt(doc, d.id);
     const delta = { x: snapped.point.x - current.x, y: snapped.point.y - current.y };
     if (Math.abs(delta.x) > 0.01 || Math.abs(delta.y) > 0.01) {
       onMoveClip(d.id, delta);
@@ -187,7 +205,6 @@ export function EditorStage({
   };
 
   const selected: Clip | undefined = doc.clips.find((c) => c.id === selectedId);
-  const selectedRest = selected ? restTransformAt(doc, selected.id) : null;
   const scaledW = doc.stage.width * zoom;
   const scaledH = doc.stage.height * zoom;
 
@@ -242,11 +259,7 @@ export function EditorStage({
             <AttachmentOverlay doc={doc} time={time} selected={selected} zoom={zoom} labels={selected.type !== "sprite" && selected.type !== "ribbon"} />
           )}
           {!clean && selected && selected.type !== "sprite" && selected.type !== "rig" && (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-info"
-              style={{ left: selectedRest?.x, top: selectedRest?.y }}
-            />
+            <AnchorDot doc={doc} clipId={selected.id} time={time} />
           )}
           {!clean &&
             extraIds &&

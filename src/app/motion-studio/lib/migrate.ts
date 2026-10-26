@@ -1,6 +1,7 @@
 import { loopMemberIds } from "@/app/components/motion-studio/engine/hierarchy";
 import { AUTO_TAIL_LENGTH, AUTO_TAIL_POSITION } from "@/app/components/motion-studio/engine/text";
 import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
+import { sanitizeKeys } from "@/app/components/motion-studio/engine/keys";
 import { tidyPose, validateRig } from "@/app/components/motion-studio/engine/rig";
 import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
 import {
@@ -127,6 +128,12 @@ function bubbleToText(bubble: LegacyBubble): TextClip {
 
 /** Brings one clip up to the current shape, whatever version wrote it. */
 export function normalizeClip(raw: Clip | LegacyBubble): Clip {
+  const clip = normalizeFields(raw);
+  // Keyframes come from files and links: keep only well-formed ones.
+  return "keys" in raw ? { ...clip, keys: sanitizeKeys(raw.keys) } : clip;
+}
+
+function normalizeFields(raw: Clip | LegacyBubble): Clip {
   if (raw.type === "bubble") return bubbleToText(raw);
   const parentId = typeof raw.parentId === "string" ? raw.parentId : null;
   const followRotation = raw.followRotation === true;

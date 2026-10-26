@@ -1,9 +1,11 @@
 "use client";
 
-import { motion, useTransform, type MotionValue } from "motion/react";
+import { useTransform, type MotionValue } from "motion/react";
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { ribbonPath } from "@/app/components/motion-studio/engine/ribbon";
 import { spritePath } from "@/app/components/motion-studio/engine/spriteTiming";
+import { SvgFrame } from "@/app/components/motion-studio/clips/SvgFrame";
+import { propValue } from "@/app/components/motion-studio/engine/keys";
 import { parentTransformAt } from "@/app/components/motion-studio/engine/transform";
 import type { RibbonClip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 
@@ -31,9 +33,12 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint, selectedPoint, 
   const markEnd = clip.type === "sprite" && !clip.loop;
   const drag = useRef<{ index: number; lastX: number; lastY: number } | null>(null);
   const handleRadius = 9 / zoom;
+  // Points are drawn from the clip's own x / y; keyframes on them shift the drawing by the difference.
   const frame = useTransform(time, (t) => {
     const w = parentTransformAt(doc, clip.id, t);
-    return `translate(${w.x} ${w.y}) scale(${w.scaleX} ${w.scaleY}) rotate(${w.rotation})`;
+    const dx = propValue(clip, "x", t) - clip.x;
+    const dy = propValue(clip, "y", t) - clip.y;
+    return `translate(${w.x} ${w.y}) scale(${w.scaleX} ${w.scaleY}) rotate(${w.rotation}) translate(${dx} ${dy})`;
   });
 
   const d = sampler.polyline
@@ -59,7 +64,7 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint, selectedPoint, 
 
   return (
     <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
-      <motion.g transform={frame}>
+      <SvgFrame transform={frame}>
       <path d={d} fill="none" stroke="var(--info)" strokeWidth={2 / zoom} strokeDasharray={`${8 / zoom} ${6 / zoom}`} />
       {points.map((p, i) => (
         <g key={i}>
@@ -97,7 +102,7 @@ export function PathEditor({ doc, clip, time, zoom, onMovePoint, selectedPoint, 
           </text>
         </g>
       ))}
-      </motion.g>
+      </SvgFrame>
     </svg>
   );
 }

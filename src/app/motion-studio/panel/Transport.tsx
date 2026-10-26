@@ -8,6 +8,7 @@ import { Button, Select, Toggle } from "@/app/components/shared-components";
 import { DragHandle, MoveButtons } from "./reorderChrome";
 import { PauseIcon, PlayIcon, ReplayIcon } from "./icons";
 import { rowMotion, useReorderDrag } from "./useReorderDrag";
+import { PropKeyMarkers } from "./PropKeyMarkers";
 import { RigKeyMarkers } from "./RigKeyMarkers";
 import { SoundRow } from "./SoundRow";
 import { WaypointMarkers } from "./WaypointMarkers";
@@ -37,6 +38,8 @@ interface Props {
   selectedBone?: string | null;
   /** A rig key at clip-local `time` dragged to `to`. */
   onRetimeRigKey: (clipId: string, time: number, to: number) => void;
+  /** A clip's keyframes at clip-local `time` dragged to `to`. */
+  onRetimePropKey: (clipId: string, time: number, to: number) => void;
   /** Same effect as the clip's Start slider. */
   onSetStart: (id: string, start: number) => void;
   /** The sound track changed (dragged on the timeline). */
@@ -177,6 +180,7 @@ export function Transport({
   onRetimeWaypoint,
   selectedBone = null,
   onRetimeRigKey,
+  onRetimePropKey,
   layout = "full",
 }: Props) {
   const [now, setNow] = useState(0);
@@ -368,7 +372,7 @@ export function Transport({
           }}
         />
         );
-        const markers =
+        const ownMarkers =
           clip.type === "sprite" ? (
             <WaypointMarkers
               clip={clip}
@@ -380,6 +384,12 @@ export function Transport({
           ) : clip.type === "rig" ? (
             <RigKeyMarkers clip={clip} duration={duration} selectedBone={isSelected ? selectedBone : null} onSeek={onSeek} onRetime={(time, to) => onRetimeRigKey(clip.id, time, to)} />
           ) : null;
+        const markers = (
+          <>
+            {ownMarkers}
+            <PropKeyMarkers clip={clip} duration={duration} onSeek={onSeek} onRetime={(time, to) => onRetimePropKey(clip.id, time, to)} />
+          </>
+        );
         // Phone timeline: name and time on one line, the bar across the full
         // width below it, so names aren't squeezed into a narrow column.
         if (stacked) {

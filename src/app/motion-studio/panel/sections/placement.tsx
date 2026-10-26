@@ -1,10 +1,13 @@
 "use client";
 
 import { attachableParents } from "@/app/components/motion-studio/engine/hierarchy";
+import type { MotionValue } from "motion/react";
+import { hasKeys } from "@/app/components/motion-studio/engine/keys";
 import { arrivalTime } from "@/app/components/motion-studio/engine/ribbon";
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
 import { BUTTON_ROW, MoreFields, NumField, SelectField, TextField, ToggleField } from "../fields";
+import { KeyEaseField, KeyedNumField } from "../KeyedFields";
 import type { PanelSection } from "../PanelGroup";
 import { setter } from "./setter";
 
@@ -16,6 +19,7 @@ export function placementSection(
   clip: Clip,
   onChange: (c: Clip) => void,
   onReparent: (parentId: string | null) => void,
+  time: MotionValue<number>,
 ): PanelSection {
   const set = setter(clip, onChange);
   const parents = attachableParents(doc, clip.id);
@@ -31,6 +35,7 @@ export function placementSection(
     const lift = flow ? -Math.round((ribbon.band * ribbon.colors.length) / 2 + clip.fontSize * 0.7) : 0;
     onChange({ ...clip, flow, x: 0, y: lift });
   };
+  const keyed = { clip, time, onChange };
   const center = () => onChange({ ...clip, x: doc.stage.width / 2, y: doc.stage.height / 2 });
   return {
     id: "placement",
@@ -40,14 +45,19 @@ export function placementSection(
         <TextField label="Name" value={clip.name} onChange={(v) => set("name", v)} />
         <NumField label="Starts at" unit="s" value={clip.start} min={0} max={20} step={0.05} onChange={(v) => set("start", v)} />
         <div className="grid grid-cols-2 gap-4">
-          <NumField label={flowing ? "Slide along" : attached ? "Offset X" : "X"} unit="px" value={clip.x} min={-2500} max={2500} step={1} onChange={(v) => set("x", v)} />
-          <NumField label={flowing ? "Lift off the line" : attached ? "Offset Y" : "Y"} unit="px" value={clip.y} min={-2500} max={2500} step={1} onChange={(v) => set("y", v)} />
+          <KeyedNumField {...keyed} prop="x" label={flowing ? "Slide along" : attached ? "Offset X" : "X"} unit="px" min={-2500} max={2500} step={1} />
+          <KeyedNumField {...keyed} prop="y" label={flowing ? "Lift off the line" : attached ? "Offset Y" : "Y"} unit="px" min={-2500} max={2500} step={1} />
         </div>
-        <NumField label="Size" unit="×" value={clip.scale} min={0.1} max={4} step={0.01} onChange={(v) => set("scale", v)} />
+        {clip.type === "ribbon" ? (
+          <NumField label="Size" unit="×" value={clip.scale} min={0.1} max={4} step={0.01} onChange={(v) => set("scale", v)} />
+        ) : (
+          <KeyedNumField {...keyed} prop="scale" label="Size" unit="×" min={0.1} max={4} step={0.01} />
+        )}
         <div className="grid grid-cols-2 gap-4">
-          {clip.type !== "ribbon" && <NumField label="Turn" unit="°" value={clip.rotation ?? 0} min={-180} max={180} step={1} onChange={(v) => set("rotation", v)} />}
-          <NumField label="Opacity" value={clip.opacity ?? 1} min={0} max={1} step={0.01} onChange={(v) => set("opacity", v)} />
+          {clip.type !== "ribbon" && <KeyedNumField {...keyed} prop="rotation" label="Turn" unit="°" min={-180} max={180} step={1} />}
+          <KeyedNumField {...keyed} prop="opacity" label="Opacity" min={0} max={1} step={0.01} />
         </div>
+        {hasKeys(clip) && <KeyEaseField clip={clip} time={time} onChange={onChange} />}
         {!attached && (
           <div className={BUTTON_ROW}>
             <Button size="xs" variant="outline" onClick={center}>

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
 import { clipEnd, docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
 import type { AudioTrack, Clip, RigClip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
+import { retimePropKeys } from "@/app/components/motion-studio/engine/keys";
 import { retimeKeys } from "@/app/components/motion-studio/engine/rig";
 import { RIG_FORMAT } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
@@ -505,6 +506,13 @@ export function MotionStudio() {
     [setDoc, boneSelection],
   );
 
+  const retimePropKey = useCallback(
+    (clipId: string, time: number, to: number) => {
+      setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === clipId ? retimePropKeys(c, time, to) : c)) }), `propkey:${clipId}`);
+    },
+    [setDoc],
+  );
+
   const saveRig = (clip: RigClip) => {
     downloadText(JSON.stringify(clip.rig, null, 2), rigFileName(clip), "application/json");
     notify(`Saved ${rigFileName(clip)} to your downloads. It opens in Agent Torres and the Mid-century Ink generator with every bone and clip.`);
@@ -775,6 +783,7 @@ export function MotionStudio() {
     },
     selectedBone,
     onRetimeRigKey: retimeRigKey,
+    onRetimePropKey: retimePropKey,
     onSetStart: setClipStart,
     onChangeClip: updateClip,
     onReorder: reorderClips,
@@ -992,6 +1001,7 @@ export function MotionStudio() {
             },
           }}
           rig={rigActions}
+          time={clock.time}
         />
         <div className="mt-6 flex flex-wrap gap-2 border-t border-hairline pt-4">
           <Button size="xs" variant="outline" onClick={() => duplicateClip(selected)}>
