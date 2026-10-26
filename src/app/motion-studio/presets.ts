@@ -501,11 +501,12 @@ export function loaderPreset(): StudioDoc {
   };
 }
 
-export const BUILT_IN_PRESETS: { label: string; make: () => StudioDoc }[] = [
-  { label: "Welcome", make: welcomePreset },
-  { label: "Ribbon ride", make: ribbonRidePreset },
-  { label: "End cap", make: endCapPreset },
-  { label: "Chippy loader", make: loaderPreset },
+/** The original four compositions; `templates.ts` adds the starter gallery after them. */
+export const BUILT_IN_PRESETS: { label: string; blurb: string; make: () => StudioDoc }[] = [
+  { label: "Welcome", blurb: "A ribbon draws in, the title rides its tip, a comet loops.", make: welcomePreset },
+  { label: "Ribbon ride", blurb: "A wave ribbon with a rider that lands and a loop.", make: ribbonRidePreset },
+  { label: "End cap", blurb: "Rings spring in, the bird arrives, a bubble speaks.", make: endCapPreset },
+  { label: "Chippy loader", blurb: "A tidy loop for a loading screen.", make: loaderPreset },
 ];
 
 export interface SavedPreset {

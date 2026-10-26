@@ -4,7 +4,9 @@ import { useState } from "react";
 import type { StudioDoc } from "@/app/components/motion-studio/types";
 import { Button, Select } from "@/app/components/shared-components";
 import { recentFirst, type Project } from "../lib/projects";
-import { BUILT_IN_PRESETS, FRAME_SIZES } from "../presets";
+import { FRAME_SIZES } from "../presets";
+import { frameLabel, TEMPLATES } from "../templates";
+import { ChipField } from "../panel/fields";
 import { MiniPreview } from "../panel/MiniPreview";
 import { DuplicateIcon, PlusIcon, TrashIcon } from "../panel/icons";
 import { Dialog } from "./Dialog";
@@ -22,12 +24,12 @@ interface Props {
   onRenameProject: (id: string, name: string) => void;
 }
 
-const TEMPLATE_BLURB: Record<string, string> = {
-  Welcome: "A ribbon draws in, the title rides its tip, a comet loops.",
-  "Ribbon ride": "A wave ribbon with a rider that lands and a loop.",
-  "End cap": "Rings spring in, the bird arrives, a bubble speaks.",
-  "Chippy loader": "A tidy loop for a loading screen.",
-};
+/** Size chips: every frame, plus all of them. The value is the chip's own text. */
+const ALL_SIZES = "All sizes";
+const SIZE_OPTIONS = [ALL_SIZES, ...FRAME_SIZES.map((f) => `${f.width} \u00D7 ${f.height}`)].map((value) => ({ value, label: value }));
+
+/** Each template with the frame it is set in, read once from a throwaway copy. */
+const CATALOG = TEMPLATES.map((t) => ({ ...t, frame: frameLabel(t.make()) }));
 
 function when(iso: string): string {
   const d = new Date(iso);
@@ -62,15 +64,27 @@ export function GalleryDialog({
 }: Props) {
   const [hover, setHover] = useState<string | null>(null);
   const [frame, setFrame] = useState(0);
+  const [size, setSize] = useState(ALL_SIZES);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const recent = recentFirst(projects);
+  const templates = CATALOG.filter((t) => size === ALL_SIZES || t.frame === size);
+
+  /** Picking a size also points the blank canvas at it. */
+  const pickSize = (next: string) => {
+    setSize(next);
+    const i = SIZE_OPTIONS.findIndex((o) => o.value === next) - 1;
+    if (i >= 0) setFrame(i);
+  };
 
   return (
     <Dialog open={open} onClose={onClose} title="Compositions" description="Start from a template or pick up where you left off." size="full">
       <section aria-labelledby="gallery-templates">
-        <h3 id="gallery-templates" className="atm-section-label mb-3">
-          Start something new
-        </h3>
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <h3 id="gallery-templates" className="atm-section-label">
+            Start something new
+          </h3>
+          <ChipField label="Size" value={size} options={SIZE_OPTIONS} onChange={pickSize} />
+        </div>
         <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
           <li>
             <div className={`${TILE} h-full justify-between border-dashed border-border-control`}>
@@ -92,8 +106,8 @@ export function GalleryDialog({
               </div>
             </div>
           </li>
-          {BUILT_IN_PRESETS.map((preset) => {
-            const key = `template:${preset.label}`;
+          {templates.map((template) => {
+            const key = `template:${template.label}`;
             return (
               <li key={key}>
                 <button
@@ -103,12 +117,15 @@ export function GalleryDialog({
                   onMouseLeave={() => setHover((h) => (h === key ? null : h))}
                   onFocus={() => setHover(key)}
                   onBlur={() => setHover((h) => (h === key ? null : h))}
-                  onClick={() => onNewFromTemplate(preset.make())}
+                  onClick={() => onNewFromTemplate(template.make())}
                 >
-                  <TemplateThumb make={preset.make} active={hover === key} />
+                  <TemplateThumb make={template.make} active={hover === key} />
                   <span className="flex flex-col gap-0.5 border-t border-hairline p-3">
-                    <span className="text-sm font-semibold text-ink">{preset.label}</span>
-                    <span className="text-xs leading-4 text-ink-muted">{TEMPLATE_BLURB[preset.label] ?? "A ready-made composition."}</span>
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="text-sm font-semibold text-ink">{template.label}</span>
+                      <span className="shrink-0 text-[11px] text-ink-muted">{template.frame}</span>
+                    </span>
+                    <span className="text-xs leading-4 text-ink-muted">{template.blurb}</span>
                   </span>
                 </button>
               </li>
@@ -135,13 +152,13 @@ export function GalleryDialog({
                   <button
                     type="button"
                     className="w-full text-left"
-                    aria-label={`Open ${project.doc.name}`}
                     onMouseEnter={() => setHover(project.id)}
                     onMouseLeave={() => setHover((h) => (h === project.id ? null : h))}
                     onFocus={() => setHover(project.id)}
                     onBlur={() => setHover((h) => (h === project.id ? null : h))}
                     onClick={() => onOpenProject(project.id)}
                   >
+                    <span className="sr-only">Open {project.doc.name}</span>
                     <MiniPreview doc={project.doc} active={hover === project.id} />
                   </button>
                   <div className="flex items-center gap-1 border-t border-hairline py-2 pr-1 pl-3">
