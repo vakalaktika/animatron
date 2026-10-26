@@ -24,6 +24,13 @@ export function placementSection(
   const ribbon = parent?.type === "ribbon" ? parent : null;
   const seat = clip.along === "front" ? "front" : typeof clip.along === "number" ? "at" : "free";
   const fraction = typeof clip.along === "number" ? clip.along : 0.5;
+  const flowing = clip.type === "text" && !!clip.flow && ribbon !== null && seat !== "free";
+  // Lift new flowing text clear of the ribbon's bands, to the left of travel.
+  const setFlow = (flow: boolean) => {
+    if (clip.type !== "text" || !ribbon) return;
+    const lift = flow ? -Math.round((ribbon.band * ribbon.colors.length) / 2 + clip.fontSize * 0.7) : 0;
+    onChange({ ...clip, flow, x: 0, y: lift });
+  };
   const center = () => onChange({ ...clip, x: doc.stage.width / 2, y: doc.stage.height / 2 });
   return {
     id: "placement",
@@ -33,8 +40,8 @@ export function placementSection(
         <TextField label="Name" value={clip.name} onChange={(v) => set("name", v)} />
         <NumField label="Starts at" unit="s" value={clip.start} min={0} max={20} step={0.05} onChange={(v) => set("start", v)} />
         <div className="grid grid-cols-2 gap-4">
-          <NumField label={attached ? "Offset X" : "X"} unit="px" value={clip.x} min={-2500} max={2500} step={1} onChange={(v) => set("x", v)} />
-          <NumField label={attached ? "Offset Y" : "Y"} unit="px" value={clip.y} min={-2500} max={2500} step={1} onChange={(v) => set("y", v)} />
+          <NumField label={flowing ? "Slide along" : attached ? "Offset X" : "X"} unit="px" value={clip.x} min={-2500} max={2500} step={1} onChange={(v) => set("x", v)} />
+          <NumField label={flowing ? "Lift off the line" : attached ? "Offset Y" : "Y"} unit="px" value={clip.y} min={-2500} max={2500} step={1} onChange={(v) => set("y", v)} />
         </div>
         <NumField label="Size" unit="×" value={clip.scale} min={0.1} max={4} step={0.01} onChange={(v) => set("scale", v)} />
         <div className="grid grid-cols-2 gap-4">
@@ -79,7 +86,10 @@ export function placementSection(
                 </Button>
               </>
             )}
-            {attached && (
+            {ribbon && seat !== "free" && clip.type === "text" && (
+              <ToggleField label="Write along the ribbon" value={!!clip.flow} onChange={setFlow} />
+            )}
+            {attached && !flowing && (
               <ToggleField label={ribbon && seat !== "free" ? "Turn with the ribbon" : "Turn with it"} value={clip.followRotation} onChange={(v) => set("followRotation", v)} />
             )}
           </MoreFields>

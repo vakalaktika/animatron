@@ -311,7 +311,13 @@ export interface TextTail {
   length: number;
 }
 
-export type TextReveal = "letters" | "pop" | "fade";
+/**
+ * How a text clip arrives. `letters` rise in one by one (from the middle or
+ * either end); `typewriter` types them left to right behind a caret; `blur`
+ * brings the whole line into focus; `mask` slides it up from behind an
+ * invisible edge; `pop` and `fade` scale or fade the whole clip.
+ */
+export type TextReveal = "letters" | "typewriter" | "blur" | "mask" | "pop" | "fade";
 
 /**
  * Anything the user types: plain text, a speech bubble, a caption. The
@@ -329,7 +335,7 @@ export interface TextClip extends ClipBase {
   container: TextContainer;
   tail: TextTail;
   reveal: TextReveal;
-  /** Seconds for a pop or fade reveal. */
+  /** Seconds for a pop, fade, blur or mask reveal. */
   revealDuration: number;
   /** Back-out overshoot for the pop reveal; 0 = no bounce. */
   overshoot: number;
@@ -341,6 +347,15 @@ export interface TextClip extends ClipBase {
   ruleDelay: number;
   ruleDuration: number;
   ruleWidth: number;
+  /**
+   * Set the letters along the ribbon this clip is seated on (`along`), like
+   * text on a path. A point seat centres the text there; riding the front
+   * trails it behind the paint head. `x` then slides it along the ribbon and
+   * `y` lifts it off the line (negative = to the left of travel, which is
+   * above a ribbon drawn left to right). The box, pointer and underline are
+   * not drawn while flowing. Ignored unless seated on a ribbon.
+   */
+  flow?: boolean;
 }
 
 export interface LottieClip extends ClipBase {

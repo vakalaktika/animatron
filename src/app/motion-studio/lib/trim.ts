@@ -1,4 +1,5 @@
 import { activeAnimation, RIG_LIMITS, setAnimationDuration } from "@/app/components/motion-studio/engine/rig";
+import { staggered } from "@/app/components/motion-studio/engine/text";
 import type { Clip } from "@/app/components/motion-studio/types";
 
 /** Shortest a trimmed clip can get, in seconds. */
@@ -19,8 +20,8 @@ export function canTrim(clip: Clip): boolean {
 
 /**
  * The clip with its main length changed by `delta` seconds: a picture's
- * travel time, a ribbon's draw time, a text's reveal. Letter-by-letter text
- * spreads the change over its letter gaps so the rhythm scales.
+ * travel time, a ribbon's draw time, a text's reveal. Letter-by-letter and
+ * typed text spread the change over their letter gaps so the rhythm scales.
  */
 export function trimClip<T extends Clip>(clip: T, delta: number): T {
   switch (clip.type) {
@@ -40,9 +41,10 @@ export function trimClip<T extends Clip>(clip: T, delta: number): T {
       return { ...clip, rig: setAnimationDuration(clip.rig, anim.id, round(clamp(anim.duration + delta, MIN_TRIM, RIG_LIMITS.duration))) };
     }
     case "text": {
-      if (clip.reveal !== "letters") return { ...clip, revealDuration: round(clamp(clip.revealDuration + delta, 0.1, MAX_TRIM)) };
+      if (!staggered(clip)) return { ...clip, revealDuration: round(clamp(clip.revealDuration + delta, 0.1, MAX_TRIM)) };
       const letters = Array.from(clip.text).length;
-      const spread = Math.max(1, clip.direction === "center" ? Math.ceil(letters / 2) : letters);
+      const gaps = clip.reveal === "typewriter" ? letters - 1 : clip.direction === "center" ? Math.ceil(letters / 2) : letters;
+      const spread = Math.max(1, gaps);
       return { ...clip, letterStagger: Number(clamp(clip.letterStagger + delta / spread, 0, 1).toFixed(4)) };
     }
     default:

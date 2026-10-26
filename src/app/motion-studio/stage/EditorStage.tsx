@@ -2,6 +2,7 @@
 
 import type { MotionValue } from "motion/react";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { flowRibbon } from "@/app/components/motion-studio/engine/textFlow";
 import { restTransformAt } from "@/app/components/motion-studio/engine/transform";
 import { StageCanvas } from "@/app/components/motion-studio/StageCanvas";
 import type { Clip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
@@ -56,6 +57,13 @@ interface Drag {
   startX: number;
   startY: number;
   targets: SnapTargets;
+  /**
+   * Text flowing along a ribbon: its frame stays on the ribbon's anchor
+   * however far it slides, so the drag tracks what it has applied (`moved`)
+   * instead of reading the clip's rest position back, and does not snap.
+   */
+  flowing: boolean;
+  moved: Vec2;
 }
 
 /**
@@ -139,7 +147,9 @@ export function EditorStage({
     e.preventDefault();
     onSelect(id, e.shiftKey);
     const rest = restTransformAt(doc, id);
-    drag.current = { id, anchor: { x: rest.x, y: rest.y }, startX: e.clientX, startY: e.clientY, targets: snapTargets(doc, id) };
+    const clip = doc.clips.find((c) => c.id === id);
+    const flowing = clip?.type === "text" && flowRibbon(doc, clip) !== null;
+    drag.current = { id, anchor: { x: rest.x, y: rest.y }, startX: e.clientX, startY: e.clientY, targets: snapTargets(doc, id), flowing, moved: { x: 0, y: 0 } };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -155,10 +165,13 @@ export function EditorStage({
     const d = drag.current;
     if (!d) return;
     const wanted = { x: d.anchor.x + (e.clientX - d.startX) / zoom, y: d.anchor.y + (e.clientY - d.startY) / zoom };
-    const snapped = e.altKey ? { point: wanted, guides: [] } : snapPoint(wanted, d.targets, SNAP_SCREEN_PX / zoom);
-    const current = restTransformAt(doc, d.id);
+    const snapped = e.altKey || d.flowing ? { point: wanted, guides: [] } : snapPoint(wanted, d.targets, SNAP_SCREEN_PX / zoom);
+    const current = d.flowing ? { x: d.anchor.x + d.moved.x, y: d.anchor.y + d.moved.y } : restTransformAt(doc, d.id);
     const delta = { x: snapped.point.x - current.x, y: snapped.point.y - current.y };
-    if (Math.abs(delta.x) > 0.01 || Math.abs(delta.y) > 0.01) onMoveClip(d.id, delta);
+    if (Math.abs(delta.x) > 0.01 || Math.abs(delta.y) > 0.01) {
+      onMoveClip(d.id, delta);
+      drag.current = { ...d, moved: { x: d.moved.x + delta.x, y: d.moved.y + delta.y } };
+    }
     setGuides(snapped.guides);
   };
   const onPointerUp = () => {
@@ -174,6 +187,7 @@ export function EditorStage({
   };
 
   const selected: Clip | undefined = doc.clips.find((c) => c.id === selectedId);
+  const selectedRest = selected ? restTransformAt(doc, selected.id) : null;
   const scaledW = doc.stage.width * zoom;
   const scaledH = doc.stage.height * zoom;
 
@@ -231,7 +245,7 @@ export function EditorStage({
             <div
               aria-hidden="true"
               className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-info"
-              style={{ left: selected.x, top: selected.y }}
+              style={{ left: selectedRest?.x, top: selectedRest?.y }}
             />
           )}
           {!clean &&

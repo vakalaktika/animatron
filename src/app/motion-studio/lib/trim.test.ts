@@ -19,6 +19,11 @@ describe("trimming on the timeline", () => {
     expect(after - before).toBeCloseTo(1, 5);
   });
 
+  it("spreads a typed text's change over its gaps between letters", () => {
+    const text = makeText({ text: "Hello", reveal: "typewriter", letterStagger: 0.1 });
+    expect(revealDuration(trimClip(text, 0.4)) - revealDuration(text)).toBeCloseTo(0.4);
+  });
+
   it("changes a popping text's reveal time directly", () => {
     const text = makeText({ reveal: "pop", revealDuration: 0.6 });
     expect(trimClip(text, 0.4).revealDuration).toBe(1);
