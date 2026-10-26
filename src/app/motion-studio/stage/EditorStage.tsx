@@ -1,19 +1,21 @@
 "use client";
 
 import { motion, useTransform, type MotionValue } from "motion/react";
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { propKeys } from "@/app/components/motion-studio/engine/keys";
 import { flowRibbon } from "@/app/components/motion-studio/engine/textFlow";
 import { restTransformAt, transformAt } from "@/app/components/motion-studio/engine/transform";
 import { StageCanvas } from "@/app/components/motion-studio/StageCanvas";
 import type { Clip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import { SNAP_SCREEN_PX, snapPoint, snapTargets, type SnapGuide, type SnapTargets } from "../lib/snap";
+import { clampView, FIT_VIEW, isFit, pinchView, wheelView, ZOOM_STEP, zoomAbout, type View } from "../lib/viewport";
 import { AttachmentOverlay } from "./AttachmentOverlay";
 import { PathEditor } from "./PathEditor";
 import type { RigHandle, RigMode } from "../lib/rigEdit";
 import { RigEditor } from "./RigEditor";
 import { SelectionBox } from "./SelectionBox";
 import { TailHandle } from "./TailHandle";
+import { ZoomControls } from "./ZoomControls";
 
 interface Props {
   doc: StudioDoc;
@@ -115,9 +117,16 @@ export function EditorStage({
   const stroke = useRef<[number, number][] | null>(null);
   const [strokePath, setStrokePath] = useState<string | null>(null);
   const canvasBoxRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(0.5);
+  const [fitZoom, setFitZoom] = useState(0.5);
+  // Pinch, trackpad and the zoom buttons move the view; the recording view is always fitted.
+  const [view, setView] = useState<View>(FIT_VIEW);
+  const shown = clean ? FIT_VIEW : view;
+  const zoom = fitZoom * shown.scale;
   const drag = useRef<Drag | null>(null);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
+  // Fingers on the stage, by pointer id, relative to its centre; two of them make a pinch.
+  const touches = useRef(new Map<number, Vec2>());
+  const pinch = useRef<{ start: View; ids: [number, number]; from: [Vec2, Vec2] } | null>(null);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -128,13 +137,48 @@ export function EditorStage({
       // on desktop enough that the add rail never sits over the canvas.
       const padX = clean ? 0 : width < 640 ? 12 : 176;
       const padY = clean ? 0 : width < 640 ? 12 : 32;
-      setZoom(Math.min((width - padX) / doc.stage.width, (height - padY) / doc.stage.height));
+      setFitZoom(Math.min((width - padX) / doc.stage.width, (height - padY) / doc.stage.height));
     };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
   }, [doc.stage.width, doc.stage.height, clean]);
+
+  // A different canvas size starts from a fitted view again.
+  useEffect(() => setView(FIT_VIEW), [doc.stage.width, doc.stage.height]);
+
+  /** Applies a view change, keeping part of the canvas on screen. */
+  const moveView = useCallback(
+    (change: (v: View) => View) => {
+      const area = wrapRef.current?.getBoundingClientRect();
+      if (!area) return;
+      const canvas = { x: doc.stage.width * fitZoom, y: doc.stage.height * fitZoom };
+      setView((v) => clampView(change(v), canvas, { x: area.width, y: area.height }));
+    },
+    [doc.stage.width, doc.stage.height, fitZoom],
+  );
+
+  /** A screen point relative to the centre of the stage area, where the view's pan is measured from. */
+  const fromCentre = useCallback((clientX: number, clientY: number): Vec2 => {
+    const r = wrapRef.current?.getBoundingClientRect();
+    return r ? { x: clientX - r.left - r.width / 2, y: clientY - r.top - r.height / 2 } : { x: 0, y: 0 };
+  }, []);
+
+  // Trackpad pinch (and Ctrl + wheel) zooms about the cursor; scrolling pans
+  // a zoomed-in view. Native listener: React's wheel handler can't prevent
+  // the browser's own page zoom.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || clean) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && isFit(view)) return;
+      e.preventDefault();
+      moveView((v) => wheelView(v, { x: e.deltaX, y: e.deltaY }, e.ctrlKey, fromCentre(e.clientX, e.clientY)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [clean, view, moveView, fromCentre]);
 
   /** Pointer position in stage pixels. */
   const stagePoint = (e: ReactPointerEvent<HTMLDivElement>): [number, number] => {
@@ -143,10 +187,31 @@ export function EditorStage({
     return [(e.clientX - box.left) / zoom, (e.clientY - box.top) / zoom];
   };
 
+  /**
+   * A second finger turns whatever the first started (a drag, a stroke)
+   * into a pinch of the view; fingers beyond two are ignored, and the one
+   * left behind when a pinch ends does nothing until it lifts.
+   */
+  const startPinch = (e: ReactPointerEvent<HTMLDivElement>): boolean => {
+    if (e.pointerType !== "touch") return false;
+    touches.current.set(e.pointerId, fromCentre(e.clientX, e.clientY));
+    if (pinch.current || touches.current.size > 2) return true;
+    if (touches.current.size < 2) return false;
+    const [a, b] = [...touches.current.entries()];
+    drag.current = null;
+    setGuides([]);
+    stroke.current = null;
+    setStrokePath(null);
+    pinch.current = { start: view, ids: [a[0], b[0]], from: [a[1], b[1]] };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    return true;
+  };
+
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (clean) return;
     // Controls floating over the stage are not the stage.
     if ((e.target as HTMLElement).closest("[data-stage-overlay]")) return;
+    if (startPinch(e)) return;
     if (drawing) {
       e.preventDefault();
       stroke.current = [stagePoint(e)];
@@ -171,6 +236,16 @@ export function EditorStage({
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "touch" && touches.current.has(e.pointerId)) {
+      touches.current.set(e.pointerId, fromCentre(e.clientX, e.clientY));
+      const p = pinch.current;
+      if (p) {
+        const a = touches.current.get(p.ids[0]);
+        const b = touches.current.get(p.ids[1]);
+        if (a && b) moveView(() => pinchView(p.start, p.from, [a, b]));
+        return;
+      }
+    }
     if (stroke.current) {
       const [px, py] = stroke.current[stroke.current.length - 1];
       const next = stagePoint(e);
@@ -192,7 +267,12 @@ export function EditorStage({
     }
     setGuides(snapped.guides);
   };
-  const onPointerUp = () => {
+  const onPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    touches.current.delete(e.pointerId);
+    if (pinch.current) {
+      if (touches.current.size < 2) pinch.current = null;
+      return;
+    }
     if (stroke.current) {
       const points = stroke.current;
       stroke.current = null;
@@ -225,7 +305,7 @@ export function EditorStage({
       <div
         ref={canvasBoxRef}
         className={clean ? "" : `box-content border border-border-strong sm:shadow-pop ${doc.stage.transparent ? "atm-checker" : ""}`}
-        style={{ width: scaledW, height: scaledH, cursor: clean ? "default" : drawing ? "crosshair" : "grab" }}
+        style={{ width: scaledW, height: scaledH, translate: `${shown.x}px ${shown.y}px`, cursor: clean ? "default" : drawing ? "crosshair" : "grab" }}
       >
         <StageCanvas doc={doc} time={time} zoom={zoom}>
           {!clean && (selected?.type === "sprite" || selected?.type === "ribbon") && (
@@ -307,6 +387,15 @@ export function EditorStage({
             ))}
         </StageCanvas>
       </div>
+      {!clean && (
+        <ZoomControls
+          scale={view.scale}
+          fitted={isFit(view)}
+          onZoomIn={() => moveView((v) => zoomAbout(v, ZOOM_STEP, { x: 0, y: 0 }))}
+          onZoomOut={() => moveView((v) => zoomAbout(v, 1 / ZOOM_STEP, { x: 0, y: 0 }))}
+          onFit={() => setView(FIT_VIEW)}
+        />
+      )}
       {overlay}
     </div>
   );
