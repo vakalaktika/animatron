@@ -110,9 +110,10 @@ export async function createShare(supabase: SupabaseClient, doc: StudioDoc, make
 /** The composition behind a short share id, repaired like any opened file; null when there is no such link. */
 export async function fetchShare(supabase: SupabaseClient, id: string): Promise<StudioDoc | null> {
   if (!isShareId(id)) return null;
-  const { data, error } = await supabase.from("shares").select("doc").eq("id", id).maybeSingle();
+  // Shares can't be listed; the one way in is this lookup by exact id.
+  const { data, error } = await supabase.rpc("get_share", { share_id: id });
   if (error) throw new Error(`Could not open the link: ${error.message}`);
-  const raw = (data as { doc?: unknown } | null)?.doc;
+  const raw: unknown = data;
   if (!raw || typeof raw !== "object") return null;
   const candidate = raw as Partial<RawDoc>;
   if (!Array.isArray(candidate.clips) || !candidate.stage) return null;
@@ -136,10 +137,13 @@ export async function sendSignInLink(supabase: SupabaseClient, email: string, re
   const address = email.trim();
   if (!isEmail(address)) throw new Error("That doesn't look like an email address.");
   const user = await currentUser(supabase);
-  const { error } =
-    user.kind === "anonymous"
-      ? await supabase.auth.updateUser({ email: address }, { emailRedirectTo: redirectTo })
-      : await supabase.auth.signInWithOtp({ email: address, options: { emailRedirectTo: redirectTo } });
+  if (user.kind === "anonymous") {
+    const { error } = await supabase.auth.updateUser({ email: address }, { emailRedirectTo: redirectTo });
+    if (!error) return;
+    // The address already has an account: sign in to that one instead (this session's links stay readable).
+    if (error.code !== "email_exists") throw new Error(`Could not send the sign-in link: ${error.message}`);
+  }
+  const { error } = await supabase.auth.signInWithOtp({ email: address, options: { emailRedirectTo: redirectTo } });
   if (error) throw new Error(`Could not send the sign-in link: ${error.message}`);
 }
 
@@ -148,11 +152,15 @@ export async function signOut(supabase: SupabaseClient): Promise<void> {
   if (error) throw new Error(`Could not sign out: ${error.message}`);
 }
 
-/** A composition as kept in the account. */
+/**
+ * A composition as kept in the account. A deleted one stays as a tombstone
+ * (no document) so every device learns of the deletion.
+ */
 export interface RemoteProject {
   id: string;
   name: string;
   doc: unknown;
+  deleted: boolean;
   updatedAt: string;
 }
 
@@ -160,23 +168,39 @@ interface ProjectRow {
   id: string;
   name: string;
   doc: unknown;
+  deleted: boolean;
   updated_at: string;
 }
 
+/** Largest composition kept in an account, in characters of JSON (the table allows a little more). */
+export const PROJECT_MAX_CHARS = 4_800_000;
+const NAME_MAX = 200;
+
 export async function listRemoteProjects(supabase: SupabaseClient): Promise<RemoteProject[]> {
-  const { data, error } = await supabase.from("projects").select("id, name, doc, updated_at");
+  const { data, error } = await supabase.from("projects").select("id, name, doc, deleted, updated_at");
   if (error) throw new Error(`Could not read your saved compositions: ${error.message}`);
-  return ((data ?? []) as ProjectRow[]).map((r) => ({ id: r.id, name: r.name, doc: r.doc, updatedAt: r.updated_at }));
+  return ((data ?? []) as ProjectRow[]).map((r) => ({ id: r.id, name: r.name, doc: r.doc, deleted: r.deleted, updatedAt: r.updated_at }));
 }
 
-export async function pushProjects(supabase: SupabaseClient, projects: Project[]): Promise<void> {
-  if (projects.length === 0) return;
-  const rows = projects.map((p) => ({ id: p.id, name: p.doc.name, doc: p.doc, updated_at: p.updatedAt }));
-  const { error } = await supabase.from("projects").upsert(rows, { onConflict: "owner,id" });
-  if (error) throw new Error(`Could not save to your account: ${error.message}`);
+/**
+ * Saves compositions to the account and returns the ones too big to keep
+ * there (they stay in this browser). Saving an older copy over a newer one
+ * is ignored by the database.
+ */
+export async function pushProjects(supabase: SupabaseClient, projects: Project[]): Promise<Project[]> {
+  const fits = (p: Project) => JSON.stringify(p.doc).length <= PROJECT_MAX_CHARS;
+  const rows = projects.filter(fits).map((p) => ({ id: p.id, name: p.doc.name.slice(0, NAME_MAX), doc: p.doc, deleted: false, updated_at: p.updatedAt }));
+  if (rows.length > 0) {
+    const { error } = await supabase.from("projects").upsert(rows, { onConflict: "owner,id" });
+    if (error) throw new Error(`Could not save to your account: ${error.message}`);
+  }
+  return projects.filter((p) => !fits(p));
 }
 
-export async function deleteRemoteProject(supabase: SupabaseClient, id: string): Promise<void> {
-  const { error } = await supabase.from("projects").delete().eq("id", id);
+/** Marks a composition deleted in the account, so other devices drop it rather than upload it again. */
+export async function deleteRemoteProject(supabase: SupabaseClient, id: string, name: string, now = new Date().toISOString()): Promise<void> {
+  const { error } = await supabase
+    .from("projects")
+    .upsert({ id, name: name.slice(0, NAME_MAX), doc: null, deleted: true, updated_at: now }, { onConflict: "owner,id" });
   if (error) throw new Error(`Could not remove it from your account: ${error.message}`);
 }

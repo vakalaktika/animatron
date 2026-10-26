@@ -7,14 +7,20 @@ import type { Project, ProjectStore } from "./projects";
 
 /**
  * What a sync does, decided from the two lists alone: newer wins, by the
- * time each side was last edited. A composition with video or sound stays
- * in this browser (the files live in the browser's media store, not in the
- * document), so it is never pushed and is reported instead; nor is the
- * untouched Welcome composition.
+ * time each side was last edited (the database ignores a stale save, so a
+ * wrong guess here can't lose newer work). A composition with video or
+ * sound stays in this browser (the files live in the browser's media store,
+ * not in the document), so it is never pushed and is reported instead; nor
+ * is the untouched Welcome composition. A deletion on another device
+ * arrives as a tombstone and removes the local copy unless that was edited
+ * after the deletion.
  */
 export interface SyncPlan {
   push: Project[];
+  /** Live compositions to bring in (new, or newer than here). */
   pull: RemoteProject[];
+  /** Local compositions deleted elsewhere after their last edit here. */
+  remove: string[];
   /** Local compositions that can't go up because of their media. */
   keptLocal: Project[];
 }
@@ -52,20 +58,26 @@ export function planSync(local: Project[], remote: RemoteProject[]): SyncPlan {
     const there = remoteById.get(p.id);
     return !there || time(p.updatedAt) > time(there.updatedAt);
   });
-  const pull = remote.filter((r) => {
+  const newerThere = (r: RemoteProject) => {
     const here = localById.get(r.id);
     return !here || time(r.updatedAt) > time(here.updatedAt);
-  });
-  return { push, pull, keptLocal };
+  };
+  const pull = remote.filter((r) => !r.deleted && newerThere(r));
+  const remove = remote.filter((r) => r.deleted && localById.has(r.id) && newerThere(r)).map((r) => r.id);
+  return { push, pull, remove, keptLocal };
 }
 
 /**
  * The store with pulled compositions merged in, each repaired like an opened
- * file; ones that don't read as a composition are skipped and counted. The
- * open composition is replaced too when the account has a newer copy; the
- * caller reloads it.
+ * file (ones that don't read as a composition are skipped and counted), and
+ * compositions deleted elsewhere removed, except the open one: the caller
+ * closes that itself (`removedCurrent`).
  */
-export function applyPull(store: ProjectStore, pulled: RemoteProject[]): { store: ProjectStore; skipped: number } {
+export function applyPull(
+  store: ProjectStore,
+  pulled: RemoteProject[],
+  remove: string[] = [],
+): { store: ProjectStore; skipped: number; removedCurrent: boolean } {
   let skipped = 0;
   const incoming: Project[] = [];
   for (const r of pulled) {
@@ -77,7 +89,12 @@ export function applyPull(store: ProjectStore, pulled: RemoteProject[]): { store
     incoming.push({ id: r.id, doc: normalizeDoc(raw as RawDoc).doc, updatedAt: r.updatedAt });
   }
   const byId = new Map(incoming.map((p) => [p.id, p]));
-  const merged = store.projects.map((p) => byId.get(p.id) ?? p);
+  const gone = new Set(remove.filter((id) => id !== store.currentId));
+  const merged = store.projects.filter((p) => !gone.has(p.id)).map((p) => byId.get(p.id) ?? p);
   const added = incoming.filter((p) => !store.projects.some((q) => q.id === p.id));
-  return { store: { ...store, projects: [...merged, ...added] }, skipped };
+  return {
+    store: { ...store, projects: [...merged, ...added] },
+    skipped,
+    removedCurrent: store.currentId !== null && remove.includes(store.currentId),
+  };
 }

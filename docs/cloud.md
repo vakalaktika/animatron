@@ -19,8 +19,26 @@ and compositions stay in the browser.
   stay its own.
 - **Sync.** Signed in, every composition syncs right away (newer edit wins,
   per composition), the open one is saved to the account a few seconds after
-  each edit, and deleting one deletes it from the account. *Sync now* runs a
-  full sync on demand. Compositions with video or sound stay in the browser.
+  each edit, and deleting one leaves a tombstone so every other device drops
+  its copy on its next sync (unless it was edited after the deletion).
+  *Sync now* runs a full sync on demand. Compositions with video or sound,
+  and the untouched Welcome composition, stay in the browser.
+
+## How it is protected
+
+- Shares can't be listed. The table is readable only by its owner; anyone
+  else opens a share through `get_share(id)`, which returns one document by
+  its exact 10-character id.
+- Each session can make 50 shares a day; an account holds up to 1000
+  compositions. Anonymous sessions can make shares but can't keep
+  compositions.
+- The database decides which copy is newer: a save never stamps a time
+  ahead of the server clock, and a save older than the stored copy is
+  ignored, so a stale device can't overwrite newer work.
+- Only composition-shaped documents are stored. Everything opened from a
+  link or an account is repaired like any imported file, pictures must be
+  carried inside the document (web addresses are dropped), and Lottie files
+  play through lottie-web's light build, which never evaluates expressions.
 
 ## Setting it up
 
@@ -49,5 +67,6 @@ anon key plus row-level security is the whole design.
   message, and a JSON download always works.
 - Deleting a composition while offline doesn't reach the account; the next
   sync brings it back.
+- Signing out keeps the compositions in this browser.
 - Shares are never edited, only made and (by their owner) deleted; there is
   no UI to delete one yet.

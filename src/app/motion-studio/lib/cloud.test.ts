@@ -32,7 +32,7 @@ interface Call {
 }
 
 /** A tiny stand-in for the Supabase auth and REST endpoints the studio uses. */
-function fakeSupabase(over: { insertError?: { code: string; message: string }[]; rows?: Record<string, unknown>[]; anonymous?: boolean } = {}) {
+function fakeSupabase(over: { insertError?: { code: string; message: string }[]; rows?: Record<string, unknown>[]; shares?: Record<string, unknown>; emailTaken?: boolean } = {}) {
   const calls: Call[] = [];
   const insertErrors = [...(over.insertError ?? [])];
   const session = (anonymous: boolean) => ({
@@ -52,16 +52,16 @@ function fakeSupabase(over: { insertError?: { code: string; message: string }[];
     calls.push({ method, path: url.pathname, search: url.search, body, auth: headers.get("authorization") });
     if (url.pathname === "/auth/v1/signup") return json(200, session(true));
     if (url.pathname === "/auth/v1/otp") return json(200, {});
-    if (url.pathname === "/auth/v1/user" && method === "PUT") return json(200, session(true).user);
+    if (url.pathname === "/auth/v1/user" && method === "PUT") {
+      return over.emailTaken ? json(422, { code: 422, error_code: "email_exists", msg: "A user with this email address has already been registered" }) : json(200, session(true).user);
+    }
+    if (url.pathname === "/rest/v1/rpc/get_share") {
+      const id = (body as { share_id: string }).share_id;
+      return json(200, over.shares?.[id] ?? null);
+    }
     if (url.pathname === "/rest/v1/shares" && method === "POST") {
       const err = insertErrors.shift();
       return err ? json(409, { ...err, details: null, hint: null }) : new Response(null, { status: 201 });
-    }
-    if (url.pathname === "/rest/v1/shares" && method === "GET") {
-      const rows = over.rows ?? [];
-      const single = (headers.get("accept") ?? "").includes("vnd.pgrst.object");
-      if (single) return rows.length ? json(200, rows[0]) : json(406, { code: "PGRST116", message: "no rows", details: null, hint: null });
-      return json(200, rows);
     }
     if (url.pathname === "/rest/v1/projects" && method === "GET") return json(200, over.rows ?? []);
     if (url.pathname === "/rest/v1/projects") return new Response(null, { status: method === "DELETE" ? 204 : 201 });
@@ -126,8 +126,10 @@ describe("createShare", () => {
 
 describe("fetchShare", () => {
   test("opens the composition, repaired like any file", async () => {
-    const { supabase } = fakeSupabase({ rows: [{ doc }] });
+    const { supabase, calls } = fakeSupabase({ shares: { abcdefghij: doc } });
     expect((await fetchShare(supabase, "abcdefghij"))?.name).toBe("Shared");
+    // Shares are read by exact id through the get_share function, never by listing the table.
+    expect(calls).toMatchObject([{ method: "POST", path: "/rest/v1/rpc/get_share", body: { share_id: "abcdefghij" } }]);
   });
 
   test("null for a malformed id (no request), a missing link or something that isn't a composition", async () => {
@@ -135,7 +137,7 @@ describe("fetchShare", () => {
     await expect(fetchShare(empty.supabase, "nope")).resolves.toBeNull();
     expect(empty.calls).toHaveLength(0);
     await expect(fetchShare(empty.supabase, "abcdefghij")).resolves.toBeNull();
-    const junk = fakeSupabase({ rows: [{ doc: { hello: 1 } }] });
+    const junk = fakeSupabase({ shares: { abcdefghij: { hello: 1 } } });
     await expect(fetchShare(junk.supabase, "abcdefghij")).resolves.toBeNull();
   });
 });
@@ -158,14 +160,24 @@ describe("accounts", () => {
     await expect(sendSignInLink(anon.supabase, "not-an-email", "https://site/")).rejects.toThrow("email address");
   });
 
+  test("an anonymous session whose email already has an account signs in to that account instead", async () => {
+    const taken = fakeSupabase({ emailTaken: true });
+    await createShare(taken.supabase, doc, () => "abcdefghij");
+    await sendSignInLink(taken.supabase, "ed@example.com", "https://site/");
+    expect(taken.calls.slice(-2).map((c) => `${c.method} ${c.path}`)).toEqual(["PUT /auth/v1/user", "POST /auth/v1/otp"]);
+  });
+
   test("projects are listed, upserted per owner and id, and deleted", async () => {
-    const { supabase, calls } = fakeSupabase({ rows: [{ id: "p1", name: "One", doc, updated_at: "2026-10-01T00:00:00Z" }] });
-    expect(await listRemoteProjects(supabase)).toEqual([{ id: "p1", name: "One", doc, updatedAt: "2026-10-01T00:00:00Z" }]);
-    await pushProjects(supabase, [{ id: "p2", doc, updatedAt: "2026-10-02T00:00:00Z" }]);
+    const { supabase, calls } = fakeSupabase({ rows: [{ id: "p1", name: "One", doc, deleted: false, updated_at: "2026-10-01T00:00:00Z" }] });
+    expect(await listRemoteProjects(supabase)).toEqual([{ id: "p1", name: "One", doc, deleted: false, updatedAt: "2026-10-01T00:00:00Z" }]);
+    const huge = { id: "big", doc: { ...doc, name: "x".repeat(5_000_000) }, updatedAt: "2026-10-02T00:00:00Z" };
+    const tooBig = await pushProjects(supabase, [{ id: "p2", doc, updatedAt: "2026-10-02T00:00:00Z" }, huge]);
+    expect(tooBig.map((p) => p.id)).toEqual(["big"]);
     const upsert = calls.at(-1);
     expect(upsert?.search).toContain("on_conflict=owner%2Cid");
-    expect(upsert?.body).toEqual([{ id: "p2", name: "Shared", doc, updated_at: "2026-10-02T00:00:00Z" }]);
-    await deleteRemoteProject(supabase, "p2");
-    expect(calls.at(-1)).toMatchObject({ method: "DELETE", search: "?id=eq.p2" });
+    expect(upsert?.body).toEqual([{ id: "p2", name: "Shared", doc, deleted: false, updated_at: "2026-10-02T00:00:00Z" }]);
+    // A deletion is a tombstone, so other devices drop their copy instead of uploading it again.
+    await deleteRemoteProject(supabase, "p2", "Shared", "2026-10-03T00:00:00Z");
+    expect(calls.at(-1)).toMatchObject({ method: "POST", body: { id: "p2", name: "Shared", doc: null, deleted: true, updated_at: "2026-10-03T00:00:00Z" } });
   });
 });

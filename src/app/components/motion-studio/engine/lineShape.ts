@@ -284,10 +284,14 @@ export function lineChunks(
   return out;
 }
 
+const ATTR_ESCAPES: Record<string, string> = { "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" };
+/** A value made safe to sit inside a double-quoted attribute (colours come from documents, which can come from links). */
+const attr = (value: string) => value.replace(/[&"<>]/g, (c) => ATTR_ESCAPES[c]);
+
 /** The chunks as SVG markup, for a view to drop into a `<g>`. */
 export function chunksMarkup(chunks: Chunk[]): string {
   let s = "";
-  for (const ch of chunks) s += `<path d="${ch.d}" fill="${ch.color}" fill-opacity="${ch.opacity.toFixed(3)}"/>`;
+  for (const ch of chunks) s += `<path d="${attr(ch.d)}" fill="${attr(ch.color)}" fill-opacity="${ch.opacity.toFixed(3)}"/>`;
   return s;
 }
 

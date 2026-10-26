@@ -175,7 +175,12 @@ export function MotionStudio() {
   }, [doc]);
 
   const cloud = useCloud();
-  const { syncNow, removeRemote } = useCloudSync({ cloud, store, storeRef, doc, setStore, replaceDoc, notify });
+  const docRef = useRef(doc);
+  docRef.current = doc;
+  // Set once the project handlers exist below; a sync can't run before then.
+  const closeCurrentRef = useRef<() => void>(() => {});
+  const closeCurrent = useCallback(() => closeCurrentRef.current(), []);
+  const { syncNow, removeRemote } = useCloudSync({ cloud, store, storeRef, docRef, setStore, replaceDoc, closeCurrent, notify });
 
   const duration = useMemo(() => docDuration(doc), [doc]);
   // A composition with a looping clip keeps running so loaders never freeze.
@@ -601,10 +606,10 @@ export function MotionStudio() {
     clock.replay();
   };
 
-  const deleteProject = (id: string) => {
+  /** Removes a composition from this browser, opening another if it was the open one. */
+  const dropProject = (id: string) => {
     const wasCurrent = id === storeRef.current.currentId;
     const next = changeStore((s) => removeProject(s, id));
-    removeRemote(id);
     void pruneMedia(next, wasCurrent ? undefined : doc);
     if (!wasCurrent) return;
     // The open composition was deleted: fall back to the latest, or a fresh Welcome.
@@ -618,6 +623,18 @@ export function MotionStudio() {
       replaceDoc(fresh);
     }
     setSelectedId(null);
+  };
+  closeCurrentRef.current = () => {
+    const id = storeRef.current.currentId;
+    if (!id) return;
+    dropProject(id);
+    notify("The open composition was deleted on another device, so it is closed here too.");
+  };
+
+  const deleteProject = (id: string) => {
+    const name = storeRef.current.projects.find((p) => p.id === id)?.doc.name ?? "";
+    dropProject(id);
+    removeRemote(id, name);
   };
 
   // ----- Export -------------------------------------------------------------

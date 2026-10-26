@@ -16,17 +16,20 @@ import {
   userFromSession,
   type CloudUser,
 } from "./cloud";
-import { applyPull, planSync } from "./cloudSync";
+import { planSync } from "./cloudSync";
 import type { Project, ProjectStore } from "./projects";
+import type { RemoteProject } from "./cloud";
 
 export interface SyncResult {
-  store: ProjectStore;
   pushed: number;
-  pulled: number;
+  /** Newer or new compositions to merge in (the caller merges into its latest store). */
+  pull: RemoteProject[];
+  /** Compositions deleted in the account after their last edit here. */
+  remove: string[];
   /** Compositions with video or sound, which stay in this browser. */
   keptLocal: number;
-  /** Rows in the account that weren't readable compositions. */
-  skipped: number;
+  /** Compositions too big for the account, which stay in this browser. */
+  tooBig: number;
 }
 
 export interface Cloud {
@@ -41,10 +44,11 @@ export interface Cloud {
   openShare: (id: string) => Promise<StudioDoc | null>;
   sendLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  /** Two-way sync of every composition; the caller saves and applies the returned store. */
+  /** Pushes what is newer here and reports what to bring in or remove; the caller applies that. */
   sync: (store: ProjectStore) => Promise<SyncResult>;
-  push: (projects: Project[]) => Promise<void>;
-  remove: (id: string) => Promise<void>;
+  /** Saves compositions; resolves to the ones too big for the account. */
+  push: (projects: Project[]) => Promise<Project[]>;
+  remove: (id: string, name: string) => Promise<void>;
 }
 
 const OFF = (): never => {
@@ -98,7 +102,7 @@ export function useCloud(): Cloud {
   );
   const signOut = useCallback(async () => endSession(await withClient()), [withClient]);
   const push = useCallback(async (projects: Project[]) => pushProjects(await withClient(), projects), [withClient]);
-  const remove = useCallback(async (id: string) => deleteRemoteProject(await withClient(), id), [withClient]);
+  const remove = useCallback(async (id: string, name: string) => deleteRemoteProject(await withClient(), id, name), [withClient]);
 
   const sync = useCallback(
     async (store: ProjectStore): Promise<SyncResult> => {
@@ -106,9 +110,8 @@ export function useCloud(): Cloud {
       setSyncing(true);
       try {
         const plan = planSync(store.projects, await listRemoteProjects(supabase));
-        await pushProjects(supabase, plan.push);
-        const pulled = applyPull(store, plan.pull);
-        return { store: pulled.store, pushed: plan.push.length, pulled: plan.pull.length - pulled.skipped, keptLocal: plan.keptLocal.length, skipped: pulled.skipped };
+        const tooBig = await pushProjects(supabase, plan.push);
+        return { pushed: plan.push.length - tooBig.length, pull: plan.pull, remove: plan.remove, keptLocal: plan.keptLocal.length, tooBig: tooBig.length };
       } finally {
         setSyncing(false);
       }
@@ -116,5 +119,9 @@ export function useCloud(): Cloud {
     [withClient],
   );
 
-  return { enabled: config !== null, user, pendingEmail, syncing, shortLink, openShare, sendLink, signOut, sync, push, remove };
+  // One object per change of state, so effects that depend on the cloud don't re-run every render.
+  return useMemo(
+    () => ({ enabled: config !== null, user, pendingEmail, syncing, shortLink, openShare, sendLink, signOut, sync, push, remove }),
+    [config, user, pendingEmail, syncing, shortLink, openShare, sendLink, signOut, sync, push, remove],
+  );
 }

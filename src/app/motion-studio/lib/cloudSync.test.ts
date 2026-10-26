@@ -12,7 +12,8 @@ const doc = (name: string, over: Partial<StudioDoc> = {}): StudioDoc => ({
   ...over,
 });
 const local = (id: string, updatedAt: string, over: Partial<StudioDoc> = {}): Project => ({ id, doc: doc(id, over), updatedAt });
-const remote = (id: string, updatedAt: string, d: unknown = doc(`${id} (cloud)`)) => ({ id, name: id, doc: d, updatedAt });
+const remote = (id: string, updatedAt: string, d: unknown = doc(`${id} (cloud)`)) => ({ id, name: id, doc: d, deleted: false, updatedAt });
+const tombstone = (id: string, updatedAt: string) => ({ id, name: id, doc: null, deleted: true, updatedAt });
 
 describe("planSync", () => {
   test("newer wins on each side; new ones go both ways", () => {
@@ -35,6 +36,26 @@ describe("planSync", () => {
     const plan = planSync([withSound], []);
     expect(plan.push).toEqual([]);
     expect(plan.keptLocal.map((p) => p.id)).toEqual(["s"]);
+  });
+});
+
+describe("deletions", () => {
+  test("a deletion elsewhere removes the local copy unless it was edited after the deletion", () => {
+    const plan = planSync(
+      [local("old", "2026-10-01T00:00:00Z"), local("edited", "2026-10-09T00:00:00Z")],
+      [tombstone("old", "2026-10-05T00:00:00Z"), tombstone("edited", "2026-10-05T00:00:00Z"), tombstone("never-here", "2026-10-05T00:00:00Z")],
+    );
+    expect(plan.remove).toEqual(["old"]);
+    expect(plan.pull).toEqual([]);
+    // Edited after the deletion: it goes back up.
+    expect(plan.push.map((p) => p.id)).toEqual(["edited"]);
+  });
+
+  test("removal spares the open composition and says so", () => {
+    const store = { currentId: "open", projects: [local("open", "2026-10-01T00:00:00Z"), local("other", "2026-10-01T00:00:00Z")] };
+    const { store: next, removedCurrent } = applyPull(store, [], ["open", "other"]);
+    expect(next.projects.map((p) => p.id)).toEqual(["open"]);
+    expect(removedCurrent).toBe(true);
   });
 });
 
