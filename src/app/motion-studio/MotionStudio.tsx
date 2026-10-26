@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
 import { clipEnd, docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
 import type { AudioTrack, Clip, RigClip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
+import { retimePropKeys, setPropAt, shiftPosition } from "@/app/components/motion-studio/engine/keys";
 import { retimeKeys } from "@/app/components/motion-studio/engine/rig";
 import { RIG_FORMAT } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
@@ -263,9 +264,7 @@ export function MotionStudio() {
         // anchor and counter-shifts the rest so they stay put on stage.
         if (!c.loop && index === c.path.length - 1) {
           return {
-            ...c,
-            x: c.x + delta.x,
-            y: c.y + delta.y,
+            ...shiftPosition(c, delta.x, delta.y),
             path: c.path.map((p, i) =>
               i === index ? p : { ...p, x: p.x - delta.x, y: p.y - delta.y },
             ),
@@ -503,6 +502,13 @@ export function MotionStudio() {
       }, `rigkey:${clipId}`);
     },
     [setDoc, boneSelection],
+  );
+
+  const retimePropKey = useCallback(
+    (clipId: string, time: number, to: number) => {
+      setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === clipId ? retimePropKeys(c, time, to) : c)) }), `propkey:${clipId}`);
+    },
+    [setDoc],
   );
 
   const saveRig = (clip: RigClip) => {
@@ -775,6 +781,7 @@ export function MotionStudio() {
     },
     selectedBone,
     onRetimeRigKey: retimeRigKey,
+    onRetimePropKey: retimePropKey,
     onSetStart: setClipStart,
     onChangeClip: updateClip,
     onReorder: reorderClips,
@@ -838,8 +845,8 @@ export function MotionStudio() {
       selectedPoint={selectedPoint}
       onSelectPoint={selectPoint}
       onChangeClip={updateClip}
-      onScaleClip={(id, scale) => setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === id ? { ...c, scale } : c)) }), `scale:${id}`)}
-      onRotateClip={(id, rotation) => setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === id ? { ...c, rotation } : c)) }), `rotate:${id}`)}
+      onScaleClip={(id, scale) => setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === id ? setPropAt(c, "scale", clock.time.get(), scale) : c)) }), `scale:${id}`)}
+      onRotateClip={(id, rotation) => setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === id ? setPropAt(c, "rotation", clock.time.get(), rotation) : c)) }), `rotate:${id}`)}
       clean={clean}
       drawing={drawing}
       onDraw={finishStroke}
@@ -992,6 +999,7 @@ export function MotionStudio() {
             },
           }}
           rig={rigActions}
+          time={clock.time}
         />
         <div className="mt-6 flex flex-wrap gap-2 border-t border-hairline pt-4">
           <Button size="xs" variant="outline" onClick={() => duplicateClip(selected)}>

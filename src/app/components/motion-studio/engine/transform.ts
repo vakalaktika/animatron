@@ -1,6 +1,7 @@
 import type { Clip, RigClip, SpriteClip, StudioDoc, TextClip, Vec2 } from "../types";
 import { clamp01, lerp } from "./easing";
 import { ancestorChain } from "./hierarchy";
+import { placementAt, propValue, restPlacement, restValue, type Placement } from "./keys";
 import { ribbonHead, ribbonPointAt } from "./ribbon";
 import { spriteActiveDuration, spritePath, spriteProgress, waypointValuesAt } from "./spriteTiming";
 import { revealTransform } from "./text";
@@ -62,7 +63,7 @@ function landingSquash(clip: SpriteClip, t: number): number {
   return 1 + bump * clip.landing.squash;
 }
 
-function spriteLocal(clip: SpriteClip, t: number): WorldTransform {
+function spriteLocal(clip: SpriteClip, place: Placement, t: number): WorldTransform {
   const p = spriteProgress(clip, t);
   const sample = spritePath(clip).at(p);
   const settle = clip.loop ? 1 : 1 - p;
@@ -71,52 +72,55 @@ function spriteLocal(clip: SpriteClip, t: number): WorldTransform {
   const local = t - clip.start;
   const fade = local < 0 ? 0 : clip.fadeIn > 0 ? clamp01(local / clip.fadeIn) : 1;
   return {
-    x: clip.x + sample.x,
-    y: clip.y + sample.y,
+    x: place.x + sample.x,
+    y: place.y + sample.y,
     rotation: foldedHeading(sample.angle) * clip.bank * settle + point.rotate,
-    scaleX: clip.scale * grow * point.scale * (clip.autoFlip ? facing(sample.angle) : 1),
-    scaleY: clip.scale * grow * point.scale * landingSquash(clip, t),
+    scaleX: place.scale * grow * point.scale * (clip.autoFlip ? facing(sample.angle) : 1),
+    scaleY: place.scale * grow * point.scale * landingSquash(clip, t),
     opacity: fade * point.opacity,
   };
 }
 
-function textLocal(clip: TextClip, t: number): WorldTransform {
+function textLocal(clip: TextClip, place: Placement, t: number): WorldTransform {
   const { scale, opacity } = revealTransform(clip, t);
-  const s = clip.scale * scale;
-  return { x: clip.x, y: clip.y, rotation: 0, scaleX: s, scaleY: s, opacity };
+  const s = place.scale * scale;
+  return { x: place.x, y: place.y, rotation: 0, scaleX: s, scaleY: s, opacity };
 }
 
 /** A rig is simply absent before its start, then stands (or plays) in place. */
-function rigLocal(clip: RigClip, t: number): WorldTransform {
-  return { x: clip.x, y: clip.y, rotation: 0, scaleX: clip.scale, scaleY: clip.scale, opacity: t < clip.start ? 0 : 1 };
+function rigLocal(clip: RigClip, place: Placement, t: number): WorldTransform {
+  return { x: place.x, y: place.y, rotation: 0, scaleX: place.scale, scaleY: place.scale, opacity: t < clip.start ? 0 : 1 };
 }
 
-/** The clip's own turn and opacity, applied over whatever its animation does. */
-function styled(clip: Clip, local: WorldTransform): WorldTransform {
-  const rotation = clip.rotation ?? 0;
-  const opacity = clip.opacity ?? 1;
-  if (rotation === 0 && opacity === 1) return local;
-  return { ...local, rotation: local.rotation + rotation, opacity: local.opacity * opacity };
+/** The clip's own turn and opacity (keyed or not), applied over whatever its animation does. */
+function styled(place: Placement, local: WorldTransform): WorldTransform {
+  if (place.rotation === 0 && place.opacity === 1) return local;
+  return { ...local, rotation: local.rotation + place.rotation, opacity: local.opacity * place.opacity };
 }
 
-/** The clip's placement with no animation applied: where it sits when settled. */
+function still(place: Placement): WorldTransform {
+  return styled(place, { x: place.x, y: place.y, rotation: 0, scaleX: place.scale, scaleY: place.scale, opacity: 1 });
+}
+
+/** The clip's placement with no animation applied: where it sits when settled (keyed properties at their last key). */
 export function restLocal(clip: Clip): WorldTransform {
-  return styled(clip, { x: clip.x, y: clip.y, rotation: 0, scaleX: clip.scale, scaleY: clip.scale, opacity: 1 });
+  return still(restPlacement(clip));
 }
 
-/** The clip's own animated placement at time `t`, ignoring any parent. */
+/** The clip's own animated placement at time `t`, ignoring any parent. Keyframed properties are read at `t`. */
 export function localTransformAt(clip: Clip, t: number): WorldTransform {
+  const place = placementAt(clip, t);
   switch (clip.type) {
     case "sprite":
-      return styled(clip, spriteLocal(clip, t));
+      return styled(place, spriteLocal(clip, place, t));
     case "text":
-      return styled(clip, textLocal(clip, t));
+      return styled(place, textLocal(clip, place, t));
     case "rig":
-      return styled(clip, rigLocal(clip, t));
+      return styled(place, rigLocal(clip, place, t));
     case "logo":
     case "lottie":
     case "ribbon":
-      return restLocal(clip);
+      return still(place);
   }
 }
 
@@ -134,7 +138,8 @@ export function localTransformAt(clip: Clip, t: number): WorldTransform {
  */
 export function seatOnRibbon(clip: Clip, parent: Clip | undefined, local: WorldTransform, t: number, rest: boolean): WorldTransform {
   if (flowsOnRibbon(clip, parent)) {
-    return { ...local, x: 0, y: 0, scaleX: clip.scale, scaleY: clip.scale };
+    const scale = rest ? restValue(clip, "scale") : propValue(clip, "scale", t);
+    return { ...local, x: 0, y: 0, scaleX: scale, scaleY: scale };
   }
   if (!parent || parent.type !== "ribbon" || clip.along === null || clip.along === undefined) return local;
   const fraction = clip.along === "front" ? (rest ? 1 : ribbonHead(parent, t)) : clip.along;

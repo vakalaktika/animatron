@@ -19,6 +19,13 @@ const FADE_SLICES = Array.from({ length: FADE_STEPS }, (_, k) => ({
   cap: (k === FADE_STEPS - 1 ? "round" : "butt") as "round" | "butt",
 }));
 const SOLID = [{ from: 0, opacity: 1, cap: "round" as const }];
+/**
+ * Extra gap (fraction of the path) after each dash. Without it the pattern's
+ * next dash starts exactly at the end of an open path, and its round cap
+ * shows there as a stray dot; a looping window's wrapped part shifts by this
+ * much, which is invisible.
+ */
+const REPEAT_SLACK = 0.001;
 
 interface Props {
   bands: Band[];
@@ -61,7 +68,7 @@ function Slice({
 }) {
   const pathLength = useTransform(window, (w) => Math.max(0.0001, w.length * (1 - from)));
   const pathOffset = useTransform(window, (w) => w.tail + w.length * from);
-  const pathSpacing = useTransform(window, (w) => Math.max(0, 1 - w.length * (1 - from)));
+  const pathSpacing = useTransform(window, (w) => Math.max(0, 1 - w.length * (1 - from)) + REPEAT_SLACK);
   return (
     <g opacity={opacity}>
       {bands.map((b, i) => (

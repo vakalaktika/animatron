@@ -1,3 +1,4 @@
+import { shiftPosition } from "@/app/components/motion-studio/engine/keys";
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { newId } from "./id";
 
@@ -26,12 +27,10 @@ export function heldClip(): Clip | null {
 export function copyOf(clip: Clip, doc: StudioDoc, offset = PASTE_OFFSET): Clip {
   const parentStays = clip.parentId !== null && doc.clips.some((c) => c.id === clip.parentId);
   return {
-    ...clip,
+    ...shiftPosition(clip, offset, offset),
     id: newId(),
     name: /\bcopy\b/.test(clip.name) ? clip.name : `${clip.name} copy`,
     parentId: parentStays ? clip.parentId : null,
     along: parentStays ? clip.along : null,
-    x: clip.x + offset,
-    y: clip.y + offset,
   };
 }

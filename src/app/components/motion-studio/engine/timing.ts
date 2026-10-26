@@ -1,5 +1,6 @@
 import type { Clip, StudioDoc } from "../types";
 import { LOGO_LAYER_COUNT } from "../assets/logoPaths";
+import { keysEnd } from "./keys";
 import { lineDuration, lineForever } from "./line";
 import { ribbonSubject } from "./ribbon";
 import { rigDuration, rigLoops } from "./rig";
@@ -10,8 +11,12 @@ import { trailSubject } from "./trail";
 export const IDLE_FLAP_SECONDS = 0.55;
 export const LANDING_SQUASH_SECONDS = 0.45;
 
-/** Seconds a clip occupies on the clock, from its start. */
+/** Seconds a clip occupies on the clock, from its start: its own animation, or its last keyframe if later. */
 export function clipDuration(clip: Clip): number {
+  return Math.max(ownDuration(clip), keysEnd(clip));
+}
+
+function ownDuration(clip: Clip): number {
   switch (clip.type) {
     case "logo": {
       const layers = (LOGO_LAYER_COUNT - 1) * clip.layerStagger + clip.layerDuration;

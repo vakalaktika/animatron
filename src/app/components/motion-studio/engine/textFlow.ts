@@ -1,4 +1,5 @@
 import type { Clip, RibbonClip, StudioDoc, TextClip, Vec2 } from "../types";
+import { propValue } from "./keys";
 import type { PathSampler } from "./path";
 import { ribbonHead, ribbonPath, ribbonPointAt } from "./ribbon";
 
@@ -154,12 +155,15 @@ function flowPin(clip: TextClip, ribbon: RibbonClip, t: number): number {
 /**
  * The glyph seats of a flowing text clip at time `t` (riding the front
  * follows the paint head). `widths` are the glyphs' unscaled advances; the
- * clip's size scales them, as it scales the glyphs drawn.
+ * clip's size scales them, as it scales the glyphs drawn. Keyframed slide,
+ * lift and size are read at `t`.
  */
 export function flowSeats(clip: TextClip, ribbon: RibbonClip, widths: number[], t: number): GlyphSeat[] {
   const align = clip.along === "front" ? "end" : "center";
-  const advances = widths.map((w) => w * clip.scale);
-  return flowGlyphs(ribbonPath(ribbon), ribbon.loop, flowPin(clip, ribbon, t), align, advances, clip.x, clip.y);
+  const scale = propValue(clip, "scale", t);
+  const advances = widths.map((w) => w * scale);
+  const pin = flowPin(clip, ribbon, t);
+  return flowGlyphs(ribbonPath(ribbon), ribbon.loop, pin, align, advances, propValue(clip, "x", t), propValue(clip, "y", t));
 }
 
 /**

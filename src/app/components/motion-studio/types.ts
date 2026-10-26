@@ -54,6 +54,20 @@ export interface Waypoint extends Vec2 {
   time?: number;
 }
 
+/** Placement properties any clip can animate with keyframes. */
+export type KeyedProp = "x" | "y" | "scale" | "rotation" | "opacity";
+
+/**
+ * One keyframe: the property's value `time` seconds after the clip starts
+ * (so keys move with the clip's bar), and how it eases to the next key.
+ * Missing easing reads as in / out.
+ */
+export interface PropKey {
+  time: number;
+  value: number;
+  ease?: Ease;
+}
+
 export interface ClipBase {
   id: string;
   name: string;
@@ -84,6 +98,13 @@ export interface ClipBase {
    * tangent there.
    */
   along?: number | "front" | null;
+  /**
+   * Keyframes per placement property. An animated property takes its value
+   * from its keys (holding the first before it and the last after it) and
+   * its own field above is ignored. Kept apart from a sprite's waypoints,
+   * which shape its flight; keys move the whole flight.
+   */
+  keys?: Partial<Record<KeyedProp, PropKey[]>>;
 }
 
 export interface LogoClip extends ClipBase {
