@@ -66,6 +66,18 @@ function AnchorDot({ doc, clipId, time }: { doc: StudioDoc; clipId: string; time
   );
 }
 
+/** A finger press not yet acted on (see `pending` in EditorStage). */
+interface Pending {
+  pointerId: number;
+  target: HTMLElement;
+  clientX: number;
+  clientY: number;
+  shiftKey: boolean;
+}
+
+/** How far (screen px) a finger moves before its press counts as a drag. */
+const TOUCH_SLOP = 6;
+
 interface Drag {
   id: string;
   /** Where the clip rests on stage when the drag began (its animated position may differ). */
@@ -124,9 +136,15 @@ export function EditorStage({
   const zoom = fitZoom * shown.scale;
   const drag = useRef<Drag | null>(null);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
-  // Fingers on the stage, by pointer id, relative to its centre; two of them make a pinch.
+  // Fingers on the stage, by pointer id, relative to its centre, tracked in
+  // the capture phase so a finger on a handle counts too. Two make a pinch;
+  // once one of those lifts, the rest do nothing until every finger is up.
   const touches = useRef(new Map<number, Vec2>());
   const pinch = useRef<{ start: View; ids: [number, number]; from: [Vec2, Vec2] } | null>(null);
+  const pinchDone = useRef(false);
+  // A finger's press on the stage waits until it moves or lifts, so a pinch
+  // never selects, deselects or drags something on the way.
+  const pending = useRef<Pending | null>(null);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -180,30 +198,82 @@ export function EditorStage({
     return () => el.removeEventListener("wheel", onWheel);
   }, [clean, view, moveView, fromCentre]);
 
-  /** Pointer position in stage pixels. */
-  const stagePoint = (e: ReactPointerEvent<HTMLDivElement>): [number, number] => {
+  /** A screen position in stage pixels. */
+  const stagePointAt = (clientX: number, clientY: number): [number, number] => {
     const box = canvasBoxRef.current?.getBoundingClientRect();
     if (!box) return [0, 0];
-    return [(e.clientX - box.left) / zoom, (e.clientY - box.top) / zoom];
+    return [(clientX - box.left) / zoom, (clientY - box.top) / zoom];
   };
 
-  /**
-   * A second finger turns whatever the first started (a drag, a stroke)
-   * into a pinch of the view; fingers beyond two are ignored, and the one
-   * left behind when a pinch ends does nothing until it lifts.
-   */
-  const startPinch = (e: ReactPointerEvent<HTMLDivElement>): boolean => {
-    if (e.pointerType !== "touch") return false;
-    touches.current.set(e.pointerId, fromCentre(e.clientX, e.clientY));
-    if (pinch.current || touches.current.size > 2) return true;
-    if (touches.current.size < 2) return false;
-    const [a, b] = [...touches.current.entries()];
+  /** Drops whatever a single pointer had started: a pending press, a drag, a stroke. */
+  const abandonPointer = () => {
+    pending.current = null;
     drag.current = null;
     setGuides([]);
     stroke.current = null;
     setStrokePath(null);
+  };
+
+  const onPointerDownCapture = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (clean || e.pointerType !== "touch") return;
+    if ((e.target as HTMLElement).closest("[data-stage-overlay]")) return;
+    touches.current.set(e.pointerId, fromCentre(e.clientX, e.clientY));
+    if (pinch.current || pinchDone.current) {
+      e.stopPropagation();
+      return;
+    }
+    if (touches.current.size < 2) return;
+    const [a, b] = [...touches.current.entries()];
+    abandonPointer();
     pinch.current = { start: view, ids: [a[0], b[0]], from: [a[1], b[1]] };
     e.currentTarget.setPointerCapture(e.pointerId);
+    e.stopPropagation();
+  };
+  const onPointerMoveCapture = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "touch" || !touches.current.has(e.pointerId)) return;
+    touches.current.set(e.pointerId, fromCentre(e.clientX, e.clientY));
+    const p = pinch.current;
+    // While pinching (and after, until the fingers are up) handles and clips don't see these moves.
+    if (!p && !pinchDone.current) return;
+    e.stopPropagation();
+    const a = p && touches.current.get(p.ids[0]);
+    const b = p && touches.current.get(p.ids[1]);
+    if (p && a && b) moveView(() => pinchView(p.start, p.from, [a, b]));
+  };
+  const onPointerEndCapture = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "touch") return;
+    touches.current.delete(e.pointerId);
+    if (pinch.current?.ids.includes(e.pointerId)) {
+      pinch.current = null;
+      pinchDone.current = touches.current.size > 0;
+    } else if (touches.current.size === 0) pinchDone.current = false;
+  };
+
+  /**
+   * Acts on a press: starts a stroke when drawing, else selects (or clears)
+   * and starts dragging what was hit. True when a stroke or drag started.
+   */
+  const begin = (press: Pending, el: HTMLDivElement): boolean => {
+    if (drawing) {
+      stroke.current = [stagePointAt(press.clientX, press.clientY)];
+      setStrokePath(null);
+      el.setPointerCapture(press.pointerId);
+      return true;
+    }
+    const target = press.target.closest<HTMLElement>("[data-clip-id]");
+    if (!target) {
+      onSelect(null);
+      return false;
+    }
+    const id = target.dataset.clipId;
+    if (!id) return false;
+    onSelect(id, press.shiftKey);
+    const rest = restTransformAt(doc, id);
+    const clip = doc.clips.find((c) => c.id === id);
+    const flowing = clip?.type === "text" && flowRibbon(doc, clip) !== null;
+    const keyed = !!clip && (propKeys(clip, "x") !== null || propKeys(clip, "y") !== null);
+    drag.current = { id, anchor: { x: rest.x, y: rest.y }, startX: press.clientX, startY: press.clientY, targets: snapTargets(doc, id), tracked: flowing || keyed, moved: { x: 0, y: 0 } };
+    el.setPointerCapture(press.pointerId);
     return true;
   };
 
@@ -211,44 +281,25 @@ export function EditorStage({
     if (clean) return;
     // Controls floating over the stage are not the stage.
     if ((e.target as HTMLElement).closest("[data-stage-overlay]")) return;
-    if (startPinch(e)) return;
-    if (drawing) {
-      e.preventDefault();
-      stroke.current = [stagePoint(e)];
-      setStrokePath(null);
+    const press = { pointerId: e.pointerId, target: e.target as HTMLElement, clientX: e.clientX, clientY: e.clientY, shiftKey: e.shiftKey };
+    if (e.pointerType === "touch") {
+      pending.current = press;
       e.currentTarget.setPointerCapture(e.pointerId);
       return;
     }
-    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-clip-id]");
-    if (!target) {
-      onSelect(null);
-      return;
-    }
-    const id = target.dataset.clipId;
-    if (!id) return;
-    e.preventDefault();
-    onSelect(id, e.shiftKey);
-    const rest = restTransformAt(doc, id);
-    const clip = doc.clips.find((c) => c.id === id);
-    const flowing = clip?.type === "text" && flowRibbon(doc, clip) !== null;
-    const keyed = !!clip && (propKeys(clip, "x") !== null || propKeys(clip, "y") !== null);
-    drag.current = { id, anchor: { x: rest.x, y: rest.y }, startX: e.clientX, startY: e.clientY, targets: snapTargets(doc, id), tracked: flowing || keyed, moved: { x: 0, y: 0 } };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Only a drag or stroke keeps focus where it is; a click on empty canvas may blur a field.
+    if (begin(press, e.currentTarget)) e.preventDefault();
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === "touch" && touches.current.has(e.pointerId)) {
-      touches.current.set(e.pointerId, fromCentre(e.clientX, e.clientY));
-      const p = pinch.current;
-      if (p) {
-        const a = touches.current.get(p.ids[0]);
-        const b = touches.current.get(p.ids[1]);
-        if (a && b) moveView(() => pinchView(p.start, p.from, [a, b]));
-        return;
-      }
+    const p = pending.current;
+    if (p && p.pointerId === e.pointerId) {
+      if (Math.hypot(e.clientX - p.clientX, e.clientY - p.clientY) < TOUCH_SLOP) return;
+      pending.current = null;
+      begin(p, e.currentTarget);
     }
     if (stroke.current) {
       const [px, py] = stroke.current[stroke.current.length - 1];
-      const next = stagePoint(e);
+      const next = stagePointAt(e.clientX, e.clientY);
       if (Math.hypot(next[0] - px, next[1] - py) >= 2 / zoom) {
         stroke.current.push(next);
         setStrokePath(stroke.current.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" "));
@@ -268,10 +319,11 @@ export function EditorStage({
     setGuides(snapped.guides);
   };
   const onPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
-    touches.current.delete(e.pointerId);
-    if (pinch.current) {
-      if (touches.current.size < 2) pinch.current = null;
-      return;
+    // A finger that lifted without moving was a tap: it selects (or clears) now.
+    const p = pending.current;
+    if (p && p.pointerId === e.pointerId) {
+      pending.current = null;
+      begin(p, e.currentTarget);
     }
     if (stroke.current) {
       const points = stroke.current;
@@ -282,6 +334,29 @@ export function EditorStage({
     }
     drag.current = null;
     setGuides([]);
+  };
+  const onPointerCancel = () => abandonPointer();
+
+  /** The selected layer's middle on screen, relative to the stage area's centre: where zooming in heads. */
+  const selectionCentre = (): Vec2 | null => {
+    if (!selectedId) return null;
+    const el = canvasBoxRef.current?.querySelector<HTMLElement>(`[data-clip-id="${CSS.escape(selectedId)}"]`);
+    const parts = el ? (Array.from(el.children) as HTMLElement[]).map((c) => c.getBoundingClientRect()).filter((r) => r.width > 0 || r.height > 0) : [];
+    if (parts.length === 0) return null;
+    const left = Math.min(...parts.map((r) => r.left));
+    const right = Math.max(...parts.map((r) => r.right));
+    const top = Math.min(...parts.map((r) => r.top));
+    const bottom = Math.max(...parts.map((r) => r.bottom));
+    return fromCentre((left + right) / 2, (top + bottom) / 2);
+  };
+
+  /** Zooms in, on the selected layer when there is one (bringing it to the middle), else on the middle. */
+  const zoomIn = () => {
+    const at = selectionCentre();
+    moveView((v) => {
+      const zoomed = zoomAbout(v, ZOOM_STEP, at ?? { x: 0, y: 0 });
+      return at ? { ...zoomed, x: zoomed.x - at.x, y: zoomed.y - at.y } : zoomed;
+    });
   };
 
   const selected: Clip | undefined = doc.clips.find((c) => c.id === selectedId);
@@ -297,10 +372,14 @@ export function EditorStage({
           : "relative flex h-full w-full touch-none select-none items-center justify-center overflow-hidden"
       }
       style={clean ? { backgroundColor: doc.stage.transparent ? "#000" : doc.stage.background } : undefined}
+      onPointerDownCapture={onPointerDownCapture}
+      onPointerMoveCapture={onPointerMoveCapture}
+      onPointerUpCapture={onPointerEndCapture}
+      onPointerCancelCapture={onPointerEndCapture}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerCancel={onPointerCancel}
     >
       <div
         ref={canvasBoxRef}
@@ -391,7 +470,8 @@ export function EditorStage({
         <ZoomControls
           scale={view.scale}
           fitted={isFit(view)}
-          onZoomIn={() => moveView((v) => zoomAbout(v, ZOOM_STEP, { x: 0, y: 0 }))}
+          onZoomIn={zoomIn}
+          zoomInLabel={selected ? `Zoom in on ${selected.name}` : "Zoom in"}
           onZoomOut={() => moveView((v) => zoomAbout(v, 1 / ZOOM_STEP, { x: 0, y: 0 }))}
           onFit={() => setView(FIT_VIEW)}
         />

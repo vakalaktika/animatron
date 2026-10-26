@@ -25,12 +25,21 @@ const START = SCOPE.pathname;
 /** The site's pages, cached on install with every build file, so the studio and the Squiggle Studio open offline even if never visited. */
 const PAGES = [START, `${START}squiggle/`];
 
+// Fetched past the browser's HTTP cache (Pages caches for ten minutes), so
+// a new build never precaches the previous one's pages.
+const fresh = (url) => new Request(url, { cache: "reload" });
+
+// No skipWaiting: a new build's worker waits until the old build's tabs are
+// closed, so their lazily loaded parts stay in the old cache until then.
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(VERSION)
-      .then((cache) => cache.addAll([...PAGES, ...PRECACHE]))
-      .then(() => self.skipWaiting()),
+      .then((cache) => cache.addAll([...PAGES, ...PRECACHE].map(fresh)))
+      .catch((err) => {
+        console.error("Animatron offline install failed; the previous version stays in use.", err);
+        throw err;
+      }),
   );
 });
 
@@ -57,12 +66,15 @@ async function networkFirst(request) {
   }
 }
 
+/** Whole responses only: a partial (Range) one can't be stored. */
+const storable = (request, response) => response.ok && response.status !== 206 && !request.headers.has("range");
+
 async function cacheFirst(request) {
   const cache = await caches.open(VERSION);
   const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok) await cache.put(request, response.clone());
+  if (storable(request, response)) await cache.put(request, response.clone());
   return response;
 }
 
@@ -70,7 +82,7 @@ async function staleWhileRevalidate(request, event) {
   const cache = await caches.open(VERSION);
   const cached = await cache.match(request);
   const refresh = fetch(request).then((response) => {
-    if (response.ok) return cache.put(request, response.clone()).then(() => response);
+    if (storable(request, response)) return cache.put(request, response.clone()).then(() => response);
     return response;
   });
   if (cached) {
