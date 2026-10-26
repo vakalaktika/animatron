@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import type { RigAsset, RigClip, RigPose } from "../types";
+import type { RigAnimation, RigAsset, RigClip, RigPose } from "../types";
 import {
   addAnimation,
   addBone,
@@ -13,6 +13,7 @@ import {
   keyTimes,
   matrix,
   multiply,
+  poseOf,
   preset,
   reassignBinding,
   rebind,
@@ -20,6 +21,7 @@ import {
   record,
   removeBone,
   removeKey,
+  retimedKeyTime,
   retimeKeys,
   rigDuration,
   rigPoseAt,
@@ -325,6 +327,40 @@ describe("animation editing", () => {
     expect(validateRig(again).ok).toBe(true);
   });
 
+  it("keeps a bone named like an Object prototype member as a plain key", () => {
+    const odd: RigAsset = { ...asset, bones: asset.bones.map((b) => (b.id === "head" ? { ...b, id: "constructor" } : b)), bindings: asset.bindings.map((b) => (b.boneId === "head" ? { ...b, boneId: "constructor" } : b)), animations: [] };
+    expect(validateRig(odd).ok).toBe(true);
+    const name: string = "constructor";
+    const w = world(odd);
+    expect(Array.isArray(w[name])).toBe(true);
+    expect(w[name].every((v) => Number.isFinite(v))).toBe(true);
+    const sampled = sample({ ...odd, animations: [{ id: "a", duration: 1, loop: false, tracks: [{ boneId: name, keys: [{ time: 0, x: 0, y: 0, rotation: 5, easing: "hold" }] }] }] }, "a", 0.5);
+    expect(sampled[name]).toEqual({ x: 0, y: 0, rotation: 5 });
+    expect(poseOf({}, name)).toEqual({ x: 0, y: 0, rotation: 0 });
+    expect(poseOf({}, "toString")).toEqual({ x: 0, y: 0, rotation: 0 });
+  });
+
+  it("retimes crowded keys safely: never past a neighbour, and all tracks land on one moment", () => {
+    const crowded: RigAsset = { ...asset, animations: [{ id: "c", duration: 2, loop: false, tracks: [
+      { boneId: "head", keys: [{ time: 0, x: 0, y: 0, rotation: 0, easing: "linear" }, { time: 0.5, x: 0, y: 0, rotation: 1, easing: "linear" }, { time: 0.505, x: 0, y: 0, rotation: 2, easing: "linear" }] },
+      { boneId: "torso", keys: [{ time: 0.5, x: 0, y: 0, rotation: 1, easing: "linear" }, { time: 1.5, x: 0, y: 0, rotation: 2, easing: "linear" }] },
+    ] }] };
+    const anim = crowded.animations[0];
+    // Every track's key at 0.5: the head's next key at 0.505 caps the move just short of it.
+    expect(retimedKeyTime(anim, null, 0.5, 0.9)).toBe(0.495);
+    const all = retimeKeys(crowded, "c", null, 0.5, 0.9);
+    expect(all.animations[0].tracks.map((t) => t.keys.map((k) => k.time))).toEqual([[0, 0.495, 0.505], [0.495, 1.5]]);
+    // A key wedged between two neighbours 0.01 s apart cannot move at all.
+    const wedged: RigAnimation = { id: "w", duration: 2, loop: false, tracks: [{ boneId: "head", keys: [0.5, 0.505, 0.51].map((time) => ({ time, x: 0, y: 0, rotation: 0, easing: "linear" as const })) }] };
+    expect(retimedKeyTime(wedged, "head", 0.505, 0.7)).toBe(0.505);
+    expect(retimeKeys({ ...crowded, animations: [wedged] }, "w", "head", 0.505, 0.7).animations[0]).toBe(wedged);
+    expect(retimedKeyTime(anim, "torso", 0.5, 0.9)).toBe(0.9);
+    const moved = retimeKeys(crowded, "c", "torso", 0.5, 0.9);
+    expect(moved.animations[0].tracks[1].keys.map((k) => k.time)).toEqual([0.9, 1.5]);
+    expect(moved.animations[0].tracks[0].keys.map((k) => k.time)).toEqual([0, 0.5, 0.505]);
+    expect(validateRig(moved).ok).toBe(true);
+  });
+
   it("removeKey drops a key and an emptied track; retimeKeys stays strictly between neighbours", () => {
     const one = upsertKey(asset, "nod", "torso", 1, { x: 0, y: 0, rotation: 3 });
     const gone = removeKey(one, "nod", "torso", 1);
@@ -332,8 +368,17 @@ describe("animation editing", () => {
     const moved = retimeKeys(asset, "nod", "head", 0.8, 1.9);
     const times = moved.animations.find((a) => a.id === "nod")!.tracks[0].keys.map((k) => k.time);
     expect(times).toEqual([0, 0.4, 1.19, 1.2, 1.6, 2]);
+    // Every track at a shared time lands on the same clamped moment.
+    const shared = retimeKeys(asset, "wave", null, 0.4, 0.69);
+    for (const t of shared.animations.find((a) => a.id === "wave")!.tracks) expect(t.keys.map((k) => k.time)).toContain(0.69);
     const all = retimeKeys(asset, "wave", null, 0.4, 0.5);
     for (const t of all.animations.find((a) => a.id === "wave")!.tracks) expect(t.keys.map((k) => k.time)).toContain(0.5);
+    // A bone with no key at that time does not block the drag: every track's key moves.
+    const fallback = retimeKeys(asset, "wave", "head", 0.4, 0.5);
+    expect(fallback.animations.find((a) => a.id === "wave")!.tracks.map((t) => t.keys.map((k) => k.time))).toEqual(all.animations.find((a) => a.id === "wave")!.tracks.map((t) => t.keys.map((k) => k.time)));
+    const solo = retimeKeys(asset, "wave", "hand-left", 0.7, 0.75);
+    expect(solo.animations.find((a) => a.id === "wave")!.tracks.find((t) => t.boneId === "hand-left")!.keys.map((k) => k.time)).toContain(0.75);
+    expect(solo.animations.find((a) => a.id === "wave")!.tracks.find((t) => t.boneId === "fore-left")!.keys.map((k) => k.time)).toContain(0.7);
     expect(validateRig(moved).ok && validateRig(all).ok).toBe(true);
   });
 

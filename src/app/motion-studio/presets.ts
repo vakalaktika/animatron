@@ -31,7 +31,6 @@ export const FRAME_SIZES = [
   { name: "Site hero", label: "1440 x 900 (site hero)", width: 1440, height: 900 },
 ] as const;
 
-export { newId } from "./lib/id";
 
 export function makeLogo(over: Partial<LogoClip> = {}): LogoClip {
   return {
@@ -584,6 +583,13 @@ export function parseImport(json: unknown, stage: Pick<StageConfig, "width" | "h
     return { kind: "doc", ...normalizeDoc(json as RawDoc) };
   }
   if (v.version !== undefined) return { kind: "error", message: `This file is version ${String(v.version)}; the studio reads up to ${DOC_VERSION}` };
-  if (isClip(json)) return { kind: "clip", clip: { ...normalizeClip(json), id: newId(), parentId: null } };
+  if (isClip(json)) {
+    // A saved rig layer carries its asset; the asset must pass the contract like any rig file.
+    if (json.type === "rig") {
+      const rig = rigClipFrom((json as { rig?: unknown }).rig, stage);
+      if (!rig.ok) return { kind: "error", message: rig.message };
+    }
+    return { kind: "clip", clip: { ...normalizeClip(json), id: newId(), parentId: null } };
+  }
   return { kind: "error", message: "Unrecognized file: expected a studio document, a clip, or a Lottie" };
 }

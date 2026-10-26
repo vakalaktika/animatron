@@ -43,18 +43,15 @@ export function makeRig(rig: RigAsset, stage: Pick<StageConfig, "width" | "heigh
  * a bad file.
  */
 export function rigClipFrom(json: unknown, stage: Pick<StageConfig, "width" | "height">): RigImportResult {
+  if (json && typeof json === "object" && new TextEncoder().encode(JSON.stringify(json)).length > RIG_LIMITS.jsonBytes) {
+    return { ok: false, message: "This rig is larger than 4 MB, which is more than the studio keeps in a composition." };
+  }
   const check = validateRig(json);
   if (!check.ok) return { ok: false, message: `This rig can't be opened: ${check.errors.join(" ")}` };
   const asset = json as RigAsset;
-  if (JSON.stringify(asset).length > RIG_LIMITS.jsonBytes) return { ok: false, message: "This rig is larger than 4 MB, which is more than the studio keeps in a composition." };
   const svg = parseRigSvg(asset);
   if (!svg.ok) return { ok: false, message: `This rig can't be opened: ${svg.error}` };
   return { ok: true, clip: makeRig(asset, stage) };
-}
-
-/** The editable master as it stands, ready to be written to `name.mci.json`. */
-export function rigAssetFrom(clip: RigClip): RigAsset {
-  return clip.rig;
 }
 
 /** File name for a saved rig. */

@@ -6,6 +6,7 @@ import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
 import { clipEnd, docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
 import type { AudioTrack, Clip, RigClip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import { retimeKeys } from "@/app/components/motion-studio/engine/rig";
+import { RIG_FORMAT } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
 import { ExportDialog } from "./dialogs/ExportDialog";
 import { GalleryDialog } from "./dialogs/GalleryDialog";
@@ -37,9 +38,8 @@ import { makeShape, type ShapeKind } from "./lib/shapes";
 import { svgSpriteFrom } from "./lib/svgSprite";
 import { attachedTextFor, detachRun, restoreRun, setRunText } from "./lib/textRuns";
 import { insertWaypointAt, retimeWaypoint } from "./lib/waypoints";
-import { dragRigHandle } from "./lib/rigEdit";
-import { rigAssetFrom, rigFileName } from "./lib/rigImport";
-import type { RigHandle, RigMode } from "./stage/RigEditor";
+import { rigFileName } from "./lib/rigImport";
+import { dragRigHandle, type RigHandle, type RigMode } from "./lib/rigEdit";
 import { spriteTiming } from "@/app/components/motion-studio/engine/spriteTiming";
 import { useMediaQuery } from "./lib/useMediaQuery";
 import { AddToolbar, type AddKind } from "./panel/AddToolbar";
@@ -377,7 +377,8 @@ export function MotionStudio() {
       if (/\.json$/i.test(file.name)) {
         const parsed: unknown = JSON.parse(await file.text());
         const asObj = parsed as Record<string, unknown>;
-        if (typeof parsed === "object" && parsed && "layers" in asObj && "fr" in asObj) {
+        // A rig is its own format even if it happens to carry Lottie-looking keys.
+        if (typeof parsed === "object" && parsed && asObj.format !== RIG_FORMAT && "layers" in asObj && "fr" in asObj) {
           addClip(makeLottie(asObj, file.name, { x: doc.stage.width / 2, y: doc.stage.height / 2 }));
           return;
         }
@@ -494,16 +495,18 @@ export function MotionStudio() {
     (clipId: string, time: number, to: number) => {
       setDoc((d) => {
         const clip = d.clips.find((c) => c.id === clipId);
-        if (clip?.type !== "rig" || !clip.animationId) return d;
+        if (clip?.type !== "rig") return d;
+        const animationId = clip.animationId;
+        if (!animationId) return d;
         const bone = boneSelection?.clipId === clipId ? boneSelection.boneId : null;
-        return { ...d, clips: d.clips.map((c) => (c.id === clipId ? { ...clip, rig: retimeKeys(clip.rig, clip.animationId!, bone, time, to) } : c)) };
-      }, `rigkey:${clipId}:${time}`);
+        return { ...d, clips: d.clips.map((c) => (c.id === clipId ? { ...clip, rig: retimeKeys(clip.rig, animationId, bone, time, to) } : c)) };
+      }, `rigkey:${clipId}`);
     },
     [setDoc, boneSelection],
   );
 
   const saveRig = (clip: RigClip) => {
-    downloadText(JSON.stringify(rigAssetFrom(clip), null, 2), rigFileName(clip), "application/json");
+    downloadText(JSON.stringify(clip.rig, null, 2), rigFileName(clip), "application/json");
     notify(`Saved ${rigFileName(clip)} to your downloads. It opens in Agent Torres and the Mid-century Ink generator with every bone and clip.`);
   };
 

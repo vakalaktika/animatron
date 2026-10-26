@@ -36,15 +36,16 @@ describe("RigClipView", () => {
     expect(svg.getAttribute("viewBox")).toBe("0 0 600 700");
     const wraps = transforms(clip.rig, rigPoseAt(clip, 0.7));
     for (const b of clip.rig.bindings) {
-      const group = svg.querySelector(`g[id="${b.svgId}"]`)!;
+      const group = svg.querySelector(`g[data-rig-part="${b.svgId}"]`);
       expect(group).not.toBeNull();
-      expect(group.parentElement?.getAttribute("transform")).toBe(matrixString(wraps[b.svgId]));
+      expect(group?.getAttribute("transform")).toBe(matrixString(wraps[b.svgId]));
     }
     // The arm that waves is not at the identity mid-wave; the torso is.
-    expect(svg.querySelector('g[id="fore-art-left"]')!.parentElement?.getAttribute("transform")).not.toBe(matrixString([1, 0, 0, 1, 0, 0]));
-    expect(svg.querySelector('g[id="torso-art"]')!.parentElement?.getAttribute("transform")).toBe(matrixString([1, 0, 0, 1, 0, 0]));
-    // Nothing from the file is executable or live.
+    expect(svg.querySelector('g[data-rig-part="fore-art-left"]')?.getAttribute("transform")).not.toBe(matrixString([1, 0, 0, 1, 0, 0]));
+    expect(svg.querySelector('g[data-rig-part="torso-art"]')?.getAttribute("transform")).toBe(matrixString([1, 0, 0, 1, 0, 0]));
+    // Nothing from the file is executable or live, and its ids stay out of the page.
     expect(container.querySelector("script, image, use, style, text, foreignObject")).toBeNull();
+    expect(container.querySelector("[id]")).toBeNull();
     expect(svg.querySelector("title")?.textContent).toBe("Ink demonstrator");
     unmount();
   });
@@ -52,8 +53,8 @@ describe("RigClipView", () => {
   it("stands in the manual pose with no clip and refuses to draw artwork outside the subset", () => {
     const posed = rigClip({ animationId: null, pose: { head: { x: 0, y: 0, rotation: 20 } } });
     const { container, unmount } = render(<StageCanvas doc={docWith(posed)} time={motionValue(3)} />);
-    const head = container.querySelector('g[id="head-art"]')!.parentElement!;
-    expect(head.getAttribute("transform")).toBe(matrixString(transforms(posed.rig, posed.pose)["head-art"]));
+    const head = container.querySelector('g[data-rig-part="head-art"]');
+    expect(head?.getAttribute("transform")).toBe(matrixString(transforms(posed.rig, posed.pose)["head-art"]));
     unmount();
 
     const asset = fixture();

@@ -1,7 +1,8 @@
 import type { StudioDoc } from "@/app/components/motion-studio/types";
 import { normalizeDoc, type RawDoc } from "./migrate";
 import { DOC_STORAGE_KEY } from "./persistence";
-import { newId, STORAGE_KEY as LEGACY_PRESETS_KEY } from "../presets";
+import { STORAGE_KEY as LEGACY_PRESETS_KEY } from "../presets";
+import { newId } from "./id";
 
 /**
  * Every composition the user has worked on, kept in the browser. The current

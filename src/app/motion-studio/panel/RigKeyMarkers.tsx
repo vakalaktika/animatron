@@ -1,14 +1,14 @@
 "use client";
 
 import { useRef, type KeyboardEvent, type PointerEvent } from "react";
-import { activeAnimation, keyTimes } from "@/app/components/motion-studio/engine/rig";
+import { activeAnimation, keyTimes, retimedKeyTime } from "@/app/components/motion-studio/engine/rig";
 import type { RigClip } from "@/app/components/motion-studio/types";
 
 interface Props {
   clip: RigClip;
   /** Composition length: the lane spans 0..duration seconds. */
   duration: number;
-  /** Bone whose keys are highlighted and moved alone; null moves every bone's key at that time. */
+  /** Bone whose keys are highlighted and moved alone when it has one there; otherwise every bone's key at that time moves. */
   selectedBone: string | null;
   /** Clock time to park the playhead on. */
   onSeek: (seconds: number) => void;
@@ -44,10 +44,11 @@ export function RigKeyMarkers({ clip, duration, selectedBone, onSeek, onRetime }
   const onPointerMove = (e: PointerEvent<HTMLSpanElement>) => {
     const d = drag.current;
     if (!d) return;
-    const to = d.time + (e.clientX - d.startX) / d.pxPerSecond;
+    // Follow the key to where it actually lands (clamped between its neighbours), so a drag never loses it.
+    const to = retimedKeyTime(anim, selectedBone, d.time, d.time + (e.clientX - d.startX) / d.pxPerSecond);
     if (Math.abs(to - d.time) < 0.005) return;
-    onRetime(d.time, Number(to.toFixed(2)));
-    d.time = Number(to.toFixed(2));
+    onRetime(d.time, to);
+    d.time = to;
     d.startX = e.clientX;
   };
   const onPointerUp = () => {
@@ -63,18 +64,18 @@ export function RigKeyMarkers({ clip, duration, selectedBone, onSeek, onRetime }
     const delta = e.key === "ArrowRight" ? step : e.key === "ArrowLeft" ? -step : 0;
     if (!delta) return;
     e.preventDefault();
-    onRetime(time, Number((time + delta).toFixed(2)));
+    onRetime(time, retimedKeyTime(anim, selectedBone, time, time + delta));
   };
 
   return (
     <>
-      {times.map((time) => {
+      {times.map((time, i) => {
         const at = pct(time);
         if (at > 100) return null;
         const mine = own.has(time);
         return (
           <span
-            key={time}
+            key={i}
             role="slider"
             tabIndex={0}
             aria-label={`${clip.name} key at ${(clip.start + time).toFixed(2)} seconds`}

@@ -12,6 +12,7 @@ import {
   editRestJoint,
   isRigId,
   keyTimes,
+  poseOf,
   preset,
   reassignBinding,
   record,
@@ -19,14 +20,14 @@ import {
   removeBone,
   removeKey,
   replaceAnimation,
+  RIG_LIMITS,
   rigPoseAt,
   setAnimationDuration,
   upsertKey,
 } from "@/app/components/motion-studio/engine/rig";
-import type { RigAsset, RigClip, RigKey } from "@/app/components/motion-studio/types";
+import type { RigAsset, RigBone, RigClip, RigKey } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
-import { localTime, setBoneDelta } from "../../lib/rigEdit";
-import type { RigMode } from "../../stage/RigEditor";
+import { localTime, setBoneDelta, type RigMode } from "../../lib/rigEdit";
 import { BUTTON_ROW, ChipField, MoreFields, NumField, SelectField, TextField, ToggleField } from "../fields";
 import type { PanelSection } from "../PanelGroup";
 
@@ -53,6 +54,8 @@ function useNow(time: MotionValue<number>): number {
 }
 
 const fmt = (n: number) => Number(n.toFixed(2));
+/** A bone's limits, or the unlimited range when it has none (for the fields, which only show when it has). */
+const limitsOf = (b: RigBone) => b.limits ?? { min: -360, max: 360 };
 
 // ----- Skeleton --------------------------------------------------------------
 
@@ -64,10 +67,12 @@ function SkeletonFields({ clip, onChange, rig }: { clip: RigClip; onChange: (c: 
   const bone = asset.bones.find((b) => b.id === rig.selectedBone) ?? null;
   const anim = activeAnimation(clip);
   const pose = rigPoseAt(clip, now);
-  const delta = bone ? (pose[bone.id] ?? { x: 0, y: 0, rotation: 0 }) : null;
+  const delta = bone ? poseOf(pose, bone.id) : null;
   const limits = bone?.limits ?? { min: -180, max: 180 };
   const span = Math.max(asset.canvas.width, asset.canvas.height);
-  const [roleDraft, setRoleDraft] = useState<string | null>(null);
+  // What is being typed into Role, kept with its bone so switching bones never shows the wrong text.
+  const [roleDraft, setRoleDraft] = useState<{ boneId: string; value: string } | null>(null);
+  const draft = bone && roleDraft?.boneId === bone.id ? roleDraft.value : null;
 
   return (
     <>
@@ -133,17 +138,17 @@ function SkeletonFields({ clip, onChange, rig }: { clip: RigClip; onChange: (c: 
           <TextField label="Name" value={bone.name ?? ""} placeholder={bone.id} onChange={(v) => change(editRestJoint(asset, bone.id, { name: v || undefined }))} />
           <TextField
             label="Role"
-            value={roleDraft ?? bone.role ?? ""}
+            value={draft ?? bone.role ?? ""}
             placeholder="head, arm.left.forearm, tail…"
             onChange={(v) => {
               const next = v.trim();
-              setRoleDraft(v);
               const taken = asset.bones.some((b) => b.id !== bone.id && b.role === next);
-              if (next === "") change(editRestJoint(asset, bone.id, { role: undefined }));
-              else if (isRigId(next) && !taken) change(editRestJoint(asset, bone.id, { role: next }));
+              const valid = next === "" || (isRigId(next) && !taken);
+              setRoleDraft(valid ? null : { boneId: bone.id, value: v });
+              if (valid) change(editRestJoint(asset, bone.id, { role: next || undefined }));
             }}
           />
-          {roleDraft !== null && roleDraft.trim() !== "" && roleDraft.trim() !== bone.role && <p className="atm-help">Roles are letters, digits, dots, dashes and underscores, starting with a letter, and unique in the rig.</p>}
+          {draft !== null && <p className="atm-help">Roles are letters, digits, dots, dashes and underscores, starting with a letter, and unique in the rig.</p>}
           <div className="grid grid-cols-2 gap-4">
             <NumField label="Joint X" unit="px" value={fmt(bone.rest.x)} min={-span} max={span} step={1} onChange={(v) => change(editRestJoint(asset, bone.id, { rest: { ...bone.rest, x: v } }))} />
             <NumField label="Joint Y" unit="px" value={fmt(bone.rest.y)} min={-span} max={span} step={1} onChange={(v) => change(editRestJoint(asset, bone.id, { rest: { ...bone.rest, y: v } }))} />
@@ -153,10 +158,10 @@ function SkeletonFields({ clip, onChange, rig }: { clip: RigClip; onChange: (c: 
             <NumField label="Length" unit="px" value={fmt(bone.length)} min={0} max={span} step={1} onChange={(v) => change(editRestJoint(asset, bone.id, { length: v }))} />
           </div>
           <ToggleField label="Limit how far it turns" value={!!bone.limits} onChange={(v) => change(editRestJoint(asset, bone.id, { limits: v ? { min: -90, max: 90 } : undefined }))} />
-          {bone.limits && (
+          {limitsOf(bone) && (
             <div className="grid grid-cols-2 gap-4">
-              <NumField label="Turns back to" unit="°" value={fmt(bone.limits.min)} min={-360} max={0} step={1} onChange={(v) => change(editRestJoint(asset, bone.id, { limits: { min: Math.min(0, v), max: bone.limits!.max } }))} />
-              <NumField label="Turns forward to" unit="°" value={fmt(bone.limits.max)} min={0} max={360} step={1} onChange={(v) => change(editRestJoint(asset, bone.id, { limits: { min: bone.limits!.min, max: Math.max(0, v) } }))} />
+              <NumField label="Turns back to" unit="°" value={fmt(limitsOf(bone).min)} min={-360} max={0} step={1} onChange={(v) => change(editRestJoint(asset, bone.id, { limits: { min: Math.min(0, v), max: limitsOf(bone).max } }))} />
+              <NumField label="Turns forward to" unit="°" value={fmt(limitsOf(bone).max)} min={0} max={360} step={1} onChange={(v) => change(editRestJoint(asset, bone.id, { limits: { min: limitsOf(bone).min, max: Math.max(0, v) } }))} />
             </div>
           )}
           <div className={BUTTON_ROW}>
@@ -228,7 +233,7 @@ function AnimationFields({ clip, onChange, rig }: { clip: RigClip; onChange: (c:
       {anim ? (
         <>
           <TextField label="Clip name" value={anim.name ?? ""} placeholder={anim.id} onChange={(v) => change(replaceAnimation(asset, { ...anim, name: v || undefined }))} />
-          <NumField label="Length" unit="s" value={fmt(anim.duration)} min={0.1} max={60} step={0.1} onChange={(v) => change(setAnimationDuration(asset, anim.id, v))} />
+          <NumField label="Length" unit="s" value={fmt(anim.duration)} min={0.1} max={RIG_LIMITS.duration} step={0.1} onChange={(v) => change(setAnimationDuration(asset, anim.id, v))} />
           <ToggleField label="Loop" value={anim.loop} onChange={(v) => change(replaceAnimation(asset, { ...anim, loop: v }))} />
           <p className="atm-help">Keys are moments where bones have a set position; the rig glides between them. The diamonds on the timeline are the keys; drag one to move it.</p>
           <div className={BUTTON_ROW}>

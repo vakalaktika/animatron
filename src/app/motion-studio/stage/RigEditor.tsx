@@ -5,11 +5,7 @@ import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { applyMatrix, boneLabel, rigPoseAt, world, type Matrix } from "@/app/components/motion-studio/engine/rig";
 import { restTransformAt, toLocalPoint, transformAt } from "@/app/components/motion-studio/engine/transform";
 import type { RigBone, RigClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
-
-export type RigMode = "pose" | "joints";
-
-/** Where on a bone a drag started: its joint (origin) or its tip. */
-export type RigHandle = "joint" | "tip";
+import type { RigHandle, RigMode } from "../lib/rigEdit";
 
 interface Props {
   doc: StudioDoc;
@@ -72,13 +68,12 @@ function BoneGlyph({
             fill="#fff"
             stroke={stroke}
             strokeWidth={1.5 / k}
-            role="slider"
-            tabIndex={-1}
-            aria-label={`${label} ${mode === "pose" ? "turn" : "direction and length"}`}
-            aria-valuenow={Math.round(bone.rest.rotation)}
+            data-rig-handle={`${bone.id}:tip`}
             style={{ cursor: "crosshair", pointerEvents: "all" }}
             onPointerDown={onDown("tip")}
-          />
+          >
+            <title>{`${label}: ${mode === "pose" ? "turn" : "direction and length"}`}</title>
+          </motion.circle>
         </>
       )}
       <motion.circle
@@ -88,13 +83,12 @@ function BoneGlyph({
         fill={selected ? PICKED : "#fff"}
         stroke={selected ? "#fff" : stroke}
         strokeWidth={2 / k}
-        role="slider"
-        tabIndex={-1}
-        aria-label={`${label} ${mode === "pose" ? "joint" : "rest joint"}`}
-        aria-valuenow={Math.round(bone.rest.x)}
+        data-rig-handle={`${bone.id}:joint`}
         style={{ cursor: mode === "pose" ? "grab" : "move", pointerEvents: "all" }}
         onPointerDown={onDown("joint")}
-      />
+      >
+        <title>{`${label}: ${mode === "pose" ? "joint" : "rest joint"}`}</title>
+      </motion.circle>
     </g>
   );
 }
@@ -112,7 +106,9 @@ function SlotGlyph({ slot, worlds, k }: { slot: NonNullable<RigClip["rig"]["slot
 /**
  * The selected rig's skeleton drawn over the artwork, in the rig's own
  * canvas frame so it follows the clip wherever it rides. Joint dots and
- * bone tips are handles; what a drag does depends on the mode.
+ * bone tips are pointer handles; what a drag does depends on the mode. Like
+ * the path editor's dots, the overlay is hidden from assistive tech: the
+ * Skeleton panel's fields are the keyboard path to the same edits.
  */
 export function RigEditor({ doc, clip, time, zoom, stageEl, mode, selectedBone, onSelectBone, onDragHandle }: Props) {
   const { rig } = clip;
@@ -154,7 +150,7 @@ export function RigEditor({ doc, clip, time, zoom, stageEl, mode, selectedBone, 
   };
 
   return (
-    <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-label={`${clip.name} skeleton`} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+    <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true" onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
       <g ref={frameRef} transform={frame.get()}>
         {rig.slots?.map((slot) => <SlotGlyph key={slot.id} slot={slot} worlds={worlds} k={k} />)}
         {rig.bones.map((bone) => (

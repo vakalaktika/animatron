@@ -3,6 +3,7 @@ import {
   applyMatrix,
   editRestJoint,
   inverse,
+  poseOf,
   rigPoseAt,
   setPoseDelta,
   solve,
@@ -13,7 +14,11 @@ import {
   type Matrix,
 } from "@/app/components/motion-studio/engine/rig";
 import type { RigClip, RigDelta, RigPose, Vec2 } from "@/app/components/motion-studio/types";
-import type { RigHandle, RigMode } from "../stage/RigEditor";
+
+/** What a stage drag on a rig does: pose it, or edit its rest joints. */
+export type RigMode = "pose" | "joints";
+/** Where on a bone a drag started: its joint (origin) or its tip. */
+export type RigHandle = "joint" | "tip";
 
 /**
  * What a stage gesture on a rig means for the document. Pose edits change
@@ -45,11 +50,11 @@ export function commitPose(clip: RigClip, t: number, next: RigPose, onlyBones?: 
   const at = localTime(clip, t);
   const changed = (clip.rig.bones.map((b) => b.id)).filter((id) => {
     if (onlyBones && !onlyBones.includes(id)) return false;
-    const a = current[id] ?? { x: 0, y: 0, rotation: 0 };
-    const b = next[id] ?? { x: 0, y: 0, rotation: 0 };
+    const a = poseOf(current, id);
+    const b = poseOf(next, id);
     return Math.abs(a.x - b.x) > 1e-6 || Math.abs(a.y - b.y) > 1e-6 || Math.abs(a.rotation - b.rotation) > 1e-6;
   });
-  const rig = changed.reduce((acc, id) => upsertKey(acc, anim.id, id, at, next[id] ?? { x: 0, y: 0, rotation: 0 }), clip.rig);
+  const rig = changed.reduce((acc, id) => upsertKey(acc, anim.id, id, at, poseOf(next, id)), clip.rig);
   return { ...clip, rig };
 }
 
@@ -92,12 +97,12 @@ export function dragRigHandle(clip: RigClip, t: number, boneId: string, handle: 
 
   // Joints mode: edit the rest skeleton, with the artwork kept in place.
   if (handle === "joint") {
-    const current = pose[boneId] ?? { x: 0, y: 0, rotation: 0 };
+    const current = poseOf(pose, boneId);
     const inParent = applyMatrix(inverse(parent), point);
     const rest = { x: inParent.x - current.x, y: inParent.y - current.y, rotation: bone.rest.rotation };
     return { ...clip, rig: editRestJoint(rig, boneId, { rest }) };
   }
-  const current = pose[boneId]?.rotation ?? 0;
+  const current = poseOf(pose, boneId).rotation;
   const angle = Math.atan2(point.y - origin.y, point.x - origin.x) * DEG;
   const rotation = wrap(angle - rotationOf(parent) - current);
   // Bone frames carry no scale, so a canvas distance is a bone length.

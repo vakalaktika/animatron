@@ -180,10 +180,11 @@ export function validateRig(asset: unknown): RigCheck {
         let previous = -1;
         for (const k of t.keys as Partial<RigKey>[]) {
           count++;
-          if (!k || !(["time", "x", "y", "rotation"] as const).every((f) => finite(k[f])) || k.time! < 0 || k.time! > anim.duration || k.time! <= previous || !["linear", "hold"].includes(k.easing as string)) {
+          const time = k && finite(k.time) ? k.time : null;
+          if (!k || time === null || !(["x", "y", "rotation"] as const).every((f) => finite(k[f])) || time < 0 || time > anim.duration || time <= previous || !["linear", "hold"].includes(k.easing as string)) {
             fail("Invalid or unsorted animation keyframe.");
           }
-          previous = k?.time ?? previous;
+          previous = time ?? previous;
         }
       }
     }
@@ -195,6 +196,14 @@ export function validateRig(asset: unknown): RigCheck {
 // ----- Evaluation ------------------------------------------------------------
 
 const bonesById = (asset: RigAsset) => new Map(asset.bones.map((b) => [b.id, b]));
+const REST: RigDelta = { x: 0, y: 0, rotation: 0 };
+/**
+ * A bone's delta in a pose, rest when absent. Always an own-property read, so
+ * a bone named `constructor` or `toString` is just a key (the reference uses
+ * prototype-less objects; these records travel through MotionValues, which
+ * need ordinary objects, so the guard lives here instead).
+ */
+export const poseOf = (pose: RigPose, boneId: string): RigDelta => (Object.hasOwn(pose, boneId) ? pose[boneId] : REST);
 
 /** The clip's local time folded into its range: modulo when it loops, clamped otherwise. */
 export function animationTime(anim: RigAnimation, seconds: number): number {
@@ -239,10 +248,10 @@ export function world(asset: RigAsset, pose: RigPose = {}): Record<string, Matri
   const map = bonesById(asset);
   const result: Record<string, Matrix> = {};
   const visit = (id: string): Matrix => {
-    if (result[id]) return result[id];
+    if (Object.hasOwn(result, id)) return result[id];
     const b = map.get(id);
     if (!b) return IDENTITY_MATRIX;
-    const p = Object.hasOwn(pose, id) ? pose[id] : { x: 0, y: 0, rotation: 0 };
+    const p = poseOf(pose, id);
     const angle = clampRotation(b, p.rotation || 0);
     const local = matrix(b.rest.x + (p.x || 0), b.rest.y + (p.y || 0), b.rest.rotation + angle);
     const m = b.parentId === null ? local : multiply(visit(b.parentId), local);
@@ -292,7 +301,7 @@ export function solve(asset: RigAsset, inputPose: RigPose, tipId: string, target
       const delta = ((((v - u) * 180) / Math.PI + 540) % 360) - 180;
       const b = map.get(joint);
       if (!b || b.parentId === null) continue;
-      const old = pose[joint] ?? { x: 0, y: 0, rotation: 0 };
+      const old = poseOf(pose, joint);
       pose[joint] = { ...old, rotation: clamp((old.rotation || 0) + delta, b.limits?.min ?? -360, b.limits?.max ?? 360) };
     }
   }
@@ -305,13 +314,16 @@ export function record(asset: RigAsset, animationId: string, time: number, pose:
   if (!anim) throw new Error("Select an animation before recording.");
   const at = clamp(time, 0, anim.duration);
   const keyed = (b: RigBone, track: RigAnimation["tracks"][number]) => {
-    const p = Object.hasOwn(pose, b.id) ? pose[b.id] : { x: 0, y: 0, rotation: 0 };
+    const p = poseOf(pose, b.id);
     const key: RigKey = { time: at, x: p.x || 0, y: p.y || 0, rotation: clampRotation(b, p.rotation || 0), easing: "linear" };
     return { ...track, keys: [...track.keys.filter((k) => Math.abs(k.time - at) > 1e-6), key].sort((l, r) => l.time - r.time) };
   };
   const map = bonesById(asset);
   // Existing tracks keep their order; bones without one are appended in bone order.
-  const existing = anim.tracks.map((t) => (map.has(t.boneId) ? keyed(map.get(t.boneId)!, t) : t));
+  const existing = anim.tracks.map((t) => {
+    const bone = map.get(t.boneId);
+    return bone ? keyed(bone, t) : t;
+  });
   const added = asset.bones.filter((b) => !anim.tracks.some((t) => t.boneId === b.id)).map((b) => keyed(b, { boneId: b.id, keys: [] }));
   return replaceAnimation(asset, { ...anim, tracks: [...existing, ...added] });
 }
@@ -479,7 +491,7 @@ export function reassignBinding(asset: RigAsset, bindingId: string, boneId: stri
 export function setPoseDelta(asset: RigAsset, pose: RigPose, boneId: string, delta: Partial<RigDelta>): RigPose {
   const bone = asset.bones.find((b) => b.id === boneId);
   if (!bone) return pose;
-  const old = pose[boneId] ?? { x: 0, y: 0, rotation: 0 };
+  const old = poseOf(pose, boneId);
   const next = { ...old, ...delta };
   return { ...pose, [boneId]: { ...next, rotation: clampRotation(bone, next.rotation) } };
 }
@@ -488,8 +500,8 @@ export function setPoseDelta(asset: RigAsset, pose: RigPose, boneId: string, del
 export function tidyPose(asset: RigAsset, pose: RigPose): RigPose {
   const out: RigPose = {};
   for (const b of asset.bones) {
+    if (!Object.hasOwn(pose, b.id)) continue;
     const p = pose[b.id];
-    if (!p) continue;
     const d = { x: p.x || 0, y: p.y || 0, rotation: clampRotation(b, p.rotation || 0) };
     if (d.x !== 0 || d.y !== 0 || d.rotation !== 0) out[b.id] = d;
   }
@@ -522,7 +534,8 @@ export function setAnimationDuration(asset: RigAsset, animationId: string, durat
   return replaceAnimation(asset, {
     ...anim,
     duration: next,
-    tracks: anim.tracks.map((t) => ({ ...t, keys: t.keys.map((k) => ({ ...k, time: Number((k.time * f).toFixed(4)) })) })),
+    // Full precision: rounding could merge two keys and break the strict order.
+    tracks: anim.tracks.map((t) => ({ ...t, keys: t.keys.map((k) => ({ ...k, time: k.time * f })) })),
   });
 }
 
@@ -550,23 +563,44 @@ export function removeKey(asset: RigAsset, animationId: string, boneId: string, 
   return replaceAnimation(asset, { ...anim, tracks });
 }
 
+const KEY_GAP = 0.01;
+
+/** The tracks a key drag at `time` moves: the one bone's when it has a key there, else every track with one. */
+function retimedTracks(anim: RigAnimation, boneId: string | null, time: number): RigAnimation["tracks"] {
+  const at = (t: RigAnimation["tracks"][number]) => t.keys.some((k) => Math.abs(k.time - time) <= 1e-6);
+  const own = boneId !== null ? anim.tracks.filter((t) => t.boneId === boneId && at(t)) : [];
+  return own.length ? own : anim.tracks.filter(at);
+}
+
 /**
- * Moves the keys at `time` (of one bone, or of every track when `boneId` is
- * null) to `to`, kept strictly between their neighbours and inside the clip.
+ * Where a key at `time` lands when dragged to `to`: kept strictly between
+ * its neighbours on every track it moves on, and inside the clip. Returns
+ * `time` itself when the keys are too crowded to move.
+ */
+export function retimedKeyTime(anim: RigAnimation, boneId: string | null, time: number, to: number): number {
+  let lo = 0;
+  let hi = anim.duration;
+  for (const t of retimedTracks(anim, boneId, time)) {
+    const i = t.keys.findIndex((k) => Math.abs(k.time - time) <= 1e-6);
+    if (i > 0) lo = Math.max(lo, t.keys[i - 1].time + KEY_GAP);
+    if (i < t.keys.length - 1) hi = Math.min(hi, t.keys[i + 1].time - KEY_GAP);
+  }
+  if (hi < lo) return time;
+  return Number(clamp(to, lo, hi).toFixed(4));
+}
+
+/**
+ * Moves the keys at `time` to `to`: the one bone's key when `boneId` names a
+ * bone that has a key there, otherwise every track's key at that time, all
+ * to the same clamped moment (see `retimedKeyTime`).
  */
 export function retimeKeys(asset: RigAsset, animationId: string, boneId: string | null, time: number, to: number): RigAsset {
   const anim = asset.animations.find((a) => a.id === animationId);
   if (!anim) return asset;
-  const gap = 0.01;
-  const tracks = anim.tracks.map((t) => {
-    if (boneId !== null && t.boneId !== boneId) return t;
-    const i = t.keys.findIndex((k) => Math.abs(k.time - time) <= 1e-6);
-    if (i < 0) return t;
-    const lo = i > 0 ? t.keys[i - 1].time + gap : 0;
-    const hi = i < t.keys.length - 1 ? t.keys[i + 1].time - gap : anim.duration;
-    const next = Number(clamp(to, lo, Math.max(lo, hi)).toFixed(4));
-    return { ...t, keys: t.keys.map((k, j) => (j === i ? { ...k, time: next } : k)) };
-  });
+  const next = retimedKeyTime(anim, boneId, time, to);
+  if (next === time) return asset;
+  const moving = new Set(retimedTracks(anim, boneId, time).map((t) => t.boneId));
+  const tracks = anim.tracks.map((t) => (moving.has(t.boneId) ? { ...t, keys: t.keys.map((k) => (Math.abs(k.time - time) <= 1e-6 ? { ...k, time: next } : k)) } : t));
   return replaceAnimation(asset, { ...anim, tracks });
 }
 

@@ -6,7 +6,7 @@ import { transformAt } from "@/app/components/motion-studio/engine/transform";
 import type { RigAsset, StudioDoc } from "@/app/components/motion-studio/types";
 import { parseImport, welcomePreset } from "../presets";
 import { normalizeDoc } from "./migrate";
-import { makeRig, rigAssetFrom, rigClipFrom, rigFileName } from "./rigImport";
+import { makeRig, rigClipFrom, rigFileName } from "./rigImport";
 
 const fixture = (): RigAsset => JSON.parse(readFileSync(path.resolve(__dirname, "../../../../docs/mci-rig/example-character.mci.json"), "utf8")) as RigAsset;
 const STAGE = { width: 1920, height: 1080 };
@@ -62,6 +62,17 @@ describe("parseImport with a rig file", () => {
     if (result.kind === "rig") expect(result.clip.rig.bones).toHaveLength(15);
   });
 
+  it("validates the asset inside a saved rig layer file too", () => {
+    const good = parseImport({ ...makeRig(fixture(), STAGE), parentId: null }, STAGE);
+    expect(good.kind).toBe("clip");
+    const bad = parseImport({ id: "a", type: "rig", start: 0, x: 0, y: 0, name: "n", enabled: true, scale: 1 }, STAGE);
+    expect(bad.kind).toBe("error");
+    const broken = parseImport({ ...makeRig(fixture(), STAGE), rig: { ...fixture(), bones: [] } }, STAGE);
+    expect(broken.kind).toBe("error");
+    const rigWithLottieKeys = parseImport({ ...fixture(), layers: [], fr: 30 }, STAGE);
+    expect(rigWithLottieKeys.kind).toBe("rig");
+  });
+
   it("reports a bad rig as an error rather than a document", () => {
     const result = parseImport({ ...fixture(), bones: [] }, STAGE);
     expect(result.kind).toBe("error");
@@ -84,19 +95,19 @@ describe("rig-preserving save and reopen", () => {
     expect(back?.type).toBe("rig");
     if (back?.type !== "rig") return;
     expect(back.rig).toEqual(asset);
-    expect(JSON.stringify(rigAssetFrom(back))).toBe(JSON.stringify(asset));
+    expect(JSON.stringify(back.rig)).toBe(JSON.stringify(asset));
   });
 
   it("writes the master back out under its own name", () => {
     expect(rigFileName(clip)).toBe("ink-demonstrator.mci.json");
-    expect(rigAssetFrom(clip)).toBe(asset);
+    expect(clip.rig).toBe(asset);
   });
 
   it("preserves fields the studio does not read", () => {
     const extra = { ...asset, metadata: { ...asset.metadata, reviewer: "torres" }, vendorNote: "keep me" } as RigAsset;
     const result = rigClipFrom(extra, STAGE);
     if (!result.ok) throw new Error(result.message);
-    expect(JSON.parse(JSON.stringify(rigAssetFrom(result.clip)))).toEqual(extra);
+    expect(JSON.parse(JSON.stringify(result.clip.rig))).toEqual(extra);
   });
 
   it("renders the rig clip in place in the composition's transform chain", () => {

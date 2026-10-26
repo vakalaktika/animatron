@@ -25,6 +25,8 @@ const ALLOWED = new Set([...PRESENTATION, ...GEOMETRY]);
 const ROOT_ALLOWED = new Set([...PRESENTATION, "width", "height", ...ROOT_ONLY]);
 /** Harmless namespaced attributes that are simply dropped. */
 const IGNORED = new Set(["xml:space", "xmlns:xlink"]);
+/** Solid paints only: a colour keyword, hex, rgb()/hsl(), none or currentColor. Never a reference. */
+const PAINT = /^(none|currentColor|transparent|#[0-9a-f]{3,8}|[a-z]+|rgba?\([\d\s.,%]*\)|hsla?\([\d\s.,%deg]*\))$/i;
 
 export interface RigSvgNode {
   tag: string;
@@ -52,7 +54,7 @@ function checkAttributes(el: Element, allowed: Set<string>): string | null {
     if (/^on/i.test(name)) return `The artwork has an event attribute (${name}), which the rig format does not allow.`;
     if (name === "style" || name === "class") return `The artwork uses ${name} attributes; the rig format wants plain presentation attributes.`;
     if (name.includes(":") || !allowed.has(name)) return `The artwork uses an attribute the rig format does not allow: ${name} on <${el.localName}>.`;
-    if ((name === "fill" || name === "stroke") && /url\s*\(/i.test(attr.value)) return `The artwork references a paint server (${name}="${attr.value}"); only solid colours are allowed.`;
+    if ((name === "fill" || name === "stroke") && !PAINT.test(attr.value.trim())) return `The artwork uses ${name}="${attr.value}"; only solid colours are allowed.`;
   }
   return null;
 }
@@ -82,8 +84,8 @@ function readNode(el: Element, isRoot: boolean, count: { n: number }): RigSvgNod
 
 /**
  * Parses and validates the rig's artwork. The viewBox must be
- * `0 0 canvas.width canvas.height` and every binding must name a direct-child
- * `<g id>` of the root.
+ * `0 0 canvas.width canvas.height`, every binding must name a direct-child
+ * `<g id>` of the root, and every such group must be bound.
  */
 export function parseRigSvg(asset: Pick<RigAsset, "svg" | "canvas" | "bindings">): RigSvgResult {
   if (typeof DOMParser === "undefined") return { ok: false, error: "This environment cannot parse SVG." };
@@ -107,6 +109,10 @@ export function parseRigSvg(asset: Pick<RigAsset, "svg" | "canvas" | "bindings">
   for (const binding of asset.bindings) {
     if (!groups.has(binding.svgId)) return { ok: false, error: `Binding "${binding.id}" points at an artwork group that is not a direct child of the SVG: "${binding.svgId}".` };
   }
+  const bound = new Set(asset.bindings.map((b) => b.svgId));
+  for (const id of groups.keys()) {
+    if (!bound.has(id)) return { ok: false, error: `The artwork group "${id}" is not bound to any bone; every drawable group must be bound exactly once.` };
+  }
   let elements = 0;
   const walk = (n: RigSvgNode) => {
     elements += 1;
@@ -116,5 +122,3 @@ export function parseRigSvg(asset: Pick<RigAsset, "svg" | "canvas" | "bindings">
   return { ok: true, svg: { root: node, groups, elements } };
 }
 
-/** The element's props as React wants them (camelCase presentation attributes). */
-export const svgNodeProps = (node: RigSvgNode): Record<string, string> => node.attrs;

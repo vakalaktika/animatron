@@ -8,7 +8,8 @@ import type { Clip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types
 import { SNAP_SCREEN_PX, snapPoint, snapTargets, type SnapGuide, type SnapTargets } from "../lib/snap";
 import { AttachmentOverlay } from "./AttachmentOverlay";
 import { PathEditor } from "./PathEditor";
-import { RigEditor, type RigHandle, type RigMode } from "./RigEditor";
+import type { RigHandle, RigMode } from "../lib/rigEdit";
+import { RigEditor } from "./RigEditor";
 import { SelectionBox } from "./SelectionBox";
 import { TailHandle } from "./TailHandle";
 

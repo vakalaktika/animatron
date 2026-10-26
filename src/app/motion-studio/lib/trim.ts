@@ -1,4 +1,4 @@
-import { activeAnimation, setAnimationDuration } from "@/app/components/motion-studio/engine/rig";
+import { activeAnimation, RIG_LIMITS, setAnimationDuration } from "@/app/components/motion-studio/engine/rig";
 import type { Clip } from "@/app/components/motion-studio/types";
 
 /** Shortest a trimmed clip can get, in seconds. */
@@ -37,7 +37,7 @@ export function trimClip<T extends Clip>(clip: T, delta: number): T {
       // A rig clip's length rescales its key times with it (the rig contract's rule).
       const anim = activeAnimation(clip);
       if (!anim) return clip;
-      return { ...clip, rig: setAnimationDuration(clip.rig, anim.id, round(clamp(anim.duration + delta, MIN_TRIM, MAX_TRIM))) };
+      return { ...clip, rig: setAnimationDuration(clip.rig, anim.id, round(clamp(anim.duration + delta, MIN_TRIM, RIG_LIMITS.duration))) };
     }
     case "text": {
       if (clip.reveal !== "letters") return { ...clip, revealDuration: round(clamp(clip.revealDuration + delta, 0.1, MAX_TRIM)) };

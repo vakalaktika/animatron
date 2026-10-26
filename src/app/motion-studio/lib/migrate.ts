@@ -152,8 +152,9 @@ export function normalizeClip(raw: Clip | LegacyBubble): Clip {
     return { ...legacy, style: lineStyleFrom(raw as LegacyLine), parentId, followRotation };
   }
   if (raw.type === "rig") {
-    // The rig asset itself is checked by `normalizeDoc`; here only the
-    // clip's own fields are filled in, so a hand-edited file still opens.
+    // The rig asset itself is checked by `normalizeDoc` (whole documents) or
+    // `parseImport` (a lone clip file); here only the clip's own fields are
+    // filled in, so a hand-edited file still opens.
     const legacy = raw as Omit<RigClip, "pose" | "animationId"> & Partial<Pick<RigClip, "pose" | "animationId">>;
     const animations = Array.isArray(legacy.rig?.animations) ? legacy.rig.animations : [];
     const animationId = typeof legacy.animationId === "string" && animations.some((a) => a?.id === legacy.animationId) ? legacy.animationId : null;
