@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
 import { clipEnd, docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
-import type { AudioTrack, Clip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
+import type { AudioTrack, Clip, RigClip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
+import { retimeKeys } from "@/app/components/motion-studio/engine/rig";
 import { Button } from "@/app/components/shared-components";
 import { ExportDialog } from "./dialogs/ExportDialog";
 import { GalleryDialog } from "./dialogs/GalleryDialog";
@@ -36,6 +37,9 @@ import { makeShape, type ShapeKind } from "./lib/shapes";
 import { svgSpriteFrom } from "./lib/svgSprite";
 import { attachedTextFor, detachRun, restoreRun, setRunText } from "./lib/textRuns";
 import { insertWaypointAt, retimeWaypoint } from "./lib/waypoints";
+import { dragRigHandle } from "./lib/rigEdit";
+import { rigAssetFrom, rigFileName } from "./lib/rigImport";
+import type { RigHandle, RigMode } from "./stage/RigEditor";
 import { spriteTiming } from "@/app/components/motion-studio/engine/spriteTiming";
 import { useMediaQuery } from "./lib/useMediaQuery";
 import { AddToolbar, type AddKind } from "./panel/AddToolbar";
@@ -169,7 +173,10 @@ export function MotionStudio() {
   const duration = useMemo(() => docDuration(doc), [doc]);
   // A composition with a looping clip keeps running so loaders never freeze.
   const hasLoopingClip = doc.clips.some((c) => c.enabled && loopsForever(c));
-  const clock = useStudioClock(duration, { autoplay: true, loop: loop || hasLoopingClip, speed });
+  // Someone who asked their system for less motion gets a still frame to
+  // scrub and edit; Play still works when they want to see it move.
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const clock = useStudioClock(duration, { autoplay: !reducedMotion, loop: loop || hasLoopingClip, speed });
 
   const selected = doc.clips.find((c) => c.id === selectedId) ?? null;
   const extras = useMemo(() => new Set([...extraIds].filter((id) => id !== selectedId && doc.clips.some((c) => c.id === id))), [extraIds, selectedId, doc.clips]);
@@ -181,6 +188,11 @@ export function MotionStudio() {
     selected?.type === "sprite" && pointSelection?.clipId === selected.id && pointSelection.index < selected.path.length
       ? pointSelection.index
       : null;
+  // Rig editing: posing (bend limbs, turn bones) or editing the rest joints,
+  // and which bone the panels and the stage are talking about.
+  const [rigMode, setRigMode] = useState<RigMode>("pose");
+  const [boneSelection, setBoneSelection] = useState<{ clipId: string; boneId: string } | null>(null);
+  const selectedBone = selected?.type === "rig" && boneSelection?.clipId === selected.id && selected.rig.bones.some((b) => b.id === boneSelection.boneId) ? boneSelection.boneId : null;
 
   const updateClip = useCallback((next: Clip) => {
     setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === next.id ? next : c)) }), `clip:${next.id}`);
@@ -369,7 +381,7 @@ export function MotionStudio() {
           addClip(makeLottie(asObj, file.name, { x: doc.stage.width / 2, y: doc.stage.height / 2 }));
           return;
         }
-        const result = parseImport(parsed);
+        const result = parseImport(parsed, doc.stage);
         if (result.kind === "doc") {
           // A whole composition opens as its own project; nothing is overwritten.
           const { doc: hydrated, missing } = await hydrateMedia(result.doc);
@@ -380,8 +392,12 @@ export function MotionStudio() {
           const { clip, missing } = await hydrateClipMedia(result.clip);
           addClip(clip);
           if (missing.length) notify(`Missing media: ${missing.join(", ")}. The layer is here but its file is not.`, { sticky: true });
-        }
-        else notify(result.message, { sticky: true });
+        } else if (result.kind === "rig") {
+          addClip(result.clip);
+          const { bones, animations } = result.clip.rig;
+          notify(`Opened the rig “${result.clip.name}”: ${bones.length} bones, ${animations.length} ${animations.length === 1 ? "clip" : "clips"}. Pick a joint on the canvas to pose it.`);
+          clock.replay();
+        } else notify(result.message, { sticky: true });
         return;
       }
       if (/\.svg$/i.test(file.name)) {
@@ -448,6 +464,60 @@ export function MotionStudio() {
       addClip(text);
       setFreshId(text.id);
     },
+  };
+
+  // ----- Rigs ---------------------------------------------------------------
+
+  const selectBone = useCallback(
+    (boneId: string | null) => {
+      if (selected?.type !== "rig") return;
+      setBoneSelection(boneId ? { clipId: selected.id, boneId } : null);
+      clock.pause();
+    },
+    [selected, clock],
+  );
+
+  /** A joint or bone tip dragged on the canvas: posed, or its rest moved, at the current clock time. */
+  const dragHandle = useCallback(
+    (clipId: string, boneId: string, handle: RigHandle, point: Vec2) => {
+      setDoc((d) => {
+        const clip = d.clips.find((c) => c.id === clipId);
+        if (clip?.type !== "rig") return d;
+        const next = dragRigHandle(clip, clock.time.get(), boneId, handle, rigMode, point);
+        return { ...d, clips: d.clips.map((c) => (c.id === clipId ? next : c)) };
+      }, `rig:${rigMode}:${clipId}:${boneId}:${handle}`);
+    },
+    [setDoc, clock.time, rigMode],
+  );
+
+  const retimeRigKey = useCallback(
+    (clipId: string, time: number, to: number) => {
+      setDoc((d) => {
+        const clip = d.clips.find((c) => c.id === clipId);
+        if (clip?.type !== "rig" || !clip.animationId) return d;
+        const bone = boneSelection?.clipId === clipId ? boneSelection.boneId : null;
+        return { ...d, clips: d.clips.map((c) => (c.id === clipId ? { ...clip, rig: retimeKeys(clip.rig, clip.animationId!, bone, time, to) } : c)) };
+      }, `rigkey:${clipId}:${time}`);
+    },
+    [setDoc, boneSelection],
+  );
+
+  const saveRig = (clip: RigClip) => {
+    downloadText(JSON.stringify(rigAssetFrom(clip), null, 2), rigFileName(clip), "application/json");
+    notify(`Saved ${rigFileName(clip)} to your downloads. It opens in Agent Torres and the Mid-century Ink generator with every bone and clip.`);
+  };
+
+  const rigActions = {
+    mode: rigMode,
+    onMode: setRigMode,
+    selectedBone,
+    onSelectBone: selectBone,
+    time: clock.time,
+    onSeek: (s: number) => {
+      clock.pause();
+      clock.seek(s);
+    },
+    onSaveRig: saveRig,
   };
 
   // ----- Projects -----------------------------------------------------------
@@ -640,12 +710,13 @@ export function MotionStudio() {
         else if (clean) setClean(false);
         else if (extras.size > 0) setExtraIds(new Set());
         else if (selectedPoint !== null) setPointSelection(null);
+        else if (selectedBone !== null) setBoneSelection(null);
         else setSelectedId(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clock, addWaypoint, removeWaypoint, selectedPoint, selected, undo, redo, duplicateClip, addClip, doc, removeClip, moveClip, clean, drawing, extras, dialog, codePreview, tour, notify]);
+  }, [clock, addWaypoint, removeWaypoint, selectedPoint, selectedBone, selected, undo, redo, duplicateClip, addClip, doc, removeClip, moveClip, clean, drawing, extras, dialog, codePreview, tour, notify]);
 
   // Choosing a clip from the list or the stage shows it: if the playhead is
   // outside its time range it would be invisible, so park the clock where it
@@ -699,6 +770,8 @@ export function MotionStudio() {
       const clip = doc.clips.find((c) => c.id === clipId);
       if (clip?.type === "sprite") updateClip(retimeWaypoint(clip, index, travel));
     },
+    selectedBone,
+    onRetimeRigKey: retimeRigKey,
     onSetStart: setClipStart,
     onChangeClip: updateClip,
     onReorder: reorderClips,
@@ -767,6 +840,7 @@ export function MotionStudio() {
       clean={clean}
       drawing={drawing}
       onDraw={finishStroke}
+      rig={{ mode: rigMode, selectedBone, onSelectBone: selectBone, onDragHandle: dragHandle }}
       overlay={
         clean ? (
           !recording && (
@@ -914,6 +988,7 @@ export function MotionStudio() {
               if (selected.type === "sprite") updateClip(retimeWaypoint(selected, index, travel));
             },
           }}
+          rig={rigActions}
         />
         <div className="mt-6 flex flex-wrap gap-2 border-t border-hairline pt-4">
           <Button size="xs" variant="outline" onClick={() => duplicateClip(selected)}>
@@ -922,6 +997,11 @@ export function MotionStudio() {
           <Button size="xs" variant="outline" onClick={() => void inlineClipMedia(selected).then((full) => downloadText(JSON.stringify(full, null, 2), `${slug(selected.name)}.clip.json`, "application/json"))}>
             Save layer as JSON
           </Button>
+          {selected.type === "rig" && (
+            <Button size="xs" variant="outline" onClick={() => saveRig(selected)}>
+              Save rig (.mci.json)
+            </Button>
+          )}
           <Button size="xs" variant="danger" onClick={() => removeClip(selected.id)}>
             Delete
           </Button>

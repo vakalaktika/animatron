@@ -394,7 +394,119 @@ export interface RibbonClip extends ClipBase {
   coat: RibbonCoat;
 }
 
-export type Clip = LogoClip | SpriteClip | TextClip | LottieClip | RibbonClip;
+// ----- Skeletal rigs (Mid-century Ink Rig 1) ---------------------------------
+
+/**
+ * A bone in a Mid-century Ink rig. `rest` is in the parent's frame (SVG user
+ * units, +Y down, degrees clockwise); `length` is the visual tip distance
+ * along the bone's local +X; `limits` bound the rotation delta from rest and
+ * include zero. See docs/mci-rig/mci-rig-v1.md for the contract.
+ */
+export interface RigBone {
+  id: string;
+  parentId: string | null;
+  /** Semantic role such as `head` or `arm.left.forearm`; unique when present. */
+  role?: string;
+  name?: string;
+  rest: { x: number; y: number; rotation: number };
+  length: number;
+  limits?: { min: number; max: number };
+}
+
+/**
+ * Ties a direct-child `<g id>` of the rig's SVG to a bone. `bindMatrix`
+ * (SVG affine `[a, b, c, d, e, f]`) maps the group's authored coordinates
+ * into the bone's rest-local frame; the group is drawn wrapped in
+ * `posedBoneWorld * bindMatrix`, which is the identity at rest.
+ */
+export interface RigBinding {
+  id: string;
+  svgId: string;
+  boneId: string;
+  bindMatrix: [number, number, number, number, number, number];
+}
+
+/** A named attachment frame in bone-local coordinates (a grip, a hat anchor). */
+export interface RigSlot {
+  id: string;
+  boneId: string;
+  x: number;
+  y: number;
+  rotation: number;
+}
+
+/** A pose delta from rest for one bone. */
+export interface RigDelta {
+  x: number;
+  y: number;
+  rotation: number;
+}
+
+export type RigEasing = "linear" | "hold";
+
+/** A keyframe: deltas from rest at `time` seconds, and how to reach the next key. */
+export interface RigKey extends RigDelta {
+  time: number;
+  easing: RigEasing;
+}
+
+export interface RigTrack {
+  boneId: string;
+  /** Times strictly increase from 0 through the clip's duration. */
+  keys: RigKey[];
+}
+
+export interface RigAnimation {
+  id: string;
+  name?: string;
+  /** Seconds, > 0 and <= 600. */
+  duration: number;
+  loop: boolean;
+  /** At most one track per bone. */
+  tracks: RigTrack[];
+}
+
+export const RIG_FORMAT = "mid-century-ink-rig";
+export const RIG_VERSION = 1;
+
+/**
+ * The editable skeletal master exactly as exchanged with Agent Torres and
+ * the Mid-century Ink generator (`name.mci.json`). Kept whole inside a rig
+ * clip so saving it back out loses nothing, including fields this studio
+ * does not interpret (`metadata`, extra keys).
+ */
+export interface RigAsset {
+  format: typeof RIG_FORMAT;
+  version: typeof RIG_VERSION;
+  name?: string;
+  canvas: { width: number; height: number };
+  /** The artwork; its viewBox is `0 0 canvas.width canvas.height`. */
+  svg: string;
+  bones: RigBone[];
+  bindings: RigBinding[];
+  slots?: RigSlot[];
+  animations: RigAnimation[];
+  /** Descriptive only, never executable. */
+  metadata?: Record<string, unknown>;
+}
+
+/** Manual pose deltas keyed by bone id; bones not listed are at rest. */
+export type RigPose = Record<string, RigDelta>;
+
+/**
+ * A rigged character: the rig's canvas is centred on the clip's anchor and
+ * scaled by `scale`. It plays `animationId` from the clip start (holding
+ * the first key before it, looping or holding the last after), or stands in
+ * its manual `pose` when no animation is chosen.
+ */
+export interface RigClip extends ClipBase {
+  type: "rig";
+  rig: RigAsset;
+  animationId: string | null;
+  pose: RigPose;
+}
+
+export type Clip = LogoClip | SpriteClip | TextClip | LottieClip | RibbonClip | RigClip;
 export type ClipType = Clip["type"];
 
 export interface StageConfig {

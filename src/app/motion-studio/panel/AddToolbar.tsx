@@ -30,7 +30,7 @@ const TOOLS: Tool[] = [
   { id: "text", label: "Text", hint: "A line of text that reveals itself", Icon: TextIcon },
   { id: "bubble", label: "Speech bubble", hint: "Text in a bubble that points at something", Icon: BubbleIcon },
   { id: "shape", label: "Shape", hint: "A circle, star, arrow and friends", Icon: ShapesIcon },
-  { id: "import", label: "Picture or video", hint: "PNG, JPG, SVG, GIF, MP4, MOV or a Lottie file", Icon: ImageIcon },
+  { id: "import", label: "Picture, video or rig", hint: "PNG, JPG, SVG, GIF, MP4, MOV, a Lottie file or a Mid-century Ink rig (.mci.json)", Icon: ImageIcon },
   { id: "sound", label: "Sound", hint: "Music or a voice-over for the whole piece (MP3, WAV, M4A)", Icon: MusicIcon },
   { id: "ribbon", label: "Ribbon", hint: "A rainbow line that draws itself in", Icon: SquiggleIcon },
   { id: "draw", label: "Draw", hint: "Sketch on the canvas: a ribbon, or a path for the picture you picked (Esc to stop)", Icon: PencilIcon },

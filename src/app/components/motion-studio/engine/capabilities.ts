@@ -1,4 +1,4 @@
-import type { Clip, LogoClip, LottieClip, RibbonClip, SpriteClip, TextClip } from "../types";
+import type { Clip, LogoClip, LottieClip, RibbonClip, RigClip, SpriteClip, TextClip } from "../types";
 
 /**
  * What a clip can do, derived from its type and source. The properties
@@ -44,6 +44,8 @@ export interface Capabilities {
   raster: SpriteClip | null;
   /** A video file: has a trim, a play length and a fit. */
   video: SpriteClip | null;
+  /** A Mid-century Ink rig: bones to pose, joints to edit, clips to record. */
+  rig: RigClip | null;
 }
 
 const NONE: Capabilities = {
@@ -64,6 +66,7 @@ const NONE: Capabilities = {
   outlinedSvg: null,
   raster: null,
   video: null,
+  rig: null,
 };
 
 export function capabilities(clip: Clip): Capabilities {
@@ -95,5 +98,7 @@ export function capabilities(clip: Clip): Capabilities {
       return { ...NONE, playback: clip };
     case "ribbon":
       return { ...NONE, ribbon: clip, line: clip };
+    case "rig":
+      return { ...NONE, rig: clip };
   }
 }

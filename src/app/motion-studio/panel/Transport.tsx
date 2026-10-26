@@ -8,6 +8,7 @@ import { Button, Select, Toggle } from "@/app/components/shared-components";
 import { DragHandle, MoveButtons } from "./reorderChrome";
 import { PauseIcon, PlayIcon, ReplayIcon } from "./icons";
 import { rowMotion, useReorderDrag } from "./useReorderDrag";
+import { RigKeyMarkers } from "./RigKeyMarkers";
 import { SoundRow } from "./SoundRow";
 import { WaypointMarkers } from "./WaypointMarkers";
 import { canTrim, trimClip } from "../lib/trim";
@@ -32,6 +33,10 @@ interface Props {
   onSelectWaypoint: (clipId: string, index: number) => void;
   /** A keyframe was dragged or nudged to a new travel time. */
   onRetimeWaypoint: (clipId: string, index: number, travel: number) => void;
+  /** Bone picked on the selected rig; its keys are highlighted and moved alone. */
+  selectedBone?: string | null;
+  /** A rig key at clip-local `time` dragged to `to`. */
+  onRetimeRigKey: (clipId: string, time: number, to: number) => void;
   /** Same effect as the clip's Start slider. */
   onSetStart: (id: string, start: number) => void;
   /** The sound track changed (dragged on the timeline). */
@@ -64,6 +69,7 @@ const TYPE_COLOR: Record<Clip["type"], string> = {
   text: "var(--chart-1)",
   lottie: "var(--chart-4)",
   ribbon: "var(--chart-5)",
+  rig: "var(--chart-6)",
 };
 
 /** Percent span of a clip on a timeline of `duration` seconds, clamped to it. */
@@ -169,6 +175,8 @@ export function Transport({
   selectedPoint = null,
   onSelectWaypoint,
   onRetimeWaypoint,
+  selectedBone = null,
+  onRetimeRigKey,
   layout = "full",
 }: Props) {
   const [now, setNow] = useState(0);
@@ -369,6 +377,8 @@ export function Transport({
               onSelect={(index) => onSelectWaypoint(clip.id, index)}
               onRetime={(index, travel) => onRetimeWaypoint(clip.id, index, travel)}
             />
+          ) : clip.type === "rig" ? (
+            <RigKeyMarkers clip={clip} duration={duration} selectedBone={isSelected ? selectedBone : null} onSeek={onSeek} onRetime={(time, to) => onRetimeRigKey(clip.id, time, to)} />
           ) : null;
         // Phone timeline: name and time on one line, the bar across the full
         // width below it, so names aren't squeezed into a narrow column.

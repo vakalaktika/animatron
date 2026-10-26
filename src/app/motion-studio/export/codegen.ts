@@ -105,4 +105,5 @@ export const HANDOFF_NOTES = `Handoff
 4. Every value in the generated CLIP / DOC object is editable by hand. Re-export from the studio to replace it.
 5. Lottie clips export without their JSON payload. Import the .json in your component and assign it to \`data\`.
 6. Video layers and the sound track point at files in the studio's browser media store (\`mediaId\`). Host those files yourself and load them with your own media hook; the runtime's VideoArt takes a URL from \`useMediaUrl\`, which you can replace.
-7. Attached clips keep their \`parentId\`; the runtime composes each child's transform from its parent every frame. A child's x / y are its offset in the parent's frame, so change those to move it relative to the parent. A single-clip export is detached with its resting stage position baked in.`;
+7. Rig layers carry their whole Mid-century Ink Rig 1 asset in \`rig\` (docs/mci-rig/mci-rig-v1.md); the runtime's RigClipView validates the artwork and poses it from \`animationId\` or \`pose\`. "Save rig" in the studio writes the asset back out as .mci.json.
+8. Attached clips keep their \`parentId\`; the runtime composes each child's transform from its parent every frame. A child's x / y are its offset in the parent's frame, so change those to move it relative to the parent. A single-clip export is detached with its resting stage position baked in.`;

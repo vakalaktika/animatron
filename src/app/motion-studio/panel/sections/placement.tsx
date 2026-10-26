@@ -8,7 +8,7 @@ import { BUTTON_ROW, MoreFields, NumField, SelectField, TextField, ToggleField }
 import type { PanelSection } from "../PanelGroup";
 import { setter } from "./setter";
 
-const KIND: Record<Clip["type"], string> = { logo: "logo", sprite: "picture", text: "text", lottie: "Lottie", ribbon: "ribbon" };
+const KIND: Record<Clip["type"], string> = { logo: "logo", sprite: "picture", text: "text", lottie: "Lottie", ribbon: "ribbon", rig: "rig" };
 
 /** Name, start, what it follows, position, size. Every clip has this. */
 export function placementSection(

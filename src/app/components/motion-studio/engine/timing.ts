@@ -2,6 +2,7 @@ import type { Clip, StudioDoc } from "../types";
 import { LOGO_LAYER_COUNT } from "../assets/logoPaths";
 import { lineDuration, lineForever } from "./line";
 import { ribbonSubject } from "./ribbon";
+import { rigDuration, rigLoops } from "./rig";
 import { spriteActiveDuration } from "./spriteTiming";
 import { revealDuration } from "./text";
 import { trailSubject } from "./trail";
@@ -51,6 +52,8 @@ export function clipDuration(clip: Clip): number {
       const coats = clip.style.motion === "paint" && clip.coat.every > 0 ? 2 * clip.coat.every + clip.coat.duration : 0;
       return line + coats;
     }
+    case "rig":
+      return rigDuration(clip);
     case "lottie": {
       const ip = Number(clip.data.ip ?? 0);
       const op = Number(clip.data.op ?? 0);
@@ -70,6 +73,8 @@ export function loopsForever(clip: Clip): boolean {
       return clip.loop;
     case "ribbon":
       return lineForever(clip.style, ribbonSubject(clip));
+    case "rig":
+      return rigLoops(clip);
     default:
       return false;
   }

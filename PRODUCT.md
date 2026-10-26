@@ -28,4 +28,5 @@ People who want a short, polished animation without learning an animation tool: 
 - Nothing destructive without undo.
 - Big files (video, sound) live in the browser's IndexedDB media store and are referenced by id; the JSON document stays small enough for localStorage and share links. A JSON download inlines them so the file stands on its own.
 - One sound track per composition. Per-layer sound would need a mixer UI the product does not want yet.
+- Skeletal characters follow the Mid-century Ink Rig 1 contract (`docs/mci-rig/mci-rig-v1.md`) exactly, so a rig edited here reopens in Agent Torres and the generator. The rig asset is kept whole inside its clip and written back out unchanged apart from the edits made; nothing the studio does not understand is dropped. Artwork is validated against the contract's SVG subset before it is drawn, and a bad file never touches the open composition.
 - Templates are generic and built only from the clip types the studio already plays (text, shapes, ribbons), in the four offered frame sizes, with placeholder copy that is obviously meant to be replaced. No brand artwork.
