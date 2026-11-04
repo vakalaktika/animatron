@@ -16,6 +16,7 @@ import { clipComponentCode, docComponentCode, HANDOFF_NOTES } from "./export/cod
 import { downloadBlob, downloadText, startTabRecording, type Recording } from "./export/recorder";
 import { canRenderAlpha, canRenderOffline } from "./export/renderer";
 import { VideoExporter, type RenderOptions } from "./export/VideoExporter";
+import { ShareCardRenderer } from "./export/ShareCardRenderer";
 import { deleteClip, deltaInParentFrame, dropClip, nudgeClip, reparentClip } from "./lib/attach";
 import { ancestorChain } from "@/app/components/motion-studio/engine/hierarchy";
 import { copyClip, copyOf, heldClip } from "./lib/clipboard";
@@ -138,6 +139,8 @@ export function MotionStudio() {
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "failed">("saved");
   const [dialog, setDialog] = useState<"gallery" | "export" | "help" | "render" | null>(null);
   const [renderOptions, setRenderOptions] = useState<RenderOptions>({ format: "mp4" });
+  /** A preview card being drawn for a short link; the renderer is mounted while this is set. */
+  const [cardJob, setCardJob] = useState<{ doc: StudioDoc; time: number; resolve: (card: Blob) => void; reject: (err: Error) => void } | null>(null);
   // The first-run tour: shown once, replayable from Help.
   const [tour, setTour] = useState(false);
   useEffect(() => {
@@ -710,11 +713,19 @@ export function MotionStudio() {
     }
   };
 
-  const makeShareLink = async (): Promise<{ ok: true; url: string } | { ok: false; reason: string }> => {
+  /** Draws the preview card for a short link: a frame two thirds of the way in, where most pieces have landed. */
+  const drawCard = (target: StudioDoc) =>
+    new Promise<Blob>((resolve, reject) => setCardJob({ doc: target, time: Math.min(duration, Math.max(0.1, duration * 0.66)), resolve, reject }));
+
+  const makeShareLink = async (): Promise<{ ok: true; url: string; note?: string } | { ok: false; reason: string }> => {
     if (hasMedia(doc)) return { ok: false as const, reason: "Video and sound files are too big for a link. Download the composition as a JSON file instead; the media travels inside it." };
     if (cloud.enabled) {
+      const description = doc.description?.trim();
+      const shared: StudioDoc = { ...doc, description: description || undefined };
       try {
-        return { ok: true, url: await cloud.shortLink(doc) };
+        const card = await drawCard(shared);
+        const { url, cardError } = await cloud.shortLink(shared, { card, duration });
+        return cardError ? { ok: true, url, note: `The link works, but its preview picture didn't save, so pasted links show no picture. ${cardError}` } : { ok: true, url };
       } catch (err) {
         return { ok: false, reason: err instanceof Error ? err.message : "Could not make the link. Try again, or download a JSON file." };
       }
@@ -1156,6 +1167,20 @@ export function MotionStudio() {
       {clean ? <div className="h-dvh">{stage}</div> : shell}
       {doc.audio && dialog !== "render" && <AudioPlayer audio={doc.audio} time={clock.time} playing={clock.playing} duration={duration} speed={speed} />}
       <Toast toast={toast} onDismiss={dismissToast} />
+      {cardJob && (
+        <ShareCardRenderer
+          doc={cardJob.doc}
+          time={cardJob.time}
+          onReady={(card) => {
+            cardJob.resolve(card);
+            setCardJob(null);
+          }}
+          onError={(err) => {
+            cardJob.reject(err);
+            setCardJob(null);
+          }}
+        />
+      )}
       <GalleryDialog
         open={dialog === "gallery"}
         onClose={() => setDialog(null)}
@@ -1204,6 +1229,8 @@ export function MotionStudio() {
         onRecord={() => void record_()}
         onShareLink={makeShareLink}
         shortLinks={cloud.enabled}
+        description={doc.description ?? ""}
+        onDescriptionChange={(text) => setDoc((d) => ({ ...d, description: text }), "description")}
         onDownloadJson={() => {
           void inlineMedia(doc).then((full) => downloadText(JSON.stringify(full, null, 2), `${slug(doc.name)}.studio.json`, "application/json"));
         }}

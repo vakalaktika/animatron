@@ -11,8 +11,9 @@ import {
   listRemoteProjects,
   pushProjects,
   sendSignInLink,
-  shortShareUrl,
+  shareLinkFor,
   signOut as endSession,
+  uploadShareCard,
   userFromSession,
   type CloudUser,
 } from "./cloud";
@@ -32,6 +33,13 @@ export interface SyncResult {
   tooBig: number;
 }
 
+/** What the share page shows besides the composition: its card and length. */
+export interface SharePreview {
+  card: Blob;
+  /** Seconds. */
+  duration: number;
+}
+
 export interface Cloud {
   /** A Supabase project is configured for this build. */
   enabled: boolean;
@@ -39,8 +47,12 @@ export interface Cloud {
   /** A sign-in link went to this address and hasn't been used yet. */
   pendingEmail: string | null;
   syncing: boolean;
-  /** Stores the composition and returns its short link. */
-  shortLink: (doc: StudioDoc) => Promise<string>;
+  /**
+   * Stores the composition and its preview card and returns the short link.
+   * The link works without the card, so a card that couldn't be saved is
+   * reported alongside the link rather than failing it.
+   */
+  shortLink: (doc: StudioDoc, preview: SharePreview) => Promise<{ url: string; cardError: string | null }>;
   openShare: (id: string) => Promise<StudioDoc | null>;
   sendLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -89,7 +101,17 @@ export function useCloud(): Cloud {
   const withClient = useCallback(async () => (config ? cloudClient(config) : OFF()), [config]);
 
   const shortLink = useCallback(
-    async (doc: StudioDoc) => shortShareUrl(await createShare(await withClient(), doc), window.location),
+    async (doc: StudioDoc, { card, duration }: SharePreview) => {
+      const supabase = await withClient();
+      const id = await createShare(supabase, doc, { duration });
+      const url = shareLinkFor(id, window.location);
+      try {
+        await uploadShareCard(supabase, id, card);
+        return { url, cardError: null };
+      } catch (err) {
+        return { url, cardError: err instanceof Error ? err.message : "Could not save the preview picture." };
+      }
+    },
     [withClient],
   );
   const openShare = useCallback(async (id: string) => fetchShare(await withClient(), id), [withClient]);

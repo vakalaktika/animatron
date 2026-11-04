@@ -1,0 +1,161 @@
+/* The Atomic Age palette, as in the studio's atomic.css. */
+:root {
+  --surface: #f1ede7;
+  --surface-raised: #faf7f4;
+  --ink: #2a241d;
+  --ink-secondary: #5a4f40;
+  --ink-muted: #645e56;
+  --hairline: #dfd9ce;
+  --border-control: #b8b0a3;
+  --primary: #186a63;
+  --primary-hover: #12564f;
+  --on-primary: #fbf7f0;
+  --card: #141618;
+  --focus: #186a63;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #151311;
+    --surface-raised: #211e1d;
+    --ink: #f6efe3;
+    --ink-secondary: #cfc5b6;
+    --ink-muted: #a69c8d;
+    --hairline: #3a3531;
+    --border-control: #5a534b;
+    --primary: #4bc2b0;
+    --primary-hover: #6fd2c3;
+    --on-primary: #10201d;
+    --focus: #4bc2b0;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-work-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.share {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+
+.share-card {
+  width: 100%;
+  max-width: 560px;
+}
+
+.share-picture {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.5);
+}
+
+.share-kicker {
+  margin: 28px 0 10px;
+  font-family: var(--font-jost), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+}
+
+.share-title {
+  margin: 0;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: clamp(32px, 6vw, 44px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.share-blurb {
+  margin: 14px 0 0;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--ink-secondary);
+  overflow-wrap: anywhere;
+}
+
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.share-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 24px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-family: var(--font-jost), system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 200ms, box-shadow 200ms;
+}
+
+.share-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--focus);
+}
+
+.share-button-primary {
+  flex: 1 1 260px;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.share-button-primary:hover {
+  background: var(--primary-hover);
+}
+
+.share-button-outline {
+  flex: 0 1 auto;
+  background: var(--surface-raised);
+  border-color: var(--border-control);
+  color: var(--ink);
+}
+
+.share-button-outline:hover {
+  background: var(--surface);
+}
+
+.share-manual {
+  flex: 1 1 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-control);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: 13px ui-monospace, Menlo, monospace;
+}
+
+.share-note {
+  margin: 20px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}

@@ -25,10 +25,13 @@ interface Props {
   /** Tab capture is available (desktop browsers). */
   canRecord: boolean;
   onRecord: () => void;
-  /** Resolves to the link, or a reason it couldn't be made. */
-  onShareLink: () => Promise<{ ok: true; url: string } | { ok: false; reason: string }>;
+  /** Resolves to the link (with a note when part of it, like the preview picture, didn't work), or a reason it couldn't be made. */
+  onShareLink: () => Promise<{ ok: true; url: string; note?: string } | { ok: false; reason: string }>;
   /** Links are short and point at a copy kept in the cloud, rather than carrying the composition. */
   shortLinks: boolean;
+  /** A sentence about the piece, shown on its share page and link preview. */
+  description: string;
+  onDescriptionChange: (text: string) => void;
   onDownloadJson: () => void;
   onShowCode: () => void;
   onPreview: () => void;
@@ -52,8 +55,8 @@ function Row({ icon, title, blurb, children }: { icon: ReactNode; title: string;
  * Video records this tab through the browser's own capture, so the steps are
  * spelled out; the share link carries the whole composition in the URL.
  */
-export function ExportDialog({ open, onClose, docName, duration, canRender, canAlpha, transparent, stageWidth, hasSound, onRender, canRecord, onRecord, onShareLink, shortLinks, onDownloadJson, onShowCode, onPreview }: Props) {
-  const [share, setShare] = useState<{ url?: string; error?: string; copied?: boolean } | null>(null);
+export function ExportDialog({ open, onClose, docName, duration, canRender, canAlpha, transparent, stageWidth, hasSound, onRender, canRecord, onRecord, onShareLink, shortLinks, description, onDescriptionChange, onDownloadJson, onShowCode, onPreview }: Props) {
+  const [share, setShare] = useState<{ url?: string; note?: string; error?: string; copied?: boolean } | null>(null);
   const [linking, setLinking] = useState(false);
   const [format, setFormat] = useState<RenderFormat>("mp4");
   const [gifWidth, setGifWidth] = useState(Math.min(720, stageWidth));
@@ -69,7 +72,7 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
 
   const makeLink = async () => {
     // A link already made is copied again rather than stored a second time.
-    const result = share?.url ? { ok: true as const, url: share.url } : await withBusy(onShareLink);
+    const result = share?.url ? { ok: true as const, url: share.url, note: share.note } : await withBusy(onShareLink);
     if (!result.ok) {
       setShare({ error: result.reason });
       return;
@@ -81,7 +84,7 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
     } catch {
       // No clipboard access: the link is shown to copy by hand.
     }
-    setShare({ url: result.url, copied });
+    setShare({ url: result.url, note: result.note, copied });
   };
 
   async function withBusy<T>(work: () => Promise<T>): Promise<T> {
@@ -183,7 +186,7 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
         title="Share a link"
         blurb={
           shortLinks
-            ? "A short link to a copy of the composition as it is now. Anyone who opens it gets their own copy to edit."
+            ? "A short link to a copy of the composition as it is now, with a preview card. Anyone who opens it gets their own copy to edit."
             : "The whole composition travels in the link. Anyone who opens it gets their own copy to edit."
         }
       >
@@ -192,6 +195,19 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
         </Button>
       </Row>
       <div className="-mt-2 mb-2 min-h-9 sm:pl-14">
+        {shortLinks && !share?.url && (
+          <label className="mb-2 flex flex-col gap-1">
+            <span className="atm-label">What is it? (optional)</span>
+            <textarea
+              rows={2}
+              maxLength={300}
+              value={description}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              placeholder="A sentence for the link preview and the share page."
+              className="w-full resize-y rounded-sm border border-border-control bg-surface px-2 py-1.5 text-sm leading-5 text-ink placeholder:text-ink-muted focus:border-primary focus:outline-none"
+            />
+          </label>
+        )}
         {share?.url && (
           <input
             readOnly
@@ -200,6 +216,11 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
             value={share.url}
             onFocus={(e) => e.currentTarget.select()}
           />
+        )}
+        {share?.note && (
+          <p role="status" className="mt-2 text-sm leading-5 text-ink-muted">
+            {share.note}
+          </p>
         )}
         {share?.error && (
           <p role="alert" className="rounded-md bg-error-soft px-3 py-2 text-sm text-ink">

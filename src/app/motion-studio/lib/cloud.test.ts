@@ -11,7 +11,10 @@ import {
   newShareId,
   pushProjects,
   sendSignInLink,
+  shareLinkFor,
+  shareOrigin,
   shortShareUrl,
+  uploadShareCard,
 } from "./cloud";
 
 const URL_BASE = "https://example.supabase.co";
@@ -32,7 +35,7 @@ interface Call {
 }
 
 /** A tiny stand-in for the Supabase auth and REST endpoints the studio uses. */
-function fakeSupabase(over: { insertError?: { code: string; message: string }[]; rows?: Record<string, unknown>[]; shares?: Record<string, unknown>; emailTaken?: boolean } = {}) {
+function fakeSupabase(over: { insertError?: { code: string; message: string }[]; rows?: Record<string, unknown>[]; shares?: Record<string, unknown>; emailTaken?: boolean; cardError?: boolean } = {}) {
   const calls: Call[] = [];
   const insertErrors = [...(over.insertError ?? [])];
   const session = (anonymous: boolean) => ({
@@ -48,7 +51,7 @@ function fakeSupabase(over: { insertError?: { code: string; message: string }[];
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
     const method = (init?.method ?? "GET").toUpperCase();
     const headers = new Headers(init?.headers);
-    const body = typeof init?.body === "string" && init.body ? (JSON.parse(init.body) as unknown) : null;
+    const body = typeof init?.body === "string" && init.body ? (JSON.parse(init.body) as unknown) : (init?.body ?? null);
     calls.push({ method, path: url.pathname, search: url.search, body, auth: headers.get("authorization") });
     if (url.pathname === "/auth/v1/signup") return json(200, session(true));
     if (url.pathname === "/auth/v1/otp") return json(200, {});
@@ -62,6 +65,9 @@ function fakeSupabase(over: { insertError?: { code: string; message: string }[];
     if (url.pathname === "/rest/v1/shares" && method === "POST") {
       const err = insertErrors.shift();
       return err ? json(409, { ...err, details: null, hint: null }) : new Response(null, { status: 201 });
+    }
+    if (url.pathname.startsWith("/storage/v1/object/share-cards/") && method === "POST") {
+      return over.cardError ? json(403, { statusCode: "403", error: "Unauthorized", message: "new row violates row-level security policy" }) : json(200, { Key: url.pathname });
     }
     if (url.pathname === "/rest/v1/projects" && method === "GET") return json(200, over.rows ?? []);
     if (url.pathname === "/rest/v1/projects") return new Response(null, { status: method === "DELETE" ? 204 : 201 });
@@ -96,12 +102,27 @@ describe("share ids and links", () => {
   test("a short link is a query parameter on this page", () => {
     expect(shortShareUrl("abcdefghij", { origin: "https://ed.github.io", pathname: "/animatron/" })).toBe("https://ed.github.io/animatron/?s=abcdefghij");
   });
+
+  test("with the share page service set up, the link is its page (which carries the preview card)", () => {
+    const here = { origin: "https://ed.github.io", pathname: "/animatron/" };
+    expect(shareLinkFor("abcdefghij", here, "https://share.example.com")).toBe("https://share.example.com/s/abcdefghij");
+    expect(shareLinkFor("abcdefghij", here, null)).toBe("https://ed.github.io/animatron/?s=abcdefghij");
+  });
+
+  test("the share page address must be https (http only on this machine), with no trailing slash", () => {
+    expect(shareOrigin("https://share.example.com/")).toBe("https://share.example.com");
+    expect(shareOrigin("http://localhost:3100")).toBe("http://localhost:3100");
+    expect(shareOrigin("http://share.example.com")).toBeNull();
+    expect(shareOrigin("not a url")).toBeNull();
+    expect(shareOrigin(undefined)).toBeNull();
+    expect(shareOrigin("  ")).toBeNull();
+  });
 });
 
 describe("createShare", () => {
   test("starts an anonymous session when nobody is signed in, then stores the composition", async () => {
     const { supabase, calls } = fakeSupabase();
-    const id = await createShare(supabase, doc, () => "abcdefghij");
+    const id = await createShare(supabase, doc, { makeId: () => "abcdefghij" });
     expect(id).toBe("abcdefghij");
     expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual(["POST /auth/v1/signup", "POST /rest/v1/shares"]);
     expect(calls[1].body).toEqual({ id: "abcdefghij", doc });
@@ -111,9 +132,9 @@ describe("createShare", () => {
   test("tries a fresh id once after a collision, and reports other failures", async () => {
     const ids = ["aaaaaaaaaa", "bbbbbbbbbb"];
     const retry = fakeSupabase({ insertError: [{ code: "23505", message: "duplicate" }] });
-    await expect(createShare(retry.supabase, doc, () => ids.shift() ?? "")).resolves.toBe("bbbbbbbbbb");
+    await expect(createShare(retry.supabase, doc, { makeId: () => ids.shift() ?? "" })).resolves.toBe("bbbbbbbbbb");
     const broken = fakeSupabase({ insertError: [{ code: "42501", message: "permission denied" }] });
-    await expect(createShare(broken.supabase, doc, () => "cccccccccc")).rejects.toThrow("Could not save the link: permission denied");
+    await expect(createShare(broken.supabase, doc, { makeId: () => "cccccccccc" })).rejects.toThrow("Could not save the link: permission denied");
   });
 
   test("refuses a composition too big for a link before sending anything", async () => {
@@ -121,6 +142,26 @@ describe("createShare", () => {
     const huge = { ...doc, name: "x".repeat(2_000_000) };
     await expect(createShare(supabase, huge)).rejects.toThrow("too big");
     expect(calls).toHaveLength(0);
+  });
+
+  test("keeps the length the studio measured, for the share page", async () => {
+    const { supabase, calls } = fakeSupabase();
+    await createShare(supabase, doc, { duration: 9.7, makeId: () => "abcdefghij" });
+    expect(calls[1].body).toEqual({ id: "abcdefghij", doc, duration: 9.7 });
+  });
+});
+
+describe("uploadShareCard", () => {
+  test("stores the card as <id>.png in the public cards bucket, never over an existing one", async () => {
+    const { supabase, calls } = fakeSupabase();
+    await uploadShareCard(supabase, "abcdefghij", new Blob([new Uint8Array([0x89, 0x50])], { type: "image/png" }));
+    expect(calls).toHaveLength(1);
+    expect(`${calls[0].method} ${calls[0].path}`).toBe("POST /storage/v1/object/share-cards/abcdefghij.png");
+  });
+
+  test("says what went wrong when the bucket refuses it", async () => {
+    const { supabase } = fakeSupabase({ cardError: true });
+    await expect(uploadShareCard(supabase, "abcdefghij", new Blob([], { type: "image/png" }))).rejects.toThrow("Could not save the preview picture");
   });
 });
 
@@ -154,7 +195,7 @@ describe("accounts", () => {
     expect(fresh.calls[0].body).toMatchObject({ email: "ed@example.com" });
 
     const anon = fakeSupabase();
-    await createShare(anon.supabase, doc, () => "abcdefghij");
+    await createShare(anon.supabase, doc, { makeId: () => "abcdefghij" });
     await sendSignInLink(anon.supabase, "ed@example.com", "https://site/");
     expect(anon.calls.at(-1)).toMatchObject({ method: "PUT", path: "/auth/v1/user", body: { email: "ed@example.com" } });
     await expect(sendSignInLink(anon.supabase, "not-an-email", "https://site/")).rejects.toThrow("email address");
@@ -162,7 +203,7 @@ describe("accounts", () => {
 
   test("an anonymous session whose email already has an account signs in to that account instead", async () => {
     const taken = fakeSupabase({ emailTaken: true });
-    await createShare(taken.supabase, doc, () => "abcdefghij");
+    await createShare(taken.supabase, doc, { makeId: () => "abcdefghij" });
     await sendSignInLink(taken.supabase, "ed@example.com", "https://site/");
     expect(taken.calls.slice(-2).map((c) => `${c.method} ${c.path}`)).toEqual(["PUT /auth/v1/user", "POST /auth/v1/otp"]);
   });
