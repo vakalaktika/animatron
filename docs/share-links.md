@@ -1,84 +1,84 @@
-# Short share links and link previews
+# Share pages and link previews
 
-A share link used to carry the whole composition in its hash: thousands of
-characters that no chat app wants to show. With the cloud configured
-(`docs/cloud.md`), *Share → Copy link* stores a copy of the composition in
-Supabase and copies a short link instead. This page is about the second
-half: making that link show a preview card wherever it is pasted.
+Short links come from the Supabase project behind cloud save (see
+[cloud.md](cloud.md)): *Share → Copy link* stores a copy of the composition
+and the link names it by a ten-character id. On its own that link is
+`…/animatron/?s=<id>`, which opens the studio and adds the piece to the
+visitor's compositions, but shows nothing when pasted into a chat: GitHub
+Pages can only serve the same static page for every link.
 
-The preview comes from a small service in `share/`, a Next.js app deployed
-on Vercel that only reads. With it configured, *Copy link* gives something
-like
+The share page service in `share/` fills that gap. It is a small Next.js app
+on Vercel that reads the same Supabase project and serves one page per
+share. With it set up, *Copy link* gives something like
 
     https://animatron-share.vercel.app/s/Ab3dEfGh9k
 
-and pasting that anywhere shows the composition's name, a sentence about
-it, its frame size and length, and a picture of it. Without it, short links
-still work: they open the studio directly (`…/animatron/?s=<id>`), with no
-preview.
+and pasting that anywhere shows a preview card: the composition's name, a
+sentence about it, its frame size and length, and a picture of it.
+
+There is one store (Supabase) and one kind of id. The service holds no data
+and has no write endpoint; it only reads.
 
 ## What happens
 
 1. *Copy link* draws one frame of the composition (two thirds of the way
    in, as the gallery tiles do) onto a 1200 × 630 dark card, right in the
    browser. The *What is it?* field under the button is the sentence the
-   card and the page show; it is saved with the composition as
-   `description`.
-2. The studio stores the composition in the `shares` table with its length
-   (as before, under the anonymous session's row-level rules) and uploads
-   the card to the public `share-cards` bucket as `<id>.png`. Only the
-   share's owner can add its card, and only once. A card that fails to
-   upload is reported next to the link; the link still works.
-3. `/s/<id>` on the service is the share page: the card, the name, the
-   sentence, *Add to my Compositions* and *Copy link*. Its `<head>` carries
-   the Open Graph and Twitter tags that chat apps and social sites read.
-   The service reads one RPC, `get_share_meta`, which returns only what the
-   page shows (never the document), and the card from the bucket.
-   `/s/<id>/card.png` serves the card from the service's own domain.
-4. *Add to my Compositions* opens the studio at `?s=<id>`; the studio
-   fetches the composition through `get_share` and adds it to the visitor's
-   compositions, as before. Long links keep working.
+   card and the page show; it is saved with the composition.
+2. The studio stores the composition and its length in the `shares` table,
+   then the card as `<id>.png` in the public `share-cards` bucket. Only the
+   share's owner can add its card, and only once. If the card can't be
+   saved, the link still works; the dialog says so and the page shows no
+   picture.
+3. The link handed out is `<share page>/s/<id>` when the studio is built
+   with `NEXT_PUBLIC_SHARE_ORIGIN`, and the studio's own `?s=<id>` link
+   when it isn't. Both lead to the same share.
+4. `/s/<id>` reads what it shows through `get_share_meta(id)` (name,
+   sentence, size, layer count, length; never the whole document) and
+   serves the card from its own domain at `/s/<id>/card.png`. Its `<head>`
+   carries the Open Graph and Twitter tags that chat apps and social sites
+   read.
+5. *Add to my Compositions* opens the studio at `?s=<id>`, which fetches
+   the composition from Supabase as any short link does.
 
 ## Setting it up
 
-The cloud must already be configured (`docs/cloud.md`). Then:
+Cloud save has to be set up first ([cloud.md](cloud.md)). Then:
 
 1. Run `supabase/migrations/20261104000000_share_pages.sql` in the SQL
-   editor (or `supabase db push`). It adds the `duration` column, the
-   `get_share_meta` function and the `share-cards` bucket with its insert
-   policy.
+   editor (or `supabase db push`). It adds the length column, the
+   `get_share_meta` function and the `share-cards` bucket with its policy.
 2. Deploy `share/` to Vercel as its own project: **Add New → Project**,
    import the repository, set **Root Directory** to `share`. Framework
    Next.js, no other build settings.
-3. Environment variables on the project:
-   - `SUPABASE_URL` and `SUPABASE_ANON_KEY`: the same project URL and anon
-     key the studio uses. The service reads with the anon key only.
-   - `STUDIO_URL`: where the studio lives,
-     `https://vakalaktika.github.io/animatron/` (that is the default; set
-     it if the studio moves).
-   - `SHARE_URL` (optional): the public address of the service, if it has a
+3. Environment variables on the Vercel project:
+   - `SUPABASE_URL` and `SUPABASE_ANON_KEY`: the same public values the
+     studio uses. Never the service-role key.
+   - `STUDIO_URL`: where the studio lives, `https://vakalaktika.github.io/animatron/`
+     (that is the default; set it if the studio moves).
+   - `SHARE_URL` (optional): the service's public address, if it has a
      custom domain. Otherwise the project's production URL is used.
 4. In the GitHub repository, **Settings → Secrets and variables → Actions →
    Variables**, add `SHARE_ORIGIN` with the service's address, e.g.
    `https://animatron-share.vercel.app`. The deploy workflow passes it to the
-   build as `NEXT_PUBLIC_SHARE_ORIGIN`; the next push to `main` makes
-   *Copy link* hand out share-page links.
+   build as `NEXT_PUBLIC_SHARE_ORIGIN`; the next push to `main` makes *Copy
+   link* hand out share page links.
 
-Locally:
+Locally, with a Supabase project (or `supabase start`):
 
 ```sh
 cd share && npm ci && SUPABASE_URL=… SUPABASE_ANON_KEY=… STUDIO_URL=http://localhost:3000/ npm run dev   # :3100
-NEXT_PUBLIC_SHARE_ORIGIN=http://localhost:3100 NEXT_PUBLIC_SUPABASE_URL=… NEXT_PUBLIC_SUPABASE_ANON_KEY=… npm run dev
+NEXT_PUBLIC_SUPABASE_URL=… NEXT_PUBLIC_SUPABASE_ANON_KEY=… NEXT_PUBLIC_SHARE_ORIGIN=http://localhost:3100 npm run dev
 ```
 
 ## Limits and notes
 
-- The service holds no data and takes no uploads; everything a link needs
-  lives in the Supabase project, under the same limits as cloud save (50
-  shares a session a day, 2 MB a composition, 1.5 MB a card).
-- A share is public to anyone with the link and cannot be listed; both the
-  meta RPC and the bucket need the exact id. There is no UI to delete one.
-- Compositions with video or sound can't be shared by link: the files live
-  in the browser's media store. A JSON download carries them.
+- A share page is public to anyone with the link; shares can't be listed
+  and the id can't reasonably be guessed (60 bits).
+- The same limits as short links apply (see [cloud.md](cloud.md)): up to
+  about 2 MB of composition, 50 links a day per session, nothing with video
+  or sound.
+- Shares made before the share page migration have no card or length: their
+  page shows the size and sentence without a picture.
 - The preview is one frame, not a loop. A chat app shows the card; opening
   the link in the studio plays the piece.
