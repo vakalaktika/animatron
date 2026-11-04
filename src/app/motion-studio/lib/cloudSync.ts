@@ -90,7 +90,11 @@ export function applyPull(
   }
   const byId = new Map(incoming.map((p) => [p.id, p]));
   const gone = new Set(remove.filter((id) => id !== store.currentId));
-  const merged = store.projects.filter((p) => !gone.has(p.id)).map((p) => byId.get(p.id) ?? p);
+  // Folders live in this browser only, so a newer copy keeps the local filing.
+  const merged = store.projects.filter((p) => !gone.has(p.id)).map((p) => {
+    const pulledCopy = byId.get(p.id);
+    return pulledCopy ? { ...pulledCopy, folderId: p.folderId } : p;
+  });
   const added = incoming.filter((p) => !store.projects.some((q) => q.id === p.id));
   return {
     store: { ...store, projects: [...merged, ...added] },
