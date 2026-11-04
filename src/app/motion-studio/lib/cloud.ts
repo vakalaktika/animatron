@@ -31,15 +31,30 @@ export function cloudConfig(
   url = process.env.NEXT_PUBLIC_SUPABASE_URL,
   anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 ): CloudConfig | null {
-  if (!url || !anonKey) return null;
-  try {
-    const parsed = new URL(url);
-    const local = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
-    if (parsed.protocol !== "https:" && !(local && parsed.protocol === "http:")) return null;
-  } catch {
-    return null;
-  }
+  if (!url || !anonKey || !isServedSafely(url)) return null;
   return { url: url.replace(/\/+$/, ""), anonKey };
+}
+
+/** https anywhere; plain http only on this machine. */
+function isServedSafely(address: string): boolean {
+  try {
+    const parsed = new URL(address);
+    const local = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+    return parsed.protocol === "https:" || (local && parsed.protocol === "http:");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The share page service (share/, docs/share-links.md), read at build time.
+ * It shows a short link with its preview card. Null when it isn't set up:
+ * short links then open the studio directly.
+ */
+export function shareOrigin(raw = process.env.NEXT_PUBLIC_SHARE_ORIGIN): string | null {
+  const address = raw?.trim();
+  if (!address || !isServedSafely(address)) return null;
+  return address.replace(/\/+$/, "");
 }
 
 let client: Promise<SupabaseClient> | null = null;
@@ -91,8 +106,14 @@ const DUPLICATE = "23505";
 /** Largest composition a share holds, in characters of JSON (the table allows a little more). */
 export const SHARE_MAX_CHARS = 1_900_000;
 
+interface ShareOptions {
+  /** Seconds, as the studio measured it; the share page shows it. */
+  duration?: number;
+  makeId?: () => string;
+}
+
 /** Stores the composition as a short share and returns its id. */
-export async function createShare(supabase: SupabaseClient, doc: StudioDoc, makeId = newShareId): Promise<string> {
+export async function createShare(supabase: SupabaseClient, doc: StudioDoc, { duration, makeId = newShareId }: ShareOptions = {}): Promise<string> {
   if (JSON.stringify(doc).length > SHARE_MAX_CHARS) {
     throw new Error("This composition is too big to share as a link (large pictures?). Download it as a JSON file instead.");
   }
@@ -100,11 +121,49 @@ export async function createShare(supabase: SupabaseClient, doc: StudioDoc, make
   // Two tries: a collision in 60 bits is vanishingly rare, but costs nothing to survive.
   for (let attempt = 0; attempt < 2; attempt++) {
     const id = makeId();
-    const { error } = await supabase.from("shares").insert({ id, doc });
+    const { error } = await supabase.from("shares").insert({ id, doc, duration });
     if (!error) return id;
     if (error.code !== DUPLICATE) throw new Error(`Could not save the link: ${error.message}`);
   }
   throw new Error("Could not save the link: try again.");
+}
+
+/** Bucket of preview cards, one public `<share id>.png` each (supabase/migrations). */
+const CARDS_BUCKET = "share-cards";
+
+/** Stores a share's preview card. Only the share's owner can, and only once. */
+export async function uploadShareCard(supabase: SupabaseClient, id: string, card: Blob): Promise<void> {
+  const { error } = await supabase.storage.from(CARDS_BUCKET).upload(`${id}.png`, card, { contentType: "image/png", upsert: false, cacheControl: "31536000" });
+  if (error) throw new Error(`Could not save the preview picture: ${error.message}`);
+}
+
+/** What a share page shows besides the composition: its card and length. */
+export interface SharePreview {
+  /** The card, or null when it couldn't be drawn. */
+  card: Blob | null;
+  /** Seconds. */
+  duration: number;
+}
+
+/**
+ * Stores the composition, then its preview card. The link works without
+ * the card, so a card that couldn't be drawn or saved comes back as
+ * `cardError` beside the id rather than failing the link.
+ */
+export async function shareWithPreview(
+  supabase: SupabaseClient,
+  doc: StudioDoc,
+  { card, duration }: SharePreview,
+  makeId = newShareId,
+): Promise<{ id: string; cardError: string | null }> {
+  const id = await createShare(supabase, doc, { duration, makeId });
+  if (!card) return { id, cardError: "Couldn't draw the preview picture." };
+  try {
+    await uploadShareCard(supabase, id, card);
+    return { id, cardError: null };
+  } catch (err) {
+    return { id, cardError: err instanceof Error ? err.message : "Could not save the preview picture." };
+  }
 }
 
 /** The composition behind a short share id, repaired like any opened file; null when there is no such link. */
@@ -123,6 +182,11 @@ export async function fetchShare(supabase: SupabaseClient, id: string): Promise<
 /** The short link for a share id on the current page. */
 export function shortShareUrl(id: string, location: { origin: string; pathname: string }): string {
   return `${location.origin}${location.pathname}?${SHORT_SHARE_PARAM}=${id}`;
+}
+
+/** The link to hand out: the share page when that service is set up (it carries the preview card), else the studio's own short link. */
+export function shareLinkFor(id: string, location: { origin: string; pathname: string }, pageOrigin = shareOrigin()): string {
+  return pageOrigin ? `${pageOrigin}/s/${id}` : shortShareUrl(id, location);
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
