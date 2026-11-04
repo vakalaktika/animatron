@@ -5,14 +5,15 @@ import type { StudioDoc } from "@/app/components/motion-studio/types";
 import {
   cloudClient,
   cloudConfig,
-  createShare,
   deleteRemoteProject,
   fetchShare,
   listRemoteProjects,
   pushProjects,
   sendSignInLink,
-  shortShareUrl,
+  shareLinkFor,
+  shareWithPreview,
   signOut as endSession,
+  type SharePreview,
   userFromSession,
   type CloudUser,
 } from "./cloud";
@@ -39,8 +40,12 @@ export interface Cloud {
   /** A sign-in link went to this address and hasn't been used yet. */
   pendingEmail: string | null;
   syncing: boolean;
-  /** Stores the composition and returns its short link. */
-  shortLink: (doc: StudioDoc) => Promise<string>;
+  /**
+   * Stores the composition and its preview card and returns the short link,
+   * with the reason when the card couldn't be drawn or saved (the link works
+   * without it).
+   */
+  shortLink: (doc: StudioDoc, preview: SharePreview) => Promise<{ url: string; cardError: string | null }>;
   openShare: (id: string) => Promise<StudioDoc | null>;
   sendLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -89,7 +94,10 @@ export function useCloud(): Cloud {
   const withClient = useCallback(async () => (config ? cloudClient(config) : OFF()), [config]);
 
   const shortLink = useCallback(
-    async (doc: StudioDoc) => shortShareUrl(await createShare(await withClient(), doc), window.location),
+    async (doc: StudioDoc, preview: SharePreview) => {
+      const { id, cardError } = await shareWithPreview(await withClient(), doc, preview);
+      return { url: shareLinkFor(id, window.location), cardError };
+    },
     [withClient],
   );
   const openShare = useCallback(async (id: string) => fetchShare(await withClient(), id), [withClient]);

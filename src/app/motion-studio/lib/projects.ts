@@ -15,12 +15,23 @@ export interface Project {
   doc: StudioDoc;
   /** ISO time of the last change. */
   updatedAt: string;
+  /** Folder it is filed in; unset or null means unfiled. */
+  folderId?: string | null;
+}
+
+/** A flat, named grouping in the gallery. Folders hold compositions, not other folders. */
+export interface Folder {
+  id: string;
+  name: string;
 }
 
 export interface ProjectStore {
   currentId: string | null;
   projects: Project[];
+  folders: Folder[];
 }
+
+export const EMPTY_STORE: ProjectStore = { currentId: null, projects: [], folders: [] };
 
 export const PROJECTS_KEY = "animatron.projects.v1";
 
@@ -58,20 +69,29 @@ function migrateLegacy(): ProjectStore {
       });
     }
   }
-  return { currentId, projects };
+  return { currentId, projects, folders: [] };
 }
 
 /** Reads the store, migrating older storage on first use. Never throws. */
 export function loadProjects(): ProjectStore {
-  if (typeof window === "undefined") return { currentId: null, projects: [] };
+  if (typeof window === "undefined") return EMPTY_STORE;
   const parsed = readJson(PROJECTS_KEY);
   if (!parsed || typeof parsed !== "object") return migrateLegacy();
   const store = parsed as Partial<ProjectStore>;
+  const folders = (Array.isArray(store.folders) ? store.folders : []).filter(
+    (f): f is Folder => !!f && typeof f === "object" && typeof f.id === "string" && typeof f.name === "string",
+  );
   const projects = (Array.isArray(store.projects) ? store.projects : [])
     .filter((p): p is Project => !!p && typeof p === "object" && typeof p.id === "string" && isDocLike(p.doc))
-    .map((p) => ({ id: p.id, updatedAt: typeof p.updatedAt === "string" ? p.updatedAt : new Date(0).toISOString(), doc: normalizeDoc(p.doc).doc }));
+    .map((p) => ({
+      id: p.id,
+      updatedAt: typeof p.updatedAt === "string" ? p.updatedAt : new Date(0).toISOString(),
+      doc: normalizeDoc(p.doc).doc,
+      // A folder that no longer exists leaves its compositions unfiled.
+      folderId: typeof p.folderId === "string" && folders.some((f) => f.id === p.folderId) ? p.folderId : null,
+    }));
   const currentId = typeof store.currentId === "string" && projects.some((p) => p.id === store.currentId) ? store.currentId : null;
-  return { currentId, projects };
+  return { currentId, projects, folders };
 }
 
 /** Writes the store; returns a message when the browser refused (quota). */
@@ -100,30 +120,77 @@ export function upsertCurrent(store: ProjectStore, doc: StudioDoc, now = new Dat
   const exists = store.projects.some((p) => p.id === id);
   const projects = exists
     ? store.projects.map((p) => (p.id === id && p.doc !== doc ? { ...p, doc, updatedAt: now } : p))
-    : [...store.projects, { id, doc, updatedAt: now }];
-  return { currentId: id, projects };
+    : [...store.projects, { id, doc, updatedAt: now, folderId: null }];
+  return { ...store, currentId: id, projects };
 }
 
-/** Adds a project and makes it current. */
-export function addProject(store: ProjectStore, doc: StudioDoc, now = new Date().toISOString()): ProjectStore {
-  const project = { id: newId(), doc, updatedAt: now };
-  return { currentId: project.id, projects: [...store.projects, project] };
+/** Adds a project (filed in `folderId`, or unfiled) and makes it current. */
+export function addProject(store: ProjectStore, doc: StudioDoc, now = new Date().toISOString(), folderId: string | null = null): ProjectStore {
+  const project: Project = { id: newId(), doc, updatedAt: now, folderId: store.folders.some((f) => f.id === folderId) ? folderId : null };
+  return { ...store, currentId: project.id, projects: [...store.projects, project] };
+}
+
+/** Adds a project without opening it: the gallery stays where it is. */
+export function fileProject(store: ProjectStore, doc: StudioDoc, folderId: string | null, now = new Date().toISOString()): ProjectStore {
+  const added = addProject(store, doc, now, folderId);
+  return { ...added, currentId: store.currentId };
 }
 
 export function removeProject(store: ProjectStore, id: string): ProjectStore {
   const projects = store.projects.filter((p) => p.id !== id);
   const currentId = store.currentId === id ? (projects.length ? projects[projects.length - 1].id : null) : store.currentId;
-  return { currentId, projects };
+  return { ...store, currentId, projects };
 }
 
 export function renameProject(store: ProjectStore, id: string, name: string, now = new Date().toISOString()): ProjectStore {
   return { ...store, projects: store.projects.map((p) => (p.id === id ? { ...p, doc: { ...p.doc, name }, updatedAt: now } : p)) };
 }
 
+/** The copy lands next to the original, in the same folder. */
 export function duplicateProject(store: ProjectStore, id: string, now = new Date().toISOString()): ProjectStore {
   const source = store.projects.find((p) => p.id === id);
   if (!source) return store;
-  return addProject(store, { ...source.doc, name: `${source.doc.name} copy` }, now);
+  return addProject(store, { ...source.doc, name: `${source.doc.name} copy` }, now, source.folderId ?? null);
+}
+
+// ----- Folders ---------------------------------------------------------------
+
+/** Trimmed, never empty, never a duplicate of a sibling (a counter is added). */
+function uniqueFolderName(folders: Folder[], wanted: string, exceptId?: string): string {
+  const base = wanted.trim() || "New folder";
+  const taken = new Set(folders.filter((f) => f.id !== exceptId).map((f) => f.name.toLowerCase()));
+  if (!taken.has(base.toLowerCase())) return base;
+  let n = 2;
+  while (taken.has(`${base} ${n}`.toLowerCase())) n += 1;
+  return `${base} ${n}`;
+}
+
+export function addFolder(store: ProjectStore, name: string, id = newId()): ProjectStore {
+  return { ...store, folders: [...store.folders, { id, name: uniqueFolderName(store.folders, name) }] };
+}
+
+export function renameFolder(store: ProjectStore, id: string, name: string): ProjectStore {
+  return { ...store, folders: store.folders.map((f) => (f.id === id ? { ...f, name: uniqueFolderName(store.folders, name, id) } : f)) };
+}
+
+/** Removes the folder; the compositions in it stay, unfiled. */
+export function removeFolder(store: ProjectStore, id: string): ProjectStore {
+  return {
+    ...store,
+    folders: store.folders.filter((f) => f.id !== id),
+    projects: store.projects.map((p) => (p.folderId === id ? { ...p, folderId: null } : p)),
+  };
+}
+
+/** Files a composition in a folder, or unfiles it with null. An unknown folder unfiles. */
+export function moveProject(store: ProjectStore, id: string, folderId: string | null): ProjectStore {
+  const target = store.folders.some((f) => f.id === folderId) ? folderId : null;
+  return { ...store, projects: store.projects.map((p) => (p.id === id ? { ...p, folderId: target } : p)) };
+}
+
+/** The compositions filed in `folderId` (null: the unfiled ones). */
+export function inFolder(projects: Project[], folderId: string | null): Project[] {
+  return projects.filter((p) => (p.folderId ?? null) === folderId);
 }
 
 /** Most recently edited first. */
