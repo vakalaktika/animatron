@@ -558,6 +558,8 @@ export const DOC_VERSION = 2;
 export interface StudioDoc {
   version: typeof DOC_VERSION;
   name: string;
+  /** A sentence about the piece, shown on its share page and link preview. */
+  description?: string;
   stage: StageConfig;
   clips: Clip[];
   audio?: AudioTrack | null;

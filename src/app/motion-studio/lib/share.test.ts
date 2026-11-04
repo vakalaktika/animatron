@@ -33,3 +33,61 @@ describe("share links", () => {
     expect(docFromHash(`#${SHARE_PARAM}=not-a-real-payload`)).toBeNull();
   });
 });
+
+describe("short links", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("reads a short id out of the hash and nothing else", async () => {
+    const { shareIdFromHash } = await import("./share");
+    expect(shareIdFromHash("#s=Ab3dEfGh9k")).toBe("Ab3dEfGh9k");
+    expect(shareIdFromHash("#s=")).toBeNull();
+    expect(shareIdFromHash("#s=has/slash")).toBeNull();
+    expect(shareIdFromHash("#s=0OIl0OIl")).toBeNull();
+    expect(shareIdFromHash("#share=x")).toBeNull();
+  });
+
+  it("knows the share origin only when the build set one", async () => {
+    const { shareOrigin } = await import("./share");
+    vi.stubEnv("NEXT_PUBLIC_SHARE_ORIGIN", "");
+    expect(shareOrigin()).toBeNull();
+    vi.stubEnv("NEXT_PUBLIC_SHARE_ORIGIN", "https://share.example.test/ ");
+    expect(shareOrigin()).toBe("https://share.example.test");
+  });
+
+  it("posts the composition and card and returns the link the service made", async () => {
+    const { createShortShare } = await import("./share");
+    const calls: { url: string; init: RequestInit }[] = [];
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({ id: "Ab3dEfGh9k", url: "https://share.example.test/s/Ab3dEfGh9k" }), { status: 201 });
+    });
+    const doc = welcomePreset();
+    const result = await createShortShare("https://share.example.test", doc, new Blob(["png"], { type: "image/png" }), 9.7);
+    expect(result).toEqual({ ok: true, url: "https://share.example.test/s/Ab3dEfGh9k" });
+    expect(calls[0].url).toBe("https://share.example.test/api/share");
+    const form = calls[0].init.body as FormData;
+    expect(form.get("duration")).toBe("9.7");
+    expect(await (form.get("doc") as Blob).text()).toBe(JSON.stringify(doc));
+  });
+
+  it("passes the service's refusal on, and says when it cannot be reached", async () => {
+    const { createShortShare } = await import("./share");
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ error: "Too big." }), { status: 413 }));
+    expect(await createShortShare("https://share.example.test", welcomePreset(), new Blob([]), 1)).toEqual({ ok: false, reason: "Too big." });
+    vi.stubGlobal("fetch", async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    expect(await createShortShare("https://share.example.test", welcomePreset(), new Blob([]), 1)).toEqual({ ok: false, reason: "offline" });
+  });
+
+  it("fetches and repairs the composition behind a short link", async () => {
+    const { fetchShortShare } = await import("./share");
+    const doc = { ...welcomePreset(), name: "From afar" };
+    vi.stubGlobal("fetch", async (url: string) => (url.endsWith("/api/share/Ab3dEfGh9k") ? Response.json(doc) : new Response("", { status: 404 })));
+    expect((await fetchShortShare("https://share.example.test", "Ab3dEfGh9k"))?.name).toBe("From afar");
+    expect(await fetchShortShare("https://share.example.test", "missing1")).toBeNull();
+  });
+});

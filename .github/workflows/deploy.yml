@@ -38,10 +38,17 @@ jobs:
       - name: Typecheck and test
         run: npm run typecheck && npm test
 
+      - name: Typecheck and test the share service
+        working-directory: share
+        run: npm ci && npm run typecheck && npm test
+
       - name: Build (static export)
         env:
           # Serve under the project subpath, e.g. /animatron.
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+          # Where short links are made and opened (docs/share-links.md).
+          # Unset: Share copies long links that carry the whole composition.
+          NEXT_PUBLIC_SHARE_ORIGIN: ${{ vars.SHARE_ORIGIN }}
         run: npm run build
 
       - name: Upload artifact

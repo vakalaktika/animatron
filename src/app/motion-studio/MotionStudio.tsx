@@ -38,7 +38,8 @@ import {
   type ProjectStore,
 } from "./lib/projects";
 import { hasMedia, hydrateClipMedia, hydrateMedia, inlineClipMedia, inlineMedia, pruneMedia } from "./lib/mediaDoc";
-import { docFromHash, shareUrl } from "./lib/share";
+import { createShortShare, docFromHash, fetchShortShare, shareIdFromHash, shareOrigin, shareUrl } from "./lib/share";
+import { ShareCardRenderer } from "./export/ShareCardRenderer";
 import { docFromJson } from "./lib/importDoc";
 import { makeShape, type ShapeKind } from "./lib/shapes";
 import { svgSpriteFrom } from "./lib/svgSprite";
@@ -133,11 +134,13 @@ export function MotionStudio() {
   const dismissToast = useCallback((id: number) => setToast((t) => (t?.id === id ? null : t)), []);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "failed">("saved");
   const [dialog, setDialog] = useState<"gallery" | "export" | "help" | "render" | null>(null);
+  /** A preview card being drawn for a short link; the renderer is mounted while this is set. */
+  const [cardJob, setCardJob] = useState<{ doc: StudioDoc; time: number; resolve: (card: Blob) => void; reject: (err: Error) => void } | null>(null);
   const [renderOptions, setRenderOptions] = useState<RenderOptions>({ format: "mp4" });
   // The first-run tour: shown once, replayable from Help.
   const [tour, setTour] = useState(false);
   useEffect(() => {
-    if (tourSeen() || window.location.hash.startsWith("#share=")) return;
+    if (tourSeen() || window.location.hash.startsWith("#share=") || window.location.hash.startsWith("#s=")) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of localStorage on mount
     const timer = window.setTimeout(() => setTour(true), 900);
     return () => window.clearTimeout(timer);
@@ -314,9 +317,7 @@ export function MotionStudio() {
     if (arrivalsTaken.current) return;
     arrivalsTaken.current = true;
     /* eslint-disable react-hooks/set-state-in-effect -- one-time reads of external stores on mount */
-    const shared = typeof window !== "undefined" ? docFromHash(window.location.hash) : null;
-    if (shared) {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    const takeShared = (shared: StudioDoc) => {
       const next = addProject(storeRef.current, shared);
       saveProjects(next);
       setStore(next);
@@ -324,6 +325,25 @@ export function MotionStudio() {
       setSelectedId(null);
       notify(`Opened “${shared.name}” from a link. It is now one of your compositions.`);
       clock.replay();
+    };
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
+    const shared = docFromHash(hash);
+    if (shared) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      takeShared(shared);
+      return;
+    }
+    const shortId = shareIdFromHash(hash);
+    if (shortId) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      const origin = shareOrigin();
+      if (!origin) notify("This copy of Animatron can't open short links.", { sticky: true });
+      else {
+        void fetchShortShare(origin, shortId).then((fetched) => {
+          if (fetched) takeShared(fetched);
+          else notify("There is nothing behind that link, or it couldn't be reached.", { sticky: true });
+        });
+      }
       return;
     }
     // Files left behind by compositions deleted in an earlier visit.
@@ -644,11 +664,37 @@ export function MotionStudio() {
     }
   };
 
-  const makeShareLink = () => {
-    if (hasMedia(doc)) return { ok: false as const, reason: "Video and sound files are too big for a link. Download the composition as a JSON file instead; the media travels inside it." };
+  const MEDIA_REASON = "Video and sound files are too big for a link. Download the composition as a JSON file instead; the media travels inside it.";
+
+  /** The link that carries the whole composition in its hash. */
+  const makeLongLink = () => {
+    if (hasMedia(doc)) return { ok: false as const, reason: MEDIA_REASON };
     const result = shareUrl(doc, window.location);
     if (result.ok) return result;
     return { ok: false as const, reason: "This composition has pictures in it, which are too big for a link. Download it as a JSON file instead." };
+  };
+
+  /** Draws the preview card for a short link: a frame two thirds of the way in, where most pieces have landed. */
+  const drawCard = (target: StudioDoc) =>
+    new Promise<Blob>((resolve, reject) => setCardJob({ doc: target, time: Math.min(duration, Math.max(0.1, duration * 0.66)), resolve, reject }));
+
+  /** A short link when the share service is configured, else the long one. */
+  const makeShareLink = async () => {
+    const origin = shareOrigin();
+    if (!origin) return makeLongLink();
+    if (hasMedia(doc)) return { ok: false as const, reason: MEDIA_REASON };
+    const description = doc.description?.trim();
+    const shared: StudioDoc = { ...doc, description: description || undefined };
+    try {
+      const card = await drawCard(shared);
+      const result = await createShortShare(origin, shared, card, duration);
+      if (result.ok) return result;
+      if (result.reason === "too-large") return { ok: false as const, reason: "This composition is too big for a link. Download it as a JSON file instead." };
+      if (result.reason === "offline") return { ok: false as const, reason: "The share service couldn't be reached. Check the connection, or copy the long link." };
+      return result;
+    } catch (err) {
+      return { ok: false as const, reason: err instanceof Error ? err.message : "Couldn't draw the preview card." };
+    }
   };
 
   // ----- Selection, waypoints and keys -------------------------------------
@@ -1081,6 +1127,20 @@ export function MotionStudio() {
       {clean ? <div className="h-dvh">{stage}</div> : shell}
       {doc.audio && dialog !== "render" && <AudioPlayer audio={doc.audio} time={clock.time} playing={clock.playing} duration={duration} speed={speed} />}
       <Toast toast={toast} onDismiss={dismissToast} />
+      {cardJob && (
+        <ShareCardRenderer
+          doc={cardJob.doc}
+          time={cardJob.time}
+          onReady={(card) => {
+            cardJob.resolve(card);
+            setCardJob(null);
+          }}
+          onError={(err) => {
+            cardJob.reject(err);
+            setCardJob(null);
+          }}
+        />
+      )}
       <GalleryDialog
         open={dialog === "gallery"}
         onClose={() => setDialog(null)}
@@ -1118,7 +1178,11 @@ export function MotionStudio() {
         }}
         canRecord={canRecord}
         onRecord={() => void record_()}
+        hasShortLinks={!!shareOrigin()}
+        description={doc.description ?? ""}
+        onDescriptionChange={(text) => setDoc((d) => ({ ...d, description: text }), "description")}
         onShareLink={makeShareLink}
+        onLongLink={makeLongLink}
         onDownloadJson={() => {
           void inlineMedia(doc).then((full) => downloadText(JSON.stringify(full, null, 2), `${slug(doc.name)}.studio.json`, "application/json"));
         }}

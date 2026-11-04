@@ -25,8 +25,15 @@ interface Props {
   /** Tab capture is available (desktop browsers). */
   canRecord: boolean;
   onRecord: () => void;
+  /** Short links are on: the composition is stored by the share service and the link carries a preview card. */
+  hasShortLinks: boolean;
+  /** A sentence about the piece, shown on its share page and link preview. */
+  description: string;
+  onDescriptionChange: (text: string) => void;
   /** Resolves to the link, or a reason it couldn't be made. */
-  onShareLink: () => { ok: true; url: string } | { ok: false; reason: string };
+  onShareLink: () => Promise<{ ok: true; url: string } | { ok: false; reason: string }>;
+  /** The link that carries the whole composition in its hash, for when the short one can't be made. */
+  onLongLink: () => { ok: true; url: string } | { ok: false; reason: string };
   onDownloadJson: () => void;
   onShowCode: () => void;
   onPreview: () => void;
@@ -50,8 +57,8 @@ function Row({ icon, title, blurb, children }: { icon: ReactNode; title: string;
  * Video records this tab through the browser's own capture, so the steps are
  * spelled out; the share link carries the whole composition in the URL.
  */
-export function ExportDialog({ open, onClose, docName, duration, canRender, canAlpha, transparent, stageWidth, hasSound, onRender, canRecord, onRecord, onShareLink, onDownloadJson, onShowCode, onPreview }: Props) {
-  const [share, setShare] = useState<{ url?: string; error?: string; copied?: boolean } | null>(null);
+export function ExportDialog({ open, onClose, docName, duration, canRender, canAlpha, transparent, stageWidth, hasSound, onRender, canRecord, onRecord, hasShortLinks, description, onDescriptionChange, onShareLink, onLongLink, onDownloadJson, onShowCode, onPreview }: Props) {
+  const [share, setShare] = useState<{ url?: string; error?: string; copied?: boolean; making?: boolean } | null>(null);
   const [format, setFormat] = useState<RenderFormat>("mp4");
   const [gifWidth, setGifWidth] = useState(Math.min(720, stageWidth));
   const formats: { value: RenderFormat; label: string; hint: string }[] = [
@@ -64,20 +71,37 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
   const chosen: RenderFormat = formats.some((f) => f.value === format) ? format : "mp4";
   const renderLabel = chosen === "gif" ? "Render GIF" : chosen === "webm" ? "Render WebM" : "Render MP4";
 
-  const makeLink = async () => {
-    const result = onShareLink();
-    if (!result.ok) {
-      setShare({ error: result.reason });
-      return;
-    }
+  const copy = async (url: string) => {
     let copied = false;
     try {
-      await navigator.clipboard.writeText(result.url);
+      await navigator.clipboard.writeText(url);
       copied = true;
     } catch {
       // No clipboard access: the link is shown to copy by hand.
     }
-    setShare({ url: result.url, copied });
+    setShare({ url, copied });
+  };
+
+  const makeLink = async () => {
+    // A link already made is copied again as it is; the card and the
+    // stored copy would come out the same.
+    if (share?.url) return copy(share.url);
+    setShare({ making: true });
+    const result = await onShareLink();
+    if (!result.ok) {
+      setShare({ error: result.reason });
+      return;
+    }
+    await copy(result.url);
+  };
+
+  const makeLongLink = async () => {
+    const result = onLongLink();
+    if (!result.ok) {
+      setShare({ error: result.reason });
+      return;
+    }
+    await copy(result.url);
   };
 
   return (
@@ -165,12 +189,33 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
           .
         </p>
       )}
-      <Row icon={<ShareIcon />} title="Share a link" blurb="The whole composition travels in the link. Anyone who opens it gets their own copy to edit.">
-        <Button size="sm" variant={share?.url ? "outline" : "primary"} onClick={() => void makeLink()} icon={share?.copied ? <CheckIcon width={16} height={16} /> : undefined}>
-          {share?.copied ? "Copied" : share?.url ? "Copy again" : "Copy link"}
+      <Row
+        icon={<ShareIcon />}
+        title="Share a link"
+        blurb={
+          hasShortLinks
+            ? "A short link with a preview card. Anyone who opens it gets their own copy to edit."
+            : "The whole composition travels in the link. Anyone who opens it gets their own copy to edit."
+        }
+      >
+        <Button size="sm" variant={share?.url ? "outline" : "primary"} disabled={share?.making} onClick={() => void makeLink()} icon={share?.copied ? <CheckIcon width={16} height={16} /> : undefined}>
+          {share?.making ? "Making the link…" : share?.copied ? "Copied" : share?.url ? "Copy again" : "Copy link"}
         </Button>
       </Row>
       <div className="-mt-2 mb-2 min-h-9 sm:pl-14">
+        {hasShortLinks && !share?.url && (
+          <label className="mb-2 flex flex-col gap-1">
+            <span className="atm-label">What is it? (optional)</span>
+            <textarea
+              rows={2}
+              maxLength={300}
+              value={description}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              placeholder="A sentence for the link preview and the share page."
+              className="w-full resize-y rounded-sm border border-border-control bg-surface px-2 py-1.5 text-sm leading-5 text-ink placeholder:text-ink-muted focus:border-primary focus:outline-none"
+            />
+          </label>
+        )}
         {share?.url && (
           <input
             readOnly
@@ -181,9 +226,14 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
           />
         )}
         {share?.error && (
-          <p role="alert" className="rounded-md bg-error-soft px-3 py-2 text-sm text-ink">
-            {share.error}
-          </p>
+          <div role="alert" className="flex flex-col gap-2 rounded-md bg-error-soft px-3 py-2 text-sm text-ink">
+            <p>{share.error}</p>
+            {hasShortLinks && (
+              <Button size="xs" variant="outline" className="self-start" onClick={() => void makeLongLink()}>
+                Copy the long link instead
+              </Button>
+            )}
+          </div>
         )}
       </div>
       <Row icon={<FileIcon />} title="Save a file" blurb="A JSON file of the composition, to keep, back up, or drop back into the studio later.">
