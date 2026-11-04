@@ -1,28 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type DragEvent } from "react";
 import type { StudioDoc } from "@/app/components/motion-studio/types";
 import { Button, Select } from "@/app/components/shared-components";
-import { recentFirst, type Project } from "../lib/projects";
+import { newId } from "../lib/id";
+import { inFolder, recentFirst, type Folder, type Project } from "../lib/projects";
 import { FRAME_SIZES } from "../presets";
 import { frameIndex, frameLabel, TEMPLATES } from "../templates";
 import { ChipField } from "../panel/fields";
 import { MiniPreview } from "../panel/MiniPreview";
-import { DuplicateIcon, PlusIcon, TrashIcon } from "../panel/icons";
+import { DuplicateIcon, FolderIcon, PlusIcon, TrashIcon, UploadIcon } from "../panel/icons";
 import { Dialog } from "./Dialog";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   projects: Project[];
+  folders: Folder[];
   currentId: string | null;
   onOpenProject: (id: string) => void;
-  onNewFromTemplate: (doc: StudioDoc) => void;
-  onNewBlank: (width: number, height: number) => void;
+  /** New compositions are filed in the folder being looked at (null: unfiled). */
+  onNewFromTemplate: (doc: StudioDoc, folderId: string | null) => void;
+  onNewBlank: (width: number, height: number, folderId: string | null) => void;
   onDuplicateProject: (id: string) => void;
   onDeleteProject: (id: string) => void;
   onRenameProject: (id: string, name: string) => void;
+  /** JSON files chosen or dropped; each becomes a composition in the folder. */
+  onImportFiles: (files: File[], folderId: string | null) => void;
+  onAddFolder: (id: string, name: string) => void;
+  onRenameFolder: (id: string, name: string) => void;
+  onDeleteFolder: (id: string) => void;
+  onMoveProject: (id: string, folderId: string | null) => void;
 }
+
+/** Which compositions are showing: every one, the unfiled ones, or a folder. */
+type View = "all" | "unfiled" | `folder:${string}`;
+const folderOf = (view: View): string | null => (view.startsWith("folder:") ? view.slice("folder:".length) : null);
+const NO_FOLDER = "";
+const isJsonFile = (file: File) => /\.json$/i.test(file.name) || file.type === "application/json";
 
 /** Size chips: every frame by its plain name, plus all of them. */
 const ALL_SIZES = "All sizes";
@@ -64,14 +79,53 @@ export function GalleryDialog({
   onDuplicateProject,
   onDeleteProject,
   onRenameProject,
+  onImportFiles,
+  onAddFolder,
+  onRenameFolder,
+  onDeleteFolder,
+  onMoveProject,
+  folders,
 }: Props) {
   const [hover, setHover] = useState<string | null>(null);
   const [frame, setFrame] = useState(0);
   const [size, setSize] = useState(ALL_SIZES);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const recent = recentFirst(projects);
+  const [confirmDeleteFolder, setConfirmDeleteFolder] = useState(false);
+  const [naming, setNaming] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  // A folder that was deleted elsewhere falls back to showing everything.
+  const [wantedView, setView] = useState<View>("all");
+  const view: View = wantedView.startsWith("folder:") && !folders.some((f) => f.id === folderOf(wantedView)) ? "all" : wantedView;
+  const viewFolderId = folderOf(view);
+  const viewFolder = folders.find((f) => f.id === viewFolderId) ?? null;
+  const shown = view === "all" ? projects : inFolder(projects, viewFolderId);
+  const recent = recentFirst(shown);
   const sizeIndex = FRAME_SIZES.findIndex((f) => f.name === size);
   const templates = sizeIndex < 0 ? CATALOG : CATALOG.filter((t) => t.frameIndex === sizeIndex);
+  const viewOptions: { value: View; label: string }[] = [
+    { value: "all", label: "All" },
+    ...(folders.length ? [{ value: "unfiled" as const, label: "Unfiled" }] : []),
+    ...folders.map((f) => ({ value: `folder:${f.id}` as const, label: f.name })),
+  ];
+
+  const createFolder = (name: string) => {
+    const id = newId();
+    onAddFolder(id, name);
+    setView(`folder:${id}`);
+    setNaming(false);
+  };
+
+  const importFiles = (list: FileList | File[] | null) => {
+    const files = Array.from(list ?? []).filter(isJsonFile);
+    if (files.length) onImportFiles(files, viewFolderId);
+  };
+
+  const onDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    importFiles(e.dataTransfer.files);
+  };
 
   /** Picking a size also points the blank canvas at it. */
   const pickSize = (next: string) => {
@@ -107,7 +161,7 @@ export function GalleryDialog({
                     </option>
                   ))}
                 </Select>
-                <Button size="xs" onClick={() => onNewBlank(FRAME_SIZES[frame].width, FRAME_SIZES[frame].height)}>
+                <Button size="xs" onClick={() => onNewBlank(FRAME_SIZES[frame].width, FRAME_SIZES[frame].height, viewFolderId)}>
                   Create
                 </Button>
               </div>
@@ -124,7 +178,7 @@ export function GalleryDialog({
                   onMouseLeave={() => setHover((h) => (h === key ? null : h))}
                   onFocus={() => setHover(key)}
                   onBlur={() => setHover((h) => (h === key ? null : h))}
-                  onClick={() => onNewFromTemplate(template.make())}
+                  onClick={() => onNewFromTemplate(template.make(), viewFolderId)}
                 >
                   <TemplateThumb make={template.make} active={hover === key} />
                   <span className="flex flex-col gap-0.5 border-t border-hairline p-3">
@@ -141,13 +195,121 @@ export function GalleryDialog({
         </ul>
       </section>
 
-      <section aria-labelledby="gallery-projects" className="mt-8">
-        <h3 id="gallery-projects" className="atm-section-label mb-3">
-          Your compositions {recent.length > 0 && <span className="text-ink-muted">· {recent.length}</span>}
-        </h3>
+      <section
+        aria-labelledby="gallery-projects"
+        className={`mt-8 rounded-lg transition-[box-shadow] duration-200 ${dragging ? "shadow-[0_0_0_2px_var(--primary)]" : ""}`}
+        onDragOver={(e) => {
+          if (!Array.from(e.dataTransfer.items).some((i) => i.kind === "file")) return;
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+        }}
+        onDrop={onDrop}
+      >
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <h3 id="gallery-projects" className="atm-section-label">
+            Your compositions {projects.length > 0 && <span className="text-ink-muted">· {projects.length}</span>}
+          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".json,application/json"
+              multiple
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
+              onChange={(e) => {
+                importFiles(e.currentTarget.files);
+                e.currentTarget.value = "";
+              }}
+            />
+            <Button size="xs" variant="outline" icon={<UploadIcon width={14} height={14} />} onClick={() => fileRef.current?.click()}>
+              Import JSON
+            </Button>
+            {naming ? (
+              <form
+                className="flex items-center gap-1"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  createFolder(new FormData(e.currentTarget).get("name")?.toString() ?? "");
+                }}
+              >
+                <input
+                  name="name"
+                  aria-label="New folder name"
+                  autoFocus
+                  defaultValue="New folder"
+                  onFocus={(e) => e.currentTarget.select()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setNaming(false);
+                  }}
+                  className="h-7 w-40 rounded-sm border border-border-control bg-surface px-2 text-sm text-ink focus:border-primary focus:outline-none"
+                />
+                <Button size="xs" type="submit">
+                  Create
+                </Button>
+                <Button size="xs" variant="outline" type="button" onClick={() => setNaming(false)}>
+                  Cancel
+                </Button>
+              </form>
+            ) : (
+              <Button size="xs" variant="outline" icon={<FolderIcon width={14} height={14} />} onClick={() => setNaming(true)}>
+                New folder
+              </Button>
+            )}
+          </div>
+        </div>
+        {folders.length > 0 && (
+          <div className="mb-3">
+            <ChipField label="Show" value={view} options={viewOptions} onChange={(v) => { setView(v); setConfirmDeleteFolder(false); }} />
+          </div>
+        )}
+        {viewFolder && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-hairline bg-surface px-3 py-2">
+            <FolderIcon width={16} height={16} className="text-ink-secondary" />
+            <input
+              aria-label="Folder name"
+              key={viewFolder.id + viewFolder.name}
+              defaultValue={viewFolder.name}
+              className="min-w-0 flex-1 rounded-sm border border-transparent bg-transparent px-1 text-sm font-semibold text-ink hover:border-hairline focus:border-primary focus:outline-none"
+              onBlur={(e) => {
+                const name = e.currentTarget.value.trim();
+                if (name && name !== viewFolder.name) onRenameFolder(viewFolder.id, name);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
+            />
+            <span className="text-xs text-ink-muted">
+              {shown.length} {shown.length === 1 ? "composition" : "compositions"}
+            </span>
+            {confirmDeleteFolder ? (
+              <span className="flex items-center gap-1">
+                <span className="text-xs text-ink-muted">Compositions stay, unfiled.</span>
+                <Button size="xs" variant="danger" onClick={() => { onDeleteFolder(viewFolder.id); setView("all"); setConfirmDeleteFolder(false); }}>
+                  Delete folder
+                </Button>
+                <Button size="xs" variant="outline" onClick={() => setConfirmDeleteFolder(false)}>
+                  Keep
+                </Button>
+              </span>
+            ) : (
+              <Button size="xs" variant="outline" onClick={() => setConfirmDeleteFolder(true)}>
+                Delete folder
+              </Button>
+            )}
+          </div>
+        )}
         {recent.length === 0 ? (
           <p className="rounded-md border border-dashed border-border-control p-6 text-center text-sm text-ink-muted">
-            Nothing saved yet. Everything you make here is kept in this browser and shows up in this list.
+            {projects.length === 0
+              ? "Nothing saved yet. Everything you make here is kept in this browser and shows up in this list. Drop a JSON file here to bring one in."
+              : viewFolder
+                ? `Nothing in “${viewFolder.name}” yet. Pick a folder on a composition's tile to file it here, or drop a JSON file.`
+                : "Everything is filed in a folder."}
           </p>
         ) : (
           <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
@@ -217,6 +379,25 @@ export function GalleryDialog({
                       </>
                     )}
                   </div>
+                  {folders.length > 0 && (
+                    <div className="flex items-center gap-2 border-t border-hairline px-3 py-1.5">
+                      <FolderIcon width={14} height={14} className="shrink-0 text-ink-muted" />
+                      <Select
+                        variant="compact"
+                        aria-label={`Folder of ${project.doc.name}`}
+                        className="w-full"
+                        value={project.folderId ?? NO_FOLDER}
+                        onChange={(e) => onMoveProject(project.id, e.target.value || null)}
+                      >
+                        <option value={NO_FOLDER}>No folder</option>
+                        {folders.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
                 </li>
               );
             })}

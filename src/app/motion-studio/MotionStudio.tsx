@@ -23,10 +23,15 @@ import { canRedo, canUndo, createHistory, record, redo as redoHistory, reset as 
 import { normalizeOrder, moveAmongSiblings, type DropTarget } from "./lib/tree";
 import { reorder } from "./lib/order";
 import {
+  addFolder,
   addProject,
   duplicateProject,
+  fileProject,
   loadProjects,
+  moveProject,
+  removeFolder,
   removeProject,
+  renameFolder,
   renameProject,
   saveProjects,
   upsertCurrent,
@@ -34,6 +39,7 @@ import {
 } from "./lib/projects";
 import { hasMedia, hydrateClipMedia, hydrateMedia, inlineClipMedia, inlineMedia, pruneMedia } from "./lib/mediaDoc";
 import { docFromHash, shareUrl } from "./lib/share";
+import { docFromJson } from "./lib/importDoc";
 import { makeShape, type ShapeKind } from "./lib/shapes";
 import { svgSpriteFrom } from "./lib/svgSprite";
 import { attachedTextFor, detachRun, restoreRun, setRunText } from "./lib/textRuns";
@@ -534,14 +540,40 @@ export function MotionStudio() {
     return next;
   }, [doc, notify]);
 
-  /** Opens a document as a brand-new project. */
-  const openDoc = useCallback((next: StudioDoc) => {
-    changeStore((s) => addProject(s, next));
+  /** Opens a document as a brand-new project, filed in `folderId` when given. */
+  const openDoc = useCallback((next: StudioDoc, folderId: string | null = null) => {
+    changeStore((s) => addProject(s, next, undefined, folderId));
     replaceDoc(next);
     setSelectedId(null);
     setDialog(null);
     clock.replay();
   }, [changeStore, replaceDoc, clock]);
+
+  /**
+   * JSON files from the gallery become compositions in the folder being
+   * looked at, without opening any of them: the gallery is where they land.
+   */
+  const importCompositions = async (files: File[], folderId: string | null) => {
+    const added: string[] = [];
+    const problems: string[] = [];
+    for (const file of files) {
+      const result = docFromJson(await file.text(), file.name);
+      if (!result.ok) {
+        problems.push(result.message);
+        continue;
+      }
+      const { doc: hydrated, missing } = await hydrateMedia(result.doc);
+      changeStore((s) => fileProject(s, hydrated, folderId));
+      added.push(hydrated.name);
+      if (missing.length) problems.push(`“${hydrated.name}” is missing media: ${missing.join(", ")}.`);
+      problems.push(...result.warnings);
+    }
+    const folder = folderId ? storeRef.current.folders.find((f) => f.id === folderId) : null;
+    const where = folder ? ` into “${folder.name}”` : "";
+    const summary = added.length === 1 ? `Added “${added[0]}”${where}.` : added.length > 1 ? `Added ${added.length} compositions${where}.` : "";
+    const text = [summary, ...problems].filter(Boolean).join(" ");
+    if (text) notify(text, { sticky: problems.length > 0 });
+  };
 
   const openProject = (id: string) => {
     const next = changeStore((s) => ({ ...s, currentId: id }));
@@ -1053,16 +1085,22 @@ export function MotionStudio() {
         open={dialog === "gallery"}
         onClose={() => setDialog(null)}
         projects={store.projects}
+        folders={store.folders}
         currentId={store.currentId}
         onOpenProject={openProject}
         onNewFromTemplate={openDoc}
-        onNewBlank={(w, h) => openDoc(blankDoc(w, h))}
+        onNewBlank={(w, h, folderId) => openDoc(blankDoc(w, h), folderId)}
         onDuplicateProject={(id) => changeStore((s) => duplicateProject(s, id))}
         onDeleteProject={deleteProject}
         onRenameProject={(id, name) => {
           if (id === store.currentId) setDoc((d) => ({ ...d, name }), "name");
           else changeStore((s) => renameProject(s, id, name));
         }}
+        onImportFiles={(files, folderId) => void importCompositions(files, folderId)}
+        onAddFolder={(id, name) => changeStore((s) => addFolder(s, name, id))}
+        onRenameFolder={(id, name) => changeStore((s) => renameFolder(s, id, name))}
+        onDeleteFolder={(id) => changeStore((s) => removeFolder(s, id))}
+        onMoveProject={(id, folderId) => changeStore((s) => moveProject(s, id, folderId))}
       />
       <ExportDialog
         open={dialog === "export"}

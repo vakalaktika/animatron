@@ -339,6 +339,20 @@ export const FileIcon = (p: SVGProps<SVGSVGElement>) => (
   </Icon>
 );
 
+export const FolderIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M3.5 6.5a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z" />
+  </Icon>
+);
+
+export const UploadIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M12 15.5v-11" />
+    <path d="M7.5 9 12 4.5 16.5 9" />
+    <path d="M4.5 19.5h15" />
+  </Icon>
+);
+
 /** Play inside a frame: preview. */
 export const PreviewIcon = (p: SVGProps<SVGSVGElement>) => (
   <Icon {...p}>

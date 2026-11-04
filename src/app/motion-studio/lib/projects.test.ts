@@ -2,12 +2,19 @@
 import { BUILT_IN_PRESETS, STORAGE_KEY as LEGACY_PRESETS_KEY, welcomePreset } from "../presets";
 import { DOC_STORAGE_KEY } from "./persistence";
 import {
+  addFolder,
   addProject,
   duplicateProject,
+  EMPTY_STORE,
+  fileProject,
+  inFolder,
   loadProjects,
+  moveProject,
   PROJECTS_KEY,
   recentFirst,
+  removeFolder,
   removeProject,
+  renameFolder,
   renameProject,
   saveProjects,
   upsertCurrent,
@@ -17,7 +24,7 @@ describe("projects store", () => {
   afterEach(() => window.localStorage.clear());
 
   it("starts empty on a fresh browser", () => {
-    expect(loadProjects()).toEqual({ currentId: null, projects: [] });
+    expect(loadProjects()).toEqual(EMPTY_STORE);
   });
 
   it("folds the old autosave slot and saved presets in on first read", () => {
@@ -35,7 +42,7 @@ describe("projects store", () => {
   });
 
   it("round-trips and mirrors the current document into the legacy slot", () => {
-    const store = addProject({ currentId: null, projects: [] }, welcomePreset(), "2026-05-01T00:00:00.000Z");
+    const store = addProject(EMPTY_STORE, welcomePreset(), "2026-05-01T00:00:00.000Z");
     expect(saveProjects(store)).toBeNull();
     expect(loadProjects()).toEqual(store);
     const mirror = JSON.parse(window.localStorage.getItem(DOC_STORAGE_KEY) ?? "null") as { name: string };
@@ -53,7 +60,7 @@ describe("projects store", () => {
   });
 
   it("upsertCurrent creates a slot the first time and updates it afterwards", () => {
-    const a = upsertCurrent({ currentId: null, projects: [] }, welcomePreset(), "t1");
+    const a = upsertCurrent(EMPTY_STORE, welcomePreset(), "t1");
     expect(a.projects).toHaveLength(1);
     expect(a.currentId).toBe(a.projects[0].id);
     const b = upsertCurrent(a, { ...welcomePreset(), name: "Renamed" }, "t2");
@@ -62,17 +69,63 @@ describe("projects store", () => {
   });
 
   it("removing the current project falls back to the latest remaining one", () => {
-    let store = addProject({ currentId: null, projects: [] }, welcomePreset(), "t1");
+    let store = addProject(EMPTY_STORE, welcomePreset(), "t1");
     const first = store.currentId!;
     store = addProject(store, { ...welcomePreset(), name: "Second" }, "t2");
     store = removeProject(store, store.currentId!);
     expect(store.currentId).toBe(first);
     store = removeProject(store, first);
-    expect(store).toEqual({ currentId: null, projects: [] });
+    expect(store).toEqual(EMPTY_STORE);
+  });
+
+  it("reads a store saved before folders existed", () => {
+    window.localStorage.setItem(PROJECTS_KEY, JSON.stringify({ currentId: "a", projects: [{ id: "a", updatedAt: "t", doc: welcomePreset() }] }));
+    const store = loadProjects();
+    expect(store.folders).toEqual([]);
+    expect(store.projects[0].folderId).toBeNull();
+    expect(store.currentId).toBe("a");
+  });
+
+  it("files compositions in folders and unfiles them when the folder goes", () => {
+    let store = addFolder(EMPTY_STORE, "  Client work ", "f1");
+    store = addFolder(store, "client work");
+    expect(store.folders.map((f) => f.name)).toEqual(["Client work", "client work 2"]);
+    store = addProject(store, welcomePreset(), "t1", "f1");
+    const inside = store.currentId!;
+    store = addProject(store, { ...welcomePreset(), name: "Loose" }, "t2", "nope");
+    expect(store.projects.map((p) => p.folderId)).toEqual(["f1", null]);
+    expect(inFolder(store.projects, "f1").map((p) => p.id)).toEqual([inside]);
+    expect(inFolder(store.projects, null).map((p) => p.doc.name)).toEqual(["Loose"]);
+
+    store = moveProject(store, store.currentId!, "f1");
+    expect(inFolder(store.projects, "f1")).toHaveLength(2);
+    store = moveProject(store, inside, null);
+    expect(inFolder(store.projects, null).map((p) => p.id)).toEqual([inside]);
+
+    store = renameFolder(store, "f1", "Pitches");
+    expect(store.folders[0].name).toBe("Pitches");
+    expect(saveProjects(store)).toBeNull();
+    expect(loadProjects()).toEqual(store);
+
+    store = removeFolder(store, "f1");
+    expect(store.folders.map((f) => f.name)).toEqual(["client work 2"]);
+    expect(store.projects.every((p) => p.folderId === null)).toBe(true);
+    expect(store.projects).toHaveLength(2);
+  });
+
+  it("duplicates into the original's folder and files imports without opening them", () => {
+    let store = addFolder(EMPTY_STORE, "Logos", "f1");
+    store = addProject(store, welcomePreset(), "t1", "f1");
+    const original = store.currentId!;
+    store = duplicateProject(store, original, "t2");
+    expect(inFolder(store.projects, "f1")).toHaveLength(2);
+    store = fileProject(store, { ...welcomePreset(), name: "Imported" }, "f1", "t3");
+    expect(store.currentId).not.toBe(store.projects[2].id);
+    expect(store.projects[2]).toMatchObject({ folderId: "f1", doc: { name: "Imported" } });
   });
 
   it("renames, duplicates and sorts by recency", () => {
-    let store = addProject({ currentId: null, projects: [] }, welcomePreset(), "2026-01-01T00:00:00.000Z");
+    let store = addProject(EMPTY_STORE, welcomePreset(), "2026-01-01T00:00:00.000Z");
     const id = store.currentId!;
     store = renameProject(store, id, "Intro");
     store = duplicateProject(store, id, "2026-02-01T00:00:00.000Z");
