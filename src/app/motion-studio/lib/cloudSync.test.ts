@@ -52,7 +52,7 @@ describe("deletions", () => {
   });
 
   test("removal spares the open composition and says so", () => {
-    const store = { currentId: "open", projects: [local("open", "2026-10-01T00:00:00Z"), local("other", "2026-10-01T00:00:00Z")] };
+    const store = { currentId: "open", folders: [], projects: [local("open", "2026-10-01T00:00:00Z"), local("other", "2026-10-01T00:00:00Z")] };
     const { store: next, removedCurrent } = applyPull(store, [], ["open", "other"]);
     expect(next.projects.map((p) => p.id)).toEqual(["open"]);
     expect(removedCurrent).toBe(true);
@@ -71,8 +71,14 @@ describe("the starter composition", () => {
 });
 
 describe("applyPull", () => {
+  test("a newer copy from the account stays in the folder it is filed in here", () => {
+    const store = { currentId: null, folders: [{ id: "f1", name: "Logos" }], projects: [{ ...local("a", "2026-10-01T00:00:00Z"), folderId: "f1" }] };
+    const { store: next } = applyPull(store, [remote("a", "2026-10-05T00:00:00Z")]);
+    expect(next.projects[0]).toMatchObject({ folderId: "f1", doc: { name: "a (cloud)" } });
+  });
+
   test("replaces older copies, adds new ones, and skips what isn't a composition", () => {
-    const store = { currentId: "a", projects: [local("a", "2026-10-01T00:00:00Z"), local("b", "2026-10-01T00:00:00Z")] };
+    const store = { currentId: "a", folders: [], projects: [local("a", "2026-10-01T00:00:00Z"), local("b", "2026-10-01T00:00:00Z")] };
     const { store: next, skipped } = applyPull(store, [remote("a", "2026-10-05T00:00:00Z"), remote("z", "2026-10-05T00:00:00Z"), remote("bad", "2026-10-05T00:00:00Z", { nope: true })]);
     expect(next.projects.map((p) => [p.id, p.doc.name])).toEqual([["a", "a (cloud)"], ["b", "b"], ["z", "z (cloud)"]]);
     expect(next.projects[0].updatedAt).toBe("2026-10-05T00:00:00Z");
