@@ -13,6 +13,7 @@ import {
   sendSignInLink,
   shareLinkFor,
   shareOrigin,
+  shareWithPreview,
   shortShareUrl,
   uploadShareCard,
 } from "./cloud";
@@ -162,6 +163,35 @@ describe("uploadShareCard", () => {
   test("says what went wrong when the bucket refuses it", async () => {
     const { supabase } = fakeSupabase({ cardError: true });
     await expect(uploadShareCard(supabase, "abcdefghij", new Blob([], { type: "image/png" }))).rejects.toThrow("Could not save the preview picture");
+  });
+});
+
+describe("shareWithPreview", () => {
+  const card = new Blob([new Uint8Array([0x89, 0x50])], { type: "image/png" });
+
+  test("stores the share, then its card", async () => {
+    const { supabase, calls } = fakeSupabase();
+    await expect(shareWithPreview(supabase, doc, { card, duration: 4 }, () => "abcdefghij")).resolves.toEqual({ id: "abcdefghij", cardError: null });
+    expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual(["POST /auth/v1/signup", "POST /rest/v1/shares", "POST /storage/v1/object/share-cards/abcdefghij.png"]);
+  });
+
+  test("the link still comes back when the card can't be saved, with the reason", async () => {
+    const { supabase } = fakeSupabase({ cardError: true });
+    const result = await shareWithPreview(supabase, doc, { card, duration: 4 }, () => "abcdefghij");
+    expect(result.id).toBe("abcdefghij");
+    expect(result.cardError).toMatch("Could not save the preview picture");
+  });
+
+  test("with no card (it couldn't be drawn) the link is made without one, and says so", async () => {
+    const { supabase, calls } = fakeSupabase();
+    const result = await shareWithPreview(supabase, doc, { card: null, duration: 4 }, () => "abcdefghij");
+    expect(result).toEqual({ id: "abcdefghij", cardError: "Couldn't draw the preview picture." });
+    expect(calls.some((c) => c.path.startsWith("/storage/"))).toBe(false);
+  });
+
+  test("a failure to store the share itself is still an error", async () => {
+    const { supabase } = fakeSupabase({ insertError: [{ code: "P0001", message: "Share limit reached: 50 links a day." }] });
+    await expect(shareWithPreview(supabase, doc, { card, duration: 4 }, () => "abcdefghij")).rejects.toThrow("Share limit reached");
   });
 });
 

@@ -47,7 +47,10 @@ Cloud save has to be set up first ([cloud.md](cloud.md)). Then:
 
 1. Run `supabase/migrations/20261104000000_share_pages.sql` in the SQL
    editor (or `supabase db push`). It adds the length column, the
-   `get_share_meta` function and the `share-cards` bucket with its policy.
+   `get_share_meta` function and the `share-cards` bucket with its
+   policies. **Run it before a studio build from this version goes live**:
+   the studio stores each link's length in that column, so without it no
+   short link can be made, share page or not.
 2. Deploy `share/` to Vercel as its own project: **Add New → Project**,
    import the repository, set **Root Directory** to `share`. Framework
    Next.js, no other build settings.
@@ -75,6 +78,13 @@ NEXT_PUBLIC_SUPABASE_URL=… NEXT_PUBLIC_SUPABASE_ANON_KEY=… NEXT_PUBLIC_SHARE
 
 - A share page is public to anyone with the link; shares can't be listed
   and the id can't reasonably be guessed (60 bits).
+- Anyone using the studio can make a page on the service's domain with a
+  name and sentence of their choosing (escaped, so no markup), within the
+  50-a-day limit per session. Keep that in mind before giving the service
+  a domain whose reputation matters.
+- Deleting a share (its owner can, through the API; there is no button yet)
+  takes its page and card down. The card's file can be deleted by the
+  owner too.
 - The same limits as short links apply (see [cloud.md](cloud.md)): up to
   about 2 MB of composition, 50 links a day per session, nothing with video
   or sound.

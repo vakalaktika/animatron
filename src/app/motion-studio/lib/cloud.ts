@@ -137,6 +137,35 @@ export async function uploadShareCard(supabase: SupabaseClient, id: string, card
   if (error) throw new Error(`Could not save the preview picture: ${error.message}`);
 }
 
+/** What a share page shows besides the composition: its card and length. */
+export interface SharePreview {
+  /** The card, or null when it couldn't be drawn. */
+  card: Blob | null;
+  /** Seconds. */
+  duration: number;
+}
+
+/**
+ * Stores the composition, then its preview card. The link works without
+ * the card, so a card that couldn't be drawn or saved comes back as
+ * `cardError` beside the id rather than failing the link.
+ */
+export async function shareWithPreview(
+  supabase: SupabaseClient,
+  doc: StudioDoc,
+  { card, duration }: SharePreview,
+  makeId = newShareId,
+): Promise<{ id: string; cardError: string | null }> {
+  const id = await createShare(supabase, doc, { duration, makeId });
+  if (!card) return { id, cardError: "Couldn't draw the preview picture." };
+  try {
+    await uploadShareCard(supabase, id, card);
+    return { id, cardError: null };
+  } catch (err) {
+    return { id, cardError: err instanceof Error ? err.message : "Could not save the preview picture." };
+  }
+}
+
 /** The composition behind a short share id, repaired like any opened file; null when there is no such link. */
 export async function fetchShare(supabase: SupabaseClient, id: string): Promise<StudioDoc | null> {
   if (!isShareId(id)) return null;

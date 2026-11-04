@@ -217,11 +217,10 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
             onFocus={(e) => e.currentTarget.select()}
           />
         )}
-        {share?.note && (
-          <p role="status" className="mt-2 text-sm leading-5 text-ink-muted">
-            {share.note}
-          </p>
-        )}
+        {/* Always present, so screen readers announce a note when it arrives. */}
+        <p role="status" className={share?.note ? "mt-2 text-sm leading-5 text-ink-muted" : "sr-only"}>
+          {share?.note}
+        </p>
         {share?.error && (
           <p role="alert" className="rounded-md bg-error-soft px-3 py-2 text-sm text-ink">
             {share.error}

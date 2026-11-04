@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { openInStudio, shareLink } from "@/lib/config";
 import { fallbackDescription, kicker } from "@/lib/format";
 import { isShareId } from "@/lib/id";
@@ -8,11 +9,12 @@ import { CopyLinkButton } from "./CopyLinkButton";
 
 type Params = { params: Promise<{ id: string }> };
 
-async function load(id: string) {
+/** One lookup per request: the head and the page both read it. */
+const load = cache(async (id: string) => {
   if (!isShareId(id)) return null;
   const [meta, card] = await Promise.all([readMeta(id), hasCard(id)]);
   return meta && { ...meta, card };
-}
+});
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;

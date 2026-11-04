@@ -91,6 +91,9 @@ function initialState(): { store: ProjectStore; doc: StudioDoc } {
   return { store: addProject(store, doc), doc };
 }
 
+/** Longest a share link waits for its preview card before going without one. */
+const CARD_TIMEOUT_MS = 10_000;
+
 export function MotionStudio() {
   const [initial] = useState(initialState);
   const [store, setStore] = useState<ProjectStore>(initial.store);
@@ -713,9 +716,30 @@ export function MotionStudio() {
     }
   };
 
-  /** Draws the preview card for a short link: a frame two thirds of the way in, where most pieces have landed. */
+  /**
+   * Draws the preview card for a short link: a frame two thirds of the way
+   * in, where most pieces have landed. Gives up after a while (a picture
+   * that never decodes, say) so the link isn't held up by its preview.
+   */
   const drawCard = (target: StudioDoc) =>
-    new Promise<Blob>((resolve, reject) => setCardJob({ doc: target, time: Math.min(duration, Math.max(0.1, duration * 0.66)), resolve, reject }));
+    new Promise<Blob>((resolve, reject) => {
+      const timer = window.setTimeout(() => {
+        setCardJob(null);
+        reject(new Error("Drawing the preview picture took too long."));
+      }, CARD_TIMEOUT_MS);
+      setCardJob({
+        doc: target,
+        time: Math.min(duration, Math.max(0.1, duration * 0.66)),
+        resolve: (card) => {
+          window.clearTimeout(timer);
+          resolve(card);
+        },
+        reject: (err) => {
+          window.clearTimeout(timer);
+          reject(err);
+        },
+      });
+    });
 
   const makeShareLink = async (): Promise<{ ok: true; url: string; note?: string } | { ok: false; reason: string }> => {
     if (hasMedia(doc)) return { ok: false as const, reason: "Video and sound files are too big for a link. Download the composition as a JSON file instead; the media travels inside it." };
@@ -723,9 +747,10 @@ export function MotionStudio() {
       const description = doc.description?.trim();
       const shared: StudioDoc = { ...doc, description: description || undefined };
       try {
-        const card = await drawCard(shared);
+        // A card that can't be drawn doesn't stop the link; shortLink reports it.
+        const card = await drawCard(shared).catch(() => null);
         const { url, cardError } = await cloud.shortLink(shared, { card, duration });
-        return cardError ? { ok: true, url, note: `The link works, but its preview picture didn't save, so pasted links show no picture. ${cardError}` } : { ok: true, url };
+        return cardError ? { ok: true, url, note: `The link works, but pasted links will show no preview picture. ${cardError}` } : { ok: true, url };
       } catch (err) {
         return { ok: false, reason: err instanceof Error ? err.message : "Could not make the link. Try again, or download a JSON file." };
       }

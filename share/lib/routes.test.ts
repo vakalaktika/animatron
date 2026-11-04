@@ -96,6 +96,12 @@ describe("the card route", () => {
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(PNG);
   });
 
+  it("answers 404 for a card whose share was deleted, even if the picture is still stored", async () => {
+    fakeSupabase({ metas: {} });
+    const { GET } = await import("../app/s/[id]/card.png/route");
+    expect((await GET(new Request("https://links.example.test"), params(ID))).status).toBe(404);
+  });
+
   it("answers 404 for a share without a card and for ids that aren't share ids", async () => {
     fakeSupabase({ cards: {} });
     const { GET } = await import("../app/s/[id]/card.png/route");

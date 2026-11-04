@@ -45,8 +45,9 @@ and compositions stay in the browser.
 ## Setting it up
 
 1. Create a Supabase project (free tier is fine).
-2. Run `supabase/migrations/20261026000000_cloud.sql` in the SQL editor (or
-   `supabase db push` with the CLI linked to the project).
+2. Run every file in `supabase/migrations/`, oldest first, in the SQL editor
+   (or `supabase db push` with the CLI linked to the project). The studio
+   needs all of them, including the share page one.
 3. **Authentication → Sign In / Providers**: keep *Email* on and turn on
    *Allow anonymous sign-ins*. Consider a CAPTCHA (Turnstile or hCaptcha)
    under *Attack Protection*, since anonymous sessions can create links.
