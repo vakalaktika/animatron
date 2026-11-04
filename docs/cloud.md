@@ -13,7 +13,9 @@ and compositions stay in the browser.
   copies `…/animatron/?s=<id>`. Opening it adds that copy to the visitor's
   compositions, as a long link does. Making one needs no account: the studio
   starts an anonymous session for it. Compositions with video or sound can't
-  be shared by link (the files live in the browser's media store).
+  be shared by link (the files live in the browser's media store). With the
+  share page service deployed ([share-links.md](share-links.md)), the link
+  is its page instead, which shows a preview card when pasted.
 - **Accounts.** *Compositions* offers an emailed sign-in link (no password).
   An anonymous session from making links is upgraded in place, so its links
   stay its own.
@@ -43,8 +45,9 @@ and compositions stay in the browser.
 ## Setting it up
 
 1. Create a Supabase project (free tier is fine).
-2. Run `supabase/migrations/20261026000000_cloud.sql` in the SQL editor (or
-   `supabase db push` with the CLI linked to the project).
+2. Run every file in `supabase/migrations/`, oldest first, in the SQL editor
+   (or `supabase db push` with the CLI linked to the project). The studio
+   needs all of them, including the share page one.
 3. **Authentication → Sign In / Providers**: keep *Email* on and turn on
    *Allow anonymous sign-ins*. Consider a CAPTCHA (Turnstile or hCaptcha)
    under *Attack Protection*, since anonymous sessions can create links.
