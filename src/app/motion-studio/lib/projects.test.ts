@@ -71,10 +71,19 @@ describe("projects store", () => {
     expect(store).toEqual({ currentId: null, projects: [] });
   });
 
+  it("keeps the edit time when the open document is saved unchanged", () => {
+    const doc = welcomePreset();
+    const store = addProject({ currentId: null, projects: [] }, doc, "2026-01-01T00:00:00.000Z");
+    expect(upsertCurrent(store, doc, "2026-05-05T00:00:00.000Z").projects[0].updatedAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(upsertCurrent(store, { ...doc }, "2026-05-05T00:00:00.000Z").projects[0].updatedAt).toBe("2026-05-05T00:00:00.000Z");
+  });
+
   it("renames, duplicates and sorts by recency", () => {
     let store = addProject({ currentId: null, projects: [] }, welcomePreset(), "2026-01-01T00:00:00.000Z");
     const id = store.currentId!;
-    store = renameProject(store, id, "Intro");
+    store = renameProject(store, id, "Intro", "2026-01-15T00:00:00.000Z");
+    // A rename is an edit: it moves the project's edit time.
+    expect(store.projects[0].updatedAt).toBe("2026-01-15T00:00:00.000Z");
     store = duplicateProject(store, id, "2026-02-01T00:00:00.000Z");
     expect(store.projects.map((p) => p.doc.name)).toEqual(["Intro", "Intro copy"]);
     expect(recentFirst(store.projects)[0].doc.name).toBe("Intro copy");

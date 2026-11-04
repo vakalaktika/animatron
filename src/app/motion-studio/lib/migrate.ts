@@ -1,6 +1,7 @@
 import { loopMemberIds } from "@/app/components/motion-studio/engine/hierarchy";
 import { AUTO_TAIL_LENGTH, AUTO_TAIL_POSITION } from "@/app/components/motion-studio/engine/text";
 import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
+import { sanitizeKeys } from "@/app/components/motion-studio/engine/keys";
 import { tidyPose, validateRig } from "@/app/components/motion-studio/engine/rig";
 import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
 import {
@@ -127,6 +128,12 @@ function bubbleToText(bubble: LegacyBubble): TextClip {
 
 /** Brings one clip up to the current shape, whatever version wrote it. */
 export function normalizeClip(raw: Clip | LegacyBubble): Clip {
+  const clip = normalizeFields(raw);
+  // Keyframes come from files and links: keep only well-formed ones.
+  return "keys" in raw ? { ...clip, keys: sanitizeKeys(raw.keys) } : clip;
+}
+
+function normalizeFields(raw: Clip | LegacyBubble): Clip {
   if (raw.type === "bubble") return bubbleToText(raw);
   const parentId = typeof raw.parentId === "string" ? raw.parentId : null;
   const followRotation = raw.followRotation === true;
@@ -171,6 +178,16 @@ function rigIsSound(clip: Clip): boolean {
 }
 
 /**
+ * A picture must travel inside the document as an image data URL. Anything
+ * else (a web address in a shared link) would be fetched the moment the
+ * composition opens, telling some server who opened it.
+ */
+function pictureIsInline(clip: Clip): boolean {
+  if (clip.type !== "sprite" || clip.source.kind !== "image") return true;
+  return typeof clip.source.dataUrl === "string" && clip.source.dataUrl.startsWith("data:image/");
+}
+
+/**
  * Migrates a document of any version to the current one, then repairs the
  * tree: parents that don't exist are dropped and clips on a parent loop are
  * detached. Import and localStorage are the only ways an old or broken
@@ -183,6 +200,11 @@ export function normalizeDoc(raw: RawDoc): Normalized {
     .filter((c) => {
       if (rigIsSound(c)) return true;
       warnings.push(`"${c.name}" had a rig this studio can't read; removed.`);
+      return false;
+    })
+    .filter((c) => {
+      if (pictureIsInline(c)) return true;
+      warnings.push(`"${c.name}" pointed at a picture elsewhere on the web instead of carrying it; removed.`);
       return false;
     })
     .map((c) => (c.type === "rig" ? { ...c, pose: tidyPose(c.rig, c.pose) } : c));

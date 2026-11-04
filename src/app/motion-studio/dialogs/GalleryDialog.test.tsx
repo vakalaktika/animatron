@@ -37,6 +37,7 @@ function mount() {
       onDuplicateProject={() => {}}
       onDeleteProject={() => {}}
       onRenameProject={() => {}}
+      account={{ enabled: false, user: { kind: "none" }, pendingEmail: null, syncing: false, onSendLink: async () => {}, onSignOut: () => {}, onSync: () => {} }}
     />,
   );
   return { ...utils, onNewBlank, onNewFromTemplate };

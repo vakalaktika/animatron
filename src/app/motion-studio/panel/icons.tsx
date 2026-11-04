@@ -224,6 +224,12 @@ export const PlusIcon = (p: SVGProps<SVGSVGElement>) => (
   </Icon>
 );
 
+export const MinusIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M5 12h14" />
+  </Icon>
+);
+
 /** A serif "T": add text. */
 export const TextIcon = (p: SVGProps<SVGSVGElement>) => (
   <Icon {...p}>

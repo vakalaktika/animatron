@@ -1,3 +1,4 @@
+import { moveRestTo } from "@/app/components/motion-studio/engine/keys";
 import { restTransformAt } from "@/app/components/motion-studio/engine/transform";
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 
@@ -20,7 +21,7 @@ function stripLottieData(clip: Clip): Clip {
 function detachForExport(doc: StudioDoc, clip: Clip): Clip {
   if (!clip.parentId) return clip;
   const rest = restTransformAt(doc, clip.id);
-  return { ...clip, parentId: null, x: rest.x, y: rest.y };
+  return { ...moveRestTo(clip, rest.x, rest.y), parentId: null };
 }
 
 /**
