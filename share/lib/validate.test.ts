@@ -1,10 +1,19 @@
 import { checkCard, checkDoc, checkDuration, checkMeta, MAX_DESCRIPTION, MAX_NAME, metaFrom } from "./validate";
 
-const doc = () => ({ version: 2, name: "Strands to Logo", description: "Rainbow strands.", stage: { width: 1920, height: 1080, background: "#fff", transparent: false }, clips: [{ id: "a", type: "text" }] });
+const clip = (over: Record<string, unknown>) => ({ id: "a", start: 0, x: 0, y: 0, scale: 1, ...over });
+const doc = () => ({ version: 2, name: "Strands to Logo", description: "Rainbow strands.", stage: { width: 1920, height: 1080, background: "#fff", transparent: false }, clips: [clip({ type: "text", text: "Hi" })] });
 
 describe("checkDoc", () => {
-  it("accepts a composition-shaped object", () => {
+  it("accepts a composition-shaped object, with every kind of layer", () => {
     expect(checkDoc(doc())).toMatchObject({ ok: true });
+    const every = [
+      clip({ type: "logo" }),
+      clip({ id: "b", type: "sprite", source: { kind: "image", src: "data:," } }),
+      clip({ id: "c", type: "lottie", data: { fr: 30 } }),
+      clip({ id: "d", type: "ribbon", points: [] }),
+      clip({ id: "e", type: "rig", rig: { format: "mci-rig-1" } }),
+    ];
+    expect(checkDoc({ ...doc(), clips: every })).toMatchObject({ ok: true });
   });
 
   it.each([
@@ -15,8 +24,12 @@ describe("checkDoc", () => {
     ["a long description", { ...doc(), description: "x".repeat(MAX_DESCRIPTION + 1) }, `The description is longer than ${MAX_DESCRIPTION} characters.`],
     ["a silly stage", { ...doc(), stage: { width: 10, height: 1e9 } }, "The stage size is missing or out of range."],
     ["a broken clip", { ...doc(), clips: [{ id: 1 }] }, "A layer in the composition is malformed."],
+    ["a clip of no known kind", { ...doc(), clips: [clip({ type: "hologram" })] }, "A layer in the composition is malformed."],
+    ["a sprite with no source", { ...doc(), clips: [clip({ type: "sprite" })] }, "A layer in the composition is malformed."],
+    ["a text layer with no text", { ...doc(), clips: [clip({ type: "text" })] }, "A layer in the composition is malformed."],
+    ["a clip with a NaN position", { ...doc(), clips: [clip({ type: "logo", x: "12" })] }, "A layer in the composition is malformed."],
     ["a sound track", { ...doc(), audio: { mediaId: "m" } }, "Compositions with sound can't be shared by link."],
-    ["a video layer", { ...doc(), clips: [{ id: "v", type: "sprite", source: { kind: "video", mediaId: "m" } }] }, "Compositions with video can't be shared by link."],
+    ["a video layer", { ...doc(), clips: [clip({ type: "sprite", source: { kind: "video", mediaId: "m" } })] }, "Compositions with video can't be shared by link."],
   ])("refuses %s", (_label, json, message) => {
     expect(checkDoc(json)).toEqual({ ok: false, message });
   });

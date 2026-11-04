@@ -7,5 +7,5 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!isShareId(id)) return new Response("Not found", { status: 404 });
   const stream = await readCard(id);
   if (!stream) return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
-  return new Response(stream, { status: 200, headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=31536000, immutable" } });
+  return new Response(stream, { status: 200, headers: { "Content-Type": "image/png", "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=31536000, immutable" } });
 }

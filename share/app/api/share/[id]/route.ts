@@ -11,6 +11,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!doc) return Response.json({ error: "There is nothing behind this link." }, { status: 404, headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" } });
   return new Response(doc, {
     status: 200,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*", "Cache-Control": IMMUTABLE },
+    headers: { "Content-Type": "application/json; charset=utf-8", "X-Content-Type-Options": "nosniff", "Access-Control-Allow-Origin": "*", "Cache-Control": IMMUTABLE },
   });
 }

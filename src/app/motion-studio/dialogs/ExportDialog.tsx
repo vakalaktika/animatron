@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Button, Select } from "@/app/components/shared-components";
 import type { RenderOptions } from "../export/VideoExporter";
 import type { RenderFormat } from "../export/renderer";
@@ -59,6 +59,9 @@ function Row({ icon, title, blurb, children }: { icon: ReactNode; title: string;
  */
 export function ExportDialog({ open, onClose, docName, duration, canRender, canAlpha, transparent, stageWidth, hasSound, onRender, canRecord, onRecord, hasShortLinks, description, onDescriptionChange, onShareLink, onLongLink, onDownloadJson, onShowCode, onPreview }: Props) {
   const [share, setShare] = useState<{ url?: string; error?: string; copied?: boolean; making?: boolean } | null>(null);
+  // Closing the dialog while a link is being made abandons that request:
+  // its link must not land in the clipboard or show up next time.
+  const request = useRef(0);
   const [format, setFormat] = useState<RenderFormat>("mp4");
   const [gifWidth, setGifWidth] = useState(Math.min(720, stageWidth));
   const formats: { value: RenderFormat; label: string; hint: string }[] = [
@@ -86,8 +89,10 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
     // A link already made is copied again as it is; the card and the
     // stored copy would come out the same.
     if (share?.url) return copy(share.url);
+    const token = ++request.current;
     setShare({ making: true });
     const result = await onShareLink();
+    if (token !== request.current) return;
     if (!result.ok) {
       setShare({ error: result.reason });
       return;
@@ -108,6 +113,7 @@ export function ExportDialog({ open, onClose, docName, duration, canRender, canA
     <Dialog
       open={open}
       onClose={() => {
+        request.current += 1;
         setShare(null);
         onClose();
       }}

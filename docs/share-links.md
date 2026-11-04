@@ -35,8 +35,8 @@ in the browser.
 1. Deploy `share/` to Vercel as its own project: **Add New → Project**,
    import the repository, set **Root Directory** to `share`. Framework
    Next.js, no other build settings.
-2. **Storage → Create → Blob**, connect it to the project. This sets
-   `BLOB_READ_WRITE_TOKEN` for you.
+2. **Storage → Create → Blob**, access **Public**, connect it to the
+   project. This sets `BLOB_READ_WRITE_TOKEN` for you.
 3. Environment variables on the project:
    - `STUDIO_URL`: where the studio lives, `https://vakalaktika.github.io/animatron/`
      (that is the default; set it if the studio moves).
@@ -50,9 +50,11 @@ in the browser.
    `https://animatron-share.vercel.app`. The deploy workflow passes it to the
    build as `NEXT_PUBLIC_SHARE_ORIGIN`; the next push to `main` turns short
    links on.
-5. Worth doing: a Vercel Firewall rate-limit rule on `/api/share` (say, 30
-   requests a minute per IP). The service limits sizes and validates shapes
-   but does not count requests itself.
+5. Add a Vercel Firewall rate-limit rule on `/api/share` (say, 30 requests
+   a minute per IP) before announcing the link. The service limits sizes
+   and validates shapes but does not count requests itself: without the
+   rule, a script could fill the store. Keep an eye on Blob usage; shares
+   are never deleted by the service.
 
 Locally:
 

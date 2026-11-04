@@ -72,10 +72,10 @@ export type ShortShareResult = { ok: true; url: string } | { ok: false; reason: 
  * The card is the preview picture the link shows wherever it is pasted.
  */
 export async function createShortShare(origin: string, doc: StudioDoc, card: Blob, duration: number): Promise<ShortShareResult> {
-  const json = JSON.stringify(doc);
-  if (json.length > SHORT_SHARE_LIMIT) return { ok: false, reason: "too-large" };
+  const payload = new Blob([JSON.stringify(doc)], { type: "application/json" });
+  if (payload.size > SHORT_SHARE_LIMIT) return { ok: false, reason: "too-large" };
   const form = new FormData();
-  form.set("doc", new Blob([json], { type: "application/json" }), "doc.json");
+  form.set("doc", payload, "doc.json");
   form.set("card", card, "card.png");
   form.set("duration", String(duration));
   let response: Response;

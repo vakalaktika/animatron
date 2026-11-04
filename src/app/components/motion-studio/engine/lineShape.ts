@@ -284,10 +284,13 @@ export function lineChunks(
   return out;
 }
 
+/** Attribute-safe text: colours come from documents, which can come from anywhere. */
+const attr = (value: string) => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 /** The chunks as SVG markup, for a view to drop into a `<g>`. */
 export function chunksMarkup(chunks: Chunk[]): string {
   let s = "";
-  for (const ch of chunks) s += `<path d="${ch.d}" fill="${ch.color}" fill-opacity="${ch.opacity.toFixed(3)}"/>`;
+  for (const ch of chunks) s += `<path d="${attr(ch.d)}" fill="${attr(ch.color)}" fill-opacity="${ch.opacity.toFixed(3)}"/>`;
   return s;
 }
 

@@ -11,7 +11,7 @@ afterAll(() => {
 });
 
 const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
-const doc = () => ({ version: 2, name: "Strands to Logo", description: "Woven rainbow strands turn into the rings.", stage: { width: 1920, height: 1080, background: "#fff", transparent: false }, clips: [{ id: "a", type: "text" }] });
+const doc = () => ({ version: 2, name: "Strands to Logo", description: "Woven rainbow strands turn into the rings.", stage: { width: 1920, height: 1080, background: "#fff", transparent: false }, clips: [{ id: "a", type: "text", text: "Hi", start: 0, x: 0, y: 0, scale: 1 }] });
 
 function form(over: { doc?: unknown; card?: Blob; duration?: string } = {}) {
   const body = new FormData();
@@ -48,6 +48,7 @@ describe("POST /api/share", () => {
     expect(back.status).toBe(200);
     expect(back.headers.get("access-control-allow-origin")).toBe("*");
     expect(back.headers.get("cache-control")).toContain("immutable");
+    expect(back.headers.get("x-content-type-options")).toBe("nosniff");
     expect(((await back.json()) as { name: string }).name).toBe("Strands to Logo");
 
     const { readMeta } = await import("./store");
@@ -64,7 +65,7 @@ describe("POST /api/share", () => {
     expect((await post(form({ doc: { hello: 1 } }))).status).toBe(400);
     expect((await post(form({ card: new Blob(["nope"], { type: "image/png" }) }))).status).toBe(400);
     expect((await post(form({ duration: "-1" }))).status).toBe(400);
-    const big = { ...doc(), clips: Array.from({ length: 20_000 }, (_, i) => ({ id: `c${i}`, type: "text", pad: "x".repeat(100) })) };
+    const big = { ...doc(), clips: Array.from({ length: 20_000 }, (_, i) => ({ ...doc().clips[0], id: `c${i}`, pad: "x".repeat(100) })) };
     expect((await post(form({ doc: big }))).status).toBe(413);
   });
 

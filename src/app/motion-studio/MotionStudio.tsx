@@ -92,12 +92,15 @@ export function MotionStudio() {
   const [store, setStore] = useState<ProjectStore>(initial.store);
   const storeRef = useRef(store);
   storeRef.current = store;
+  // The open document, for callbacks that outlive the render they started in.
+  const docRef = useRef<StudioDoc | null>(null);
 
   // The working document lives inside an undo history. Every write keeps the
   // clip list in tree order (each clip followed by its descendants), which is
   // what the layer tree and the paint order both read.
   const [history, setHistory] = useState<History<StudioDoc>>(() => createHistory(initial.doc));
   const doc = history.present;
+  docRef.current = doc;
   /**
    * @param key names a gesture; changes with the same key a moment apart
    * coalesce into one undo step (a drag, a slider, typing).
@@ -318,7 +321,10 @@ export function MotionStudio() {
     arrivalsTaken.current = true;
     /* eslint-disable react-hooks/set-state-in-effect -- one-time reads of external stores on mount */
     const takeShared = (shared: StudioDoc) => {
-      const next = addProject(storeRef.current, shared);
+      // The open work goes into its slot first: a short link arrives after
+      // a fetch, by which time the user may have started editing.
+      const flushed = docRef.current ? upsertCurrent(storeRef.current, docRef.current) : storeRef.current;
+      const next = addProject(flushed, shared);
       saveProjects(next);
       setStore(next);
       replaceDoc(shared);
