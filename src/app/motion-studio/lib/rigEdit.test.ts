@@ -30,6 +30,9 @@ describe("localTime", () => {
     expect(localTime(clipWith({ animationId: "wave" }), 3.5)).toBe(0.5);
     expect(localTime(clipWith({ animationId: "wave" }), 0)).toBe(0);
   });
+  it("lets the human edit the closing key at the end of the first loop", () => {
+    expect(localTime(clipWith({ animationId: "wave" }), 3)).toBe(2);
+  });
 });
 
 describe("commitPose and setBoneDelta", () => {
@@ -48,7 +51,11 @@ describe("commitPose and setBoneDelta", () => {
     const clip = setBoneDelta(clipWith({ animationId: "nod" }), 1.6, "torso", { rotation: 10 });
     const nod = clip.rig.animations.find((a) => a.id === "nod")!;
     expect(nod.tracks.map((t) => t.boneId)).toEqual(["head", "torso"]);
-    expect(nod.tracks[1].keys).toEqual([{ time: 0.6, x: 0, y: 0, rotation: 10, easing: "linear" }]);
+    expect(nod.tracks[1].keys).toEqual([
+      { time: 0, x: 0, y: 0, rotation: 0, easing: "linear" },
+      { time: 0.6, x: 0, y: 0, rotation: 10, easing: "linear" },
+    ]);
+    expect(rigPoseAt(clip, 1).torso.rotation).toBe(0);
     expect(nod.tracks[0]).toEqual(fixture().animations[1].tracks[0]);
     expect(clip.pose).toEqual({});
     expect(rigPoseAt(clip, 1.6).torso.rotation).toBe(10);
