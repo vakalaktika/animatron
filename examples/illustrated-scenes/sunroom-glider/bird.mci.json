@@ -1,0 +1,1424 @@
+{
+  "format": "mid-century-ink-rig",
+  "version": 2,
+  "name": "Sunroom bird — illustrated part",
+  "canvas": {
+    "width": 1536,
+    "height": 1024
+  },
+  "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1536 1024\"><g id=\"bird\"></g></svg>",
+  "bones": [
+    {
+      "id": "root",
+      "parentId": null,
+      "rest": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "length": 0
+    },
+    {
+      "id": "bird",
+      "parentId": "root",
+      "rest": {
+        "x": 910,
+        "y": 170,
+        "rotation": 0
+      },
+      "length": 0
+    }
+  ],
+  "bindings": [
+    {
+      "id": "bind-bird",
+      "svgId": "bird",
+      "boneId": "bird",
+      "bindMatrix": [
+        1,
+        0,
+        0,
+        1,
+        -910,
+        -170
+      ]
+    }
+  ],
+  "rasterAttachments": [
+    {
+      "id": "paint-bird",
+      "svgId": "bird",
+      "src": "data:image/png;base64,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",
+      "x": 840,
+      "y": 110,
+      "width": 140,
+      "height": 120
+    }
+  ],
+  "animations": [
+    {
+      "id": "bird-pass",
+      "name": "Quiet outside pass",
+      "duration": 8,
+      "loop": true,
+      "tracks": [
+        {
+          "boneId": "bird",
+          "keys": [
+            {
+              "time": 0,
+              "x": -70,
+              "y": 0,
+              "rotation": 0,
+              "easing": "linear"
+            },
+            {
+              "time": 0.041666666666666664,
+              "x": -69.95240541598183,
+              "y": 0.26177862041473343,
+              "rotation": -0.04362977006912224,
+              "easing": "linear"
+            },
+            {
+              "time": 0.08333333333333333,
+              "x": -69.80964431637156,
+              "y": 0.523432648384032,
+              "rotation": -0.087238774730672,
+              "easing": "linear"
+            },
+            {
+              "time": 0.125,
+              "x": -69.57178464772069,
+              "y": 0.7848375507617167,
+              "rotation": -0.13080625846028612,
+              "easing": "linear"
+            },
+            {
+              "time": 0.16666666666666666,
+              "x": -69.23893961834911,
+              "y": 1.045868912971898,
+              "rotation": -0.17431148549531633,
+              "easing": "linear"
+            },
+            {
+              "time": 0.20833333333333334,
+              "x": -68.81126764446392,
+              "y": 1.306402498223575,
+              "rotation": -0.21773374970392914,
+              "easing": "linear"
+            },
+            {
+              "time": 0.25,
+              "x": -68.28897227476207,
+              "y": 1.5663143066406189,
+              "rotation": -0.26105238444010315,
+              "easing": "linear"
+            },
+            {
+              "time": 0.2916666666666667,
+              "x": -67.67230209355213,
+              "y": 1.8254806342790006,
+              "rotation": -0.30424677237983344,
+              "easing": "linear"
+            },
+            {
+              "time": 0.3333333333333333,
+              "x": -66.9615506024416,
+              "y": 2.083778132003164,
+              "rotation": -0.34729635533386066,
+              "easing": "linear"
+            },
+            {
+              "time": 0.375,
+              "x": -66.15705608064609,
+              "y": 2.341083864193539,
+              "rotation": -0.3901806440322565,
+              "easing": "linear"
+            },
+            {
+              "time": 0.4166666666666667,
+              "x": -65.25920142398667,
+              "y": 2.5972753672572346,
+              "rotation": -0.43287922787620575,
+              "easing": "linear"
+            },
+            {
+              "time": 0.4583333333333333,
+              "x": -64.26841396265229,
+              "y": 2.8522307079140767,
+              "rotation": -0.47537178465234614,
+              "easing": "linear"
+            },
+            {
+              "time": 0.5,
+              "x": -63.185165257813665,
+              "y": 3.105828541230249,
+              "rotation": -0.5176380902050415,
+              "easing": "linear"
+            },
+            {
+              "time": 0.5416666666666666,
+              "x": -62.009970877185744,
+              "y": 3.3579481683719044,
+              "rotation": -0.5596580280619841,
+              "easing": "linear"
+            },
+            {
+              "time": 0.5833333333333334,
+              "x": -60.743390149645386,
+              "y": 3.608469594051278,
+              "rotation": -0.6014115990085463,
+              "easing": "linear"
+            },
+            {
+              "time": 0.625,
+              "x": -59.386025899021135,
+              "y": 3.857273583637939,
+              "rotation": -0.6428789306063232,
+              "easing": "linear"
+            },
+            {
+              "time": 0.6666666666666666,
+              "x": -57.93852415718169,
+              "y": 4.104241719908025,
+              "rotation": -0.6840402866513374,
+              "easing": "linear"
+            },
+            {
+              "time": 0.7083333333333334,
+              "x": -56.40157385655971,
+              "y": 4.34925645940442,
+              "rotation": -0.7248760765674033,
+              "easing": "linear"
+            },
+            {
+              "time": 0.75,
+              "x": -54.77590650225735,
+              "y": 4.592201188381077,
+              "rotation": -0.7653668647301796,
+              "easing": "linear"
+            },
+            {
+              "time": 0.7916666666666666,
+              "x": -53.06229582388942,
+              "y": 4.832960278304846,
+              "rotation": -0.8054933797174744,
+              "easing": "linear"
+            },
+            {
+              "time": 0.8333333333333334,
+              "x": -51.26155740732999,
+              "y": 5.071419140888393,
+              "rotation": -0.8452365234813989,
+              "easing": "linear"
+            },
+            {
+              "time": 0.875,
+              "x": -49.37454830653765,
+              "y": 5.307464282628015,
+              "rotation": -0.8845773804380025,
+              "easing": "linear"
+            },
+            {
+              "time": 0.9166666666666666,
+              "x": -47.40216663564434,
+              "y": 5.540983358820406,
+              "rotation": -0.9234972264700677,
+              "easing": "linear"
+            },
+            {
+              "time": 0.9583333333333334,
+              "x": -45.34535114150154,
+              "y": 5.771865227032651,
+              "rotation": -0.9619775378387753,
+              "easing": "linear"
+            },
+            {
+              "time": 1,
+              "x": -43.20508075688774,
+              "y": 5.999999999999999,
+              "rotation": -0.9999999999999999,
+              "easing": "linear"
+            },
+            {
+              "time": 1.0416666666666667,
+              "x": -40.98237413458932,
+              "y": 6.225279097926258,
+              "rotation": -1.0375465163210429,
+              "easing": "linear"
+            },
+            {
+              "time": 1.0833333333333333,
+              "x": -38.678289162577144,
+              "y": 6.447595300161885,
+              "rotation": -1.0745992166936476,
+              "easing": "linear"
+            },
+            {
+              "time": 1.125,
+              "x": -36.293922460509044,
+              "y": 6.666842796235226,
+              "rotation": -1.1111404660392044,
+              "easing": "linear"
+            },
+            {
+              "time": 1.1666666666666667,
+              "x": -33.83040885779836,
+              "y": 6.882917236212554,
+              "rotation": -1.1471528727020923,
+              "easing": "linear"
+            },
+            {
+              "time": 1.2083333333333333,
+              "x": -31.288920853496535,
+              "y": 7.095715780362989,
+              "rotation": -1.1826192967271647,
+              "easing": "linear"
+            },
+            {
+              "time": 1.25,
+              "x": -28.67066805824703,
+              "y": 7.305137148104648,
+              "rotation": -1.2175228580174413,
+              "easing": "linear"
+            },
+            {
+              "time": 1.2916666666666667,
+              "x": -25.97689661857637,
+              "y": 7.5110816662087085,
+              "rotation": -1.2518469443681182,
+              "easing": "linear"
+            },
+            {
+              "time": 1.3333333333333333,
+              "x": -23.208888623795602,
+              "y": 7.713451316238471,
+              "rotation": -1.2855752193730785,
+              "easing": "linear"
+            },
+            {
+              "time": 1.375,
+              "x": -20.367961495795477,
+              "y": 7.912149781200826,
+              "rotation": -1.3186916302001377,
+              "easing": "linear"
+            },
+            {
+              "time": 1.4166666666666667,
+              "x": -17.45546736202482,
+              "y": 8.107082491387922,
+              "rotation": -1.3511804152313205,
+              "easing": "linear"
+            },
+            {
+              "time": 1.4583333333333333,
+              "x": -14.472792411951126,
+              "y": 8.298156669387232,
+              "rotation": -1.3830261115645388,
+              "easing": "linear"
+            },
+            {
+              "time": 1.5,
+              "x": -11.421356237309517,
+              "y": 8.48528137423857,
+              "rotation": -1.414213562373095,
+              "easing": "linear"
+            },
+            {
+              "time": 1.5416666666666667,
+              "x": -8.302611156453857,
+              "y": 8.668367544717066,
+              "rotation": -1.444727924119511,
+              "easing": "linear"
+            },
+            {
+              "time": 1.5833333333333333,
+              "x": -5.1180415231320495,
+              "y": 8.847328041721488,
+              "rotation": -1.474554673620248,
+              "easing": "linear"
+            },
+            {
+              "time": 1.625,
+              "x": -1.8691630200137865,
+              "y": 9.022077689747729,
+              "rotation": -1.5036796149579548,
+              "easing": "linear"
+            },
+            {
+              "time": 1.6666666666666667,
+              "x": 1.4424780626921319,
+              "y": 9.192533317427737,
+              "rotation": -1.532088886237956,
+              "easing": "linear"
+            },
+            {
+              "time": 1.7083333333333333,
+              "x": 4.81530556318819,
+              "y": 9.35861379711458,
+              "rotation": -1.5597689661857634,
+              "easing": "linear"
+            },
+            {
+              "time": 1.75,
+              "x": 8.247714198255863,
+              "y": 9.520240083494823,
+              "rotation": -1.5867066805824703,
+              "easing": "linear"
+            },
+            {
+              "time": 1.7916666666666667,
+              "x": 11.73807032728351,
+              "y": 9.67733525120979,
+              "rotation": -1.612889208534965,
+              "easing": "linear"
+            },
+            {
+              "time": 1.8333333333333333,
+              "x": 15.284712729790769,
+              "y": 9.8298245314679,
+              "rotation": -1.6383040885779834,
+              "easing": "linear"
+            },
+            {
+              "time": 1.875,
+              "x": 18.885953396079543,
+              "y": 9.977635347630542,
+              "rotation": -1.6629392246050902,
+              "easing": "linear"
+            },
+            {
+              "time": 1.9166666666666667,
+              "x": 22.540078330635268,
+              "y": 10.120697349754627,
+              "rotation": -1.6867828916257712,
+              "easing": "linear"
+            },
+            {
+              "time": 1.9583333333333333,
+              "x": 26.245348367895687,
+              "y": 10.25894244807536,
+              "rotation": -1.7098237413458932,
+              "easing": "linear"
+            },
+            {
+              "time": 2,
+              "x": 29.99999999999997,
+              "y": 10.392304845413264,
+              "rotation": -1.7320508075688772,
+              "easing": "linear"
+            },
+            {
+              "time": 2.0416666666666665,
+              "x": 33.802246216122455,
+              "y": 10.520721068490092,
+              "rotation": -1.7534535114150154,
+              "easing": "linear"
+            },
+            {
+              "time": 2.0833333333333335,
+              "x": 37.650277352993214,
+              "y": 10.644129998138661,
+              "rotation": -1.7740216663564434,
+              "easing": "linear"
+            },
+            {
+              "time": 2.125,
+              "x": 41.54226195619974,
+              "y": 10.76247289839226,
+              "rotation": -1.7937454830653767,
+              "easing": "linear"
+            },
+            {
+              "time": 2.1666666666666665,
+              "x": 45.476347651860095,
+              "y": 10.875693444439797,
+              "rotation": -1.8126155740732997,
+              "easing": "linear"
+            },
+            {
+              "time": 2.2083333333333335,
+              "x": 49.45066202825254,
+              "y": 10.983737749433365,
+              "rotation": -1.8306229582388942,
+              "easing": "linear"
+            },
+            {
+              "time": 2.25,
+              "x": 53.463313526982034,
+              "y": 11.08655439013544,
+              "rotation": -1.8477590650225735,
+              "easing": "linear"
+            },
+            {
+              "time": 2.2916666666666665,
+              "x": 57.51239234325966,
+              "y": 11.184094431393582,
+              "rotation": -1.8640157385655969,
+              "easing": "linear"
+            },
+            {
+              "time": 2.3333333333333335,
+              "x": 61.59597133486622,
+              "y": 11.276311449430901,
+              "rotation": -1.8793852415718169,
+              "easing": "linear"
+            },
+            {
+              "time": 2.375,
+              "x": 65.71210693936766,
+              "y": 11.363161553941268,
+              "rotation": -1.8938602589902112,
+              "easing": "linear"
+            },
+            {
+              "time": 2.4166666666666665,
+              "x": 69.85884009914537,
+              "y": 11.444603408978722,
+              "rotation": -1.9074339014964536,
+              "easing": "linear"
+            },
+            {
+              "time": 2.4583333333333335,
+              "x": 74.03419719380159,
+              "y": 11.520598252631144,
+              "rotation": -1.9200997087718574,
+              "easing": "linear"
+            },
+            {
+              "time": 2.5,
+              "x": 78.23619097949586,
+              "y": 11.59110991546882,
+              "rotation": -1.9318516525781366,
+              "easing": "linear"
+            },
+            {
+              "time": 2.5416666666666665,
+              "x": 82.46282153476537,
+              "y": 11.656104837759138,
+              "rotation": -1.9426841396265229,
+              "easing": "linear"
+            },
+            {
+              "time": 2.5833333333333335,
+              "x": 86.71207721237943,
+              "y": 11.7155520854392,
+              "rotation": -1.9525920142398667,
+              "easing": "linear"
+            },
+            {
+              "time": 2.625,
+              "x": 90.98193559677435,
+              "y": 11.769423364838765,
+              "rotation": -1.9615705608064609,
+              "easing": "linear"
+            },
+            {
+              "time": 2.6666666666666665,
+              "x": 95.27036446661393,
+              "y": 11.817693036146496,
+              "rotation": -1.969615506024416,
+              "easing": "linear"
+            },
+            {
+              "time": 2.7083333333333335,
+              "x": 99.57532276201664,
+              "y": 11.860338125613128,
+              "rotation": -1.9767230209355213,
+              "easing": "linear"
+            },
+            {
+              "time": 2.75,
+              "x": 103.89476155598967,
+              "y": 11.897338336485724,
+              "rotation": -1.9828897227476208,
+              "easing": "linear"
+            },
+            {
+              "time": 2.7916666666666665,
+              "x": 108.22662502960705,
+              "y": 11.928676058667836,
+              "rotation": -1.9881126764446393,
+              "easing": "linear"
+            },
+            {
+              "time": 2.8333333333333335,
+              "x": 112.56885145046837,
+              "y": 11.954336377100947,
+              "rotation": -1.992389396183491,
+              "easing": "linear"
+            },
+            {
+              "time": 2.875,
+              "x": 116.9193741539714,
+              "y": 11.97430707886324,
+              "rotation": -1.995717846477207,
+              "easing": "linear"
+            },
+            {
+              "time": 2.9166666666666665,
+              "x": 121.2761225269328,
+              "y": 11.988578658982293,
+              "rotation": -1.9980964431637156,
+              "easing": "linear"
+            },
+            {
+              "time": 2.9583333333333335,
+              "x": 125.63702299308775,
+              "y": 11.99714432495891,
+              "rotation": -1.9995240541598183,
+              "easing": "linear"
+            },
+            {
+              "time": 3,
+              "x": 129.99999999999997,
+              "y": 12,
+              "rotation": -2,
+              "easing": "linear"
+            },
+            {
+              "time": 3.0416666666666665,
+              "x": 134.3629770069122,
+              "y": 11.99714432495891,
+              "rotation": -1.9995240541598183,
+              "easing": "linear"
+            },
+            {
+              "time": 3.0833333333333335,
+              "x": 138.72387747306723,
+              "y": 11.988578658982293,
+              "rotation": -1.9980964431637156,
+              "easing": "linear"
+            },
+            {
+              "time": 3.125,
+              "x": 143.08062584602862,
+              "y": 11.97430707886324,
+              "rotation": -1.995717846477207,
+              "easing": "linear"
+            },
+            {
+              "time": 3.1666666666666665,
+              "x": 147.43114854953163,
+              "y": 11.954336377100947,
+              "rotation": -1.992389396183491,
+              "easing": "linear"
+            },
+            {
+              "time": 3.2083333333333335,
+              "x": 151.77337497039287,
+              "y": 11.928676058667836,
+              "rotation": -1.9881126764446393,
+              "easing": "linear"
+            },
+            {
+              "time": 3.25,
+              "x": 156.10523844401027,
+              "y": 11.897338336485724,
+              "rotation": -1.9828897227476208,
+              "easing": "linear"
+            },
+            {
+              "time": 3.2916666666666665,
+              "x": 160.4246772379833,
+              "y": 11.860338125613128,
+              "rotation": -1.9767230209355213,
+              "easing": "linear"
+            },
+            {
+              "time": 3.3333333333333335,
+              "x": 164.72963553338607,
+              "y": 11.817693036146496,
+              "rotation": -1.969615506024416,
+              "easing": "linear"
+            },
+            {
+              "time": 3.375,
+              "x": 169.01806440322565,
+              "y": 11.769423364838765,
+              "rotation": -1.9615705608064609,
+              "easing": "linear"
+            },
+            {
+              "time": 3.4166666666666665,
+              "x": 173.28792278762057,
+              "y": 11.7155520854392,
+              "rotation": -1.9525920142398667,
+              "easing": "linear"
+            },
+            {
+              "time": 3.4583333333333335,
+              "x": 177.53717846523463,
+              "y": 11.656104837759138,
+              "rotation": -1.9426841396265229,
+              "easing": "linear"
+            },
+            {
+              "time": 3.5,
+              "x": 181.76380902050414,
+              "y": 11.59110991546882,
+              "rotation": -1.9318516525781366,
+              "easing": "linear"
+            },
+            {
+              "time": 3.5416666666666665,
+              "x": 185.9658028061984,
+              "y": 11.520598252631144,
+              "rotation": -1.9200997087718574,
+              "easing": "linear"
+            },
+            {
+              "time": 3.5833333333333335,
+              "x": 190.14115990085457,
+              "y": 11.444603408978724,
+              "rotation": -1.9074339014964539,
+              "easing": "linear"
+            },
+            {
+              "time": 3.625,
+              "x": 194.28789306063226,
+              "y": 11.363161553941268,
+              "rotation": -1.8938602589902114,
+              "easing": "linear"
+            },
+            {
+              "time": 3.6666666666666665,
+              "x": 198.4040286651337,
+              "y": 11.276311449430901,
+              "rotation": -1.8793852415718169,
+              "easing": "linear"
+            },
+            {
+              "time": 3.7083333333333335,
+              "x": 202.4876076567403,
+              "y": 11.184094431393582,
+              "rotation": -1.864015738565597,
+              "easing": "linear"
+            },
+            {
+              "time": 3.75,
+              "x": 206.53668647301794,
+              "y": 11.086554390135442,
+              "rotation": -1.8477590650225737,
+              "easing": "linear"
+            },
+            {
+              "time": 3.7916666666666665,
+              "x": 210.54933797174743,
+              "y": 10.983737749433367,
+              "rotation": -1.8306229582388944,
+              "easing": "linear"
+            },
+            {
+              "time": 3.8333333333333335,
+              "x": 214.52365234813993,
+              "y": 10.8756934444398,
+              "rotation": -1.8126155740733,
+              "easing": "linear"
+            },
+            {
+              "time": 3.875,
+              "x": 218.4577380438002,
+              "y": 10.76247289839226,
+              "rotation": -1.7937454830653767,
+              "easing": "linear"
+            },
+            {
+              "time": 3.9166666666666665,
+              "x": 222.3497226470068,
+              "y": 10.644129998138663,
+              "rotation": -1.7740216663564436,
+              "easing": "linear"
+            },
+            {
+              "time": 3.9583333333333335,
+              "x": 226.1977537838775,
+              "y": 10.52072106849009,
+              "rotation": -1.7534535114150152,
+              "easing": "linear"
+            },
+            {
+              "time": 4,
+              "x": 229.99999999999994,
+              "y": 10.392304845413264,
+              "rotation": -1.7320508075688774,
+              "easing": "linear"
+            },
+            {
+              "time": 4.041666666666667,
+              "x": 233.7546516321043,
+              "y": 10.258942448075357,
+              "rotation": -1.709823741345893,
+              "easing": "linear"
+            },
+            {
+              "time": 4.083333333333333,
+              "x": 237.4599216693647,
+              "y": 10.12069734975463,
+              "rotation": -1.6867828916257717,
+              "easing": "linear"
+            },
+            {
+              "time": 4.125,
+              "x": 241.11404660392037,
+              "y": 9.977635347630542,
+              "rotation": -1.6629392246050902,
+              "easing": "linear"
+            },
+            {
+              "time": 4.166666666666667,
+              "x": 244.71528727020922,
+              "y": 9.8298245314679,
+              "rotation": -1.6383040885779834,
+              "easing": "linear"
+            },
+            {
+              "time": 4.208333333333333,
+              "x": 248.26192967271646,
+              "y": 9.677335251209794,
+              "rotation": -1.6128892085349655,
+              "easing": "linear"
+            },
+            {
+              "time": 4.25,
+              "x": 251.7522858017441,
+              "y": 9.520240083494823,
+              "rotation": -1.5867066805824703,
+              "easing": "linear"
+            },
+            {
+              "time": 4.291666666666667,
+              "x": 255.1846944368118,
+              "y": 9.35861379711458,
+              "rotation": -1.5597689661857634,
+              "easing": "linear"
+            },
+            {
+              "time": 4.333333333333333,
+              "x": 258.55752193730785,
+              "y": 9.19253331742774,
+              "rotation": -1.5320888862379567,
+              "easing": "linear"
+            },
+            {
+              "time": 4.375,
+              "x": 261.8691630200138,
+              "y": 9.022077689747729,
+              "rotation": -1.5036796149579548,
+              "easing": "linear"
+            },
+            {
+              "time": 4.416666666666667,
+              "x": 265.1180415231321,
+              "y": 8.84732804172149,
+              "rotation": -1.4745546736202482,
+              "easing": "linear"
+            },
+            {
+              "time": 4.458333333333333,
+              "x": 268.3026111564538,
+              "y": 8.668367544717068,
+              "rotation": -1.4447279241195112,
+              "easing": "linear"
+            },
+            {
+              "time": 4.5,
+              "x": 271.4213562373095,
+              "y": 8.485281374238571,
+              "rotation": -1.4142135623730951,
+              "easing": "linear"
+            },
+            {
+              "time": 4.541666666666667,
+              "x": 274.4727924119512,
+              "y": 8.298156669387234,
+              "rotation": -1.383026111564539,
+              "easing": "linear"
+            },
+            {
+              "time": 4.583333333333333,
+              "x": 277.4554673620248,
+              "y": 8.107082491387924,
+              "rotation": -1.3511804152313207,
+              "easing": "linear"
+            },
+            {
+              "time": 4.625,
+              "x": 280.3679614957955,
+              "y": 7.912149781200828,
+              "rotation": -1.318691630200138,
+              "easing": "linear"
+            },
+            {
+              "time": 4.666666666666667,
+              "x": 283.2088886237956,
+              "y": 7.713451316238469,
+              "rotation": -1.2855752193730783,
+              "easing": "linear"
+            },
+            {
+              "time": 4.708333333333333,
+              "x": 285.97689661857635,
+              "y": 7.51108166620871,
+              "rotation": -1.2518469443681184,
+              "easing": "linear"
+            },
+            {
+              "time": 4.75,
+              "x": 288.670668058247,
+              "y": 7.3051371481046505,
+              "rotation": -1.2175228580174418,
+              "easing": "linear"
+            },
+            {
+              "time": 4.791666666666667,
+              "x": 291.2889208534965,
+              "y": 7.095715780362987,
+              "rotation": -1.1826192967271645,
+              "easing": "linear"
+            },
+            {
+              "time": 4.833333333333333,
+              "x": 293.8304088577983,
+              "y": 6.882917236212556,
+              "rotation": -1.1471528727020928,
+              "easing": "linear"
+            },
+            {
+              "time": 4.875,
+              "x": 296.29392246050907,
+              "y": 6.66684279623523,
+              "rotation": -1.111140466039205,
+              "easing": "linear"
+            },
+            {
+              "time": 4.916666666666667,
+              "x": 298.67828916257713,
+              "y": 6.447595300161885,
+              "rotation": -1.0745992166936476,
+              "easing": "linear"
+            },
+            {
+              "time": 4.958333333333333,
+              "x": 300.9823741345893,
+              "y": 6.225279097926261,
+              "rotation": -1.0375465163210436,
+              "easing": "linear"
+            },
+            {
+              "time": 5,
+              "x": 303.20508075688775,
+              "y": 5.999999999999999,
+              "rotation": -0.9999999999999999,
+              "easing": "linear"
+            },
+            {
+              "time": 5.041666666666667,
+              "x": 305.34535114150157,
+              "y": 5.771865227032651,
+              "rotation": -0.9619775378387753,
+              "easing": "linear"
+            },
+            {
+              "time": 5.083333333333333,
+              "x": 307.40216663564433,
+              "y": 5.540983358820407,
+              "rotation": -0.9234972264700678,
+              "easing": "linear"
+            },
+            {
+              "time": 5.125,
+              "x": 309.37454830653763,
+              "y": 5.30746428262802,
+              "rotation": -0.8845773804380034,
+              "easing": "linear"
+            },
+            {
+              "time": 5.166666666666667,
+              "x": 311.26155740733003,
+              "y": 5.071419140888394,
+              "rotation": -0.845236523481399,
+              "easing": "linear"
+            },
+            {
+              "time": 5.208333333333333,
+              "x": 313.0622958238894,
+              "y": 4.8329602783048475,
+              "rotation": -0.8054933797174746,
+              "easing": "linear"
+            },
+            {
+              "time": 5.25,
+              "x": 314.7759065022573,
+              "y": 4.592201188381079,
+              "rotation": -0.7653668647301798,
+              "easing": "linear"
+            },
+            {
+              "time": 5.291666666666667,
+              "x": 316.4015738565597,
+              "y": 4.349256459404416,
+              "rotation": -0.7248760765674027,
+              "easing": "linear"
+            },
+            {
+              "time": 5.333333333333333,
+              "x": 317.9385241571817,
+              "y": 4.1042417199080266,
+              "rotation": -0.6840402866513378,
+              "easing": "linear"
+            },
+            {
+              "time": 5.375,
+              "x": 319.3860258990211,
+              "y": 3.857273583637941,
+              "rotation": -0.6428789306063235,
+              "easing": "linear"
+            },
+            {
+              "time": 5.416666666666667,
+              "x": 320.7433901496454,
+              "y": 3.60846959405128,
+              "rotation": -0.6014115990085467,
+              "easing": "linear"
+            },
+            {
+              "time": 5.458333333333333,
+              "x": 322.0099708771857,
+              "y": 3.3579481683719123,
+              "rotation": -0.5596580280619854,
+              "easing": "linear"
+            },
+            {
+              "time": 5.5,
+              "x": 323.18516525781365,
+              "y": 3.1058285412302524,
+              "rotation": -0.517638090205042,
+              "easing": "linear"
+            },
+            {
+              "time": 5.541666666666667,
+              "x": 324.2684139626523,
+              "y": 2.8522307079140754,
+              "rotation": -0.47537178465234586,
+              "easing": "linear"
+            },
+            {
+              "time": 5.583333333333333,
+              "x": 325.2592014239866,
+              "y": 2.597275367257238,
+              "rotation": -0.43287922787620636,
+              "easing": "linear"
+            },
+            {
+              "time": 5.625,
+              "x": 326.1570560806461,
+              "y": 2.341083864193538,
+              "rotation": -0.39018064403225633,
+              "easing": "linear"
+            },
+            {
+              "time": 5.666666666666667,
+              "x": 326.9615506024416,
+              "y": 2.083778132003163,
+              "rotation": -0.34729635533386055,
+              "easing": "linear"
+            },
+            {
+              "time": 5.708333333333333,
+              "x": 327.67230209355216,
+              "y": 1.825480634279005,
+              "rotation": -0.30424677237983416,
+              "easing": "linear"
+            },
+            {
+              "time": 5.75,
+              "x": 328.2889722747621,
+              "y": 1.5663143066406238,
+              "rotation": -0.261052384440104,
+              "easing": "linear"
+            },
+            {
+              "time": 5.791666666666667,
+              "x": 328.8112676444639,
+              "y": 1.306402498223575,
+              "rotation": -0.21773374970392914,
+              "easing": "linear"
+            },
+            {
+              "time": 5.833333333333333,
+              "x": 329.2389396183491,
+              "y": 1.0458689129718983,
+              "rotation": -0.1743114854953164,
+              "easing": "linear"
+            },
+            {
+              "time": 5.875,
+              "x": 329.5717846477207,
+              "y": 0.7848375507617174,
+              "rotation": -0.13080625846028623,
+              "easing": "linear"
+            },
+            {
+              "time": 5.916666666666667,
+              "x": 329.8096443163716,
+              "y": 0.5234326483840275,
+              "rotation": -0.08723877473067125,
+              "easing": "linear"
+            },
+            {
+              "time": 5.958333333333333,
+              "x": 329.9524054159818,
+              "y": 0.2617786204147346,
+              "rotation": -0.043629770069122435,
+              "easing": "linear"
+            },
+            {
+              "time": 6,
+              "x": 330,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.041666666666667,
+              "x": 329.5717846477207,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.083333333333333,
+              "x": 328.2889722747621,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.125,
+              "x": 326.1570560806461,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.166666666666667,
+              "x": 323.18516525781365,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.208333333333333,
+              "x": 319.38602589902115,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.25,
+              "x": 314.7759065022573,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.291666666666667,
+              "x": 309.37454830653763,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.333333333333333,
+              "x": 303.2050807568878,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.375,
+              "x": 296.29392246050907,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.416666666666667,
+              "x": 288.670668058247,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.458333333333333,
+              "x": 280.36796149579556,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.5,
+              "x": 271.4213562373095,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.541666666666667,
+              "x": 261.86916302001373,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.583333333333333,
+              "x": 251.75228580174422,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.625,
+              "x": 241.11404660392046,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.666666666666667,
+              "x": 229.99999999999994,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.708333333333333,
+              "x": 218.45773804380033,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.75,
+              "x": 206.53668647301797,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.791666666666667,
+              "x": 194.28789306063226,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.833333333333333,
+              "x": 181.76380902050423,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.875,
+              "x": 169.01806440322565,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.916666666666667,
+              "x": 156.10523844401024,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 6.958333333333333,
+              "x": 143.08062584602868,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7,
+              "x": 130.00000000000003,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.041666666666667,
+              "x": 116.91937415397132,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.083333333333333,
+              "x": 103.89476155598976,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.125,
+              "x": 90.98193559677435,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.166666666666667,
+              "x": 78.23619097949577,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.208333333333333,
+              "x": 65.7121069393678,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.25,
+              "x": 53.46331352698206,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.291666666666667,
+              "x": 41.542261956199695,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.333333333333333,
+              "x": 30.000000000000114,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.375,
+              "x": 18.88595339607963,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.416666666666667,
+              "x": 8.247714198255835,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.458333333333333,
+              "x": -1.8691630200136728,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.5,
+              "x": -11.42135623730951,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.541666666666667,
+              "x": -20.367961495795498,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.583333333333333,
+              "x": -28.670668058246918,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.625,
+              "x": -36.293922460509066,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.666666666666667,
+              "x": -43.20508075688775,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.708333333333333,
+              "x": -49.37454830653763,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.75,
+              "x": -54.77590650225733,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.791666666666667,
+              "x": -59.38602589902115,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.833333333333333,
+              "x": -63.18516525781365,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.875,
+              "x": -66.1570560806461,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.916666666666667,
+              "x": -68.2889722747621,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 7.958333333333333,
+              "x": -69.57178464772068,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            },
+            {
+              "time": 8,
+              "x": -70,
+              "y": 1.4695761589768238e-15,
+              "rotation": -2.4492935982947064e-16,
+              "easing": "linear"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

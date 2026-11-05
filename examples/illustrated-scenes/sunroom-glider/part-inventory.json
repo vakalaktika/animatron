@@ -1,0 +1,182 @@
+{
+  "canvas": {
+    "width": 1536,
+    "height": 1024
+  },
+  "registration": "Extraction shifted left; arm and bird translated +30px, head +38px, cuff +35px. Generated head edits resampled to common 480x512 frame. Full-resolution room uses a separate static rig clip. See visual review for remaining differences.",
+  "parts": [
+    {
+      "id": "plate",
+      "source": "clean-plate.png",
+      "x": 0,
+      "y": 0,
+      "width": 1536,
+      "height": 1024,
+      "alpha": false,
+      "bone": "root",
+      "inferred": "Sky, garden and wall concealed by removed head/arm/bird.",
+      "file": "parts/plate.png",
+      "pixelWidth": 1536,
+      "pixelHeight": 1024,
+      "bytes": 1586161
+    },
+    {
+      "id": "lift",
+      "source": "extracted-parts.png",
+      "crop": {
+        "left": 790,
+        "top": 340,
+        "width": 264,
+        "height": 400
+      },
+      "x": 820,
+      "y": 340,
+      "width": 264,
+      "height": 400,
+      "alpha": true,
+      "bone": "lift",
+      "inferred": "Rounded lower forearm extends inside stationary cuff.",
+      "file": "parts/lift.png",
+      "pixelWidth": 264,
+      "pixelHeight": 400,
+      "bytes": 57975,
+      "alphaStats": {
+        "transparent": 68363,
+        "visible": 37237,
+        "partial": 37237
+      }
+    },
+    {
+      "id": "head-open",
+      "source": "head-open.png",
+      "x": 1094,
+      "y": 320,
+      "width": 480,
+      "height": 512,
+      "alpha": true,
+      "bone": "head",
+      "inferred": "Neck and collar edge repainted in extraction.",
+      "file": "parts/head-open.png",
+      "pixelWidth": 480,
+      "pixelHeight": 512,
+      "bytes": 160318,
+      "alphaStats": {
+        "transparent": 138724,
+        "visible": 107036,
+        "partial": 107036
+      }
+    },
+    {
+      "id": "head-blink",
+      "source": "head-blink.png",
+      "x": 1094,
+      "y": 320,
+      "width": 480,
+      "height": 512,
+      "alpha": true,
+      "bone": "head",
+      "inferred": "Closed eyelids; replacement generated from open head.",
+      "file": "parts/head-blink.png",
+      "pixelWidth": 480,
+      "pixelHeight": 512,
+      "bytes": 158333,
+      "alphaStats": {
+        "transparent": 141687,
+        "visible": 104073,
+        "partial": 102339
+      }
+    },
+    {
+      "id": "head-mid",
+      "source": "head-mid.png",
+      "x": 1094,
+      "y": 320,
+      "width": 480,
+      "height": 512,
+      "alpha": true,
+      "bone": "head",
+      "inferred": "Intermediate perspective head drawing; concealed far-side face/hair inferred.",
+      "file": "parts/head-mid.png",
+      "pixelWidth": 480,
+      "pixelHeight": 512,
+      "bytes": 173346,
+      "alphaStats": {
+        "transparent": 133816,
+        "visible": 111944,
+        "partial": 110535
+      }
+    },
+    {
+      "id": "head-turn",
+      "source": "head-turn.png",
+      "x": 1094,
+      "y": 320,
+      "width": 480,
+      "height": 512,
+      "alpha": true,
+      "bone": "head",
+      "inferred": "More frontal perspective head drawing; concealed face/hair inferred.",
+      "file": "parts/head-turn.png",
+      "pixelWidth": 480,
+      "pixelHeight": 512,
+      "bytes": 160865,
+      "alphaStats": {
+        "transparent": 144710,
+        "visible": 101050,
+        "partial": 99552
+      }
+    },
+    {
+      "id": "cuff-front",
+      "source": "cuff-front.png",
+      "crop": {
+        "left": 840,
+        "top": 656,
+        "width": 128,
+        "height": 108
+      },
+      "x": 875,
+      "y": 656,
+      "width": 128,
+      "height": 108,
+      "alpha": true,
+      "bone": "root",
+      "inferred": "Generated isolated foreground cuff follows curved skin boundary; manually registered +35px.",
+      "file": "parts/cuff-front.png",
+      "pixelWidth": 128,
+      "pixelHeight": 108,
+      "bytes": 11239,
+      "alphaStats": {
+        "transparent": 8088,
+        "visible": 5736,
+        "partial": 5736
+      }
+    },
+    {
+      "id": "bird",
+      "source": "extracted-parts.png",
+      "crop": {
+        "left": 810,
+        "top": 110,
+        "width": 140,
+        "height": 120
+      },
+      "x": 840,
+      "y": 110,
+      "width": 140,
+      "height": 120,
+      "alpha": true,
+      "bone": "bird",
+      "inferred": "Extracted bird; no automatic wing deformation.",
+      "file": "parts/bird.png",
+      "pixelWidth": 140,
+      "pixelHeight": 120,
+      "bytes": 15578,
+      "alphaStats": {
+        "transparent": 10570,
+        "visible": 6230,
+        "partial": 6230
+      }
+    }
+  ]
+}

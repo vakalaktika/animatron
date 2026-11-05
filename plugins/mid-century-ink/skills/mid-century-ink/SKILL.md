@@ -48,6 +48,8 @@ For every animated scene, read `references/illustrated-scene-production.md` befo
 
 Volume models remain useful construction aids. Their projected primitive hulls are never mandatory final contours: deliberately author curves, asymmetry, taper, cheeks, hands, clothing and species anatomy. Preserve accepted character identities and approval records; reference people are visual targets, not newly approved reusable characters.
 
+Match production evidence to the requested visual goal. To prove preservation of generated illustration quality, use actual generated illustration with the selected visual inputs, then inspect its separated/recombined parts. Rasterizing hand-coded SVG art does not provide that proof. A layered rig edits part transforms, drawing choices and timing; its internal painted marks are not editable vector paths. A structurally valid example may still fail the visual target; report that honestly and keep it a technical fixture.
+
 ## Choose the output workflow
 
 - **Raster illustrations and photo/artwork edits:** follow the Workflow below and the host adapter's image-tool rules.

@@ -18,11 +18,17 @@ Use existing Rig 1 for vector skeletons. For head angles and gestures, draw need
 
 ## Path B: layered illustration
 
+For a benchmark of generated illustration fidelity, actually generate the finished illustration through the host image tool with the selected visual inputs attached. Hand-coded vector art is a distinct production path. Rasterizing that vector art tests raster attachments, but does not establish preservation of generated illustration quality. Do not label a technical fixture as a style benchmark merely because its palette, scene contents or rig structure are correct.
+
 Start from a high-resolution background plus separate transparent character/prop parts. A flattened picture is a painting, not automatically a clean rig. Create isolated parts directly when possible. When extracting from a finished picture, inspect the actual masks and reconstruct concealed anatomy/clothing economically: label inferred areas, remove background color halos and preserve antialiased transparent edges. Keep lossless transparent PNG masters and the editable source used to create them.
 
 Make a part inventory with source file, pixel size, canvas position, anchor, bone, paint order and visible/inferred areas. Rig 2 `rasterAttachments` embeds validated PNGs inside bound SVG groups; inverse-rest matrices preserve registration. No remote images, arbitrary SVG `<image>`, external fetches or animated payloads. The new contract is explicit; do not put Rig 2 fields in Rig 1. High-resolution art must fit the actual importer budgets; do not silently flatten, lower quality or claim transparency is verified without viewing it.
 
 Inspect rest, mid-motion and extreme poses against contrasting light/dark backgrounds. Repair seams, joint holes, clipped fingers and detached marks. Hide seams under designed overlaps or create a replacement drawing at that angle. Rigid attachment rotation is not mesh deformation. Add deformation only after a concrete action demonstrates need and an editable round-trip fixture proves it.
+
+Generated extractions and clean plates can drift in scale, placement, color or facial identity even when prompted to preserve them. Register by observable anchors, inspect the rebuilt still beside the original, and record inferred/repainted regions. Inspect alternate head drawings as complete heads, including hairline, ear, jaw and neck; a clean alpha channel alone does not prove registration or continuity. If a generated edit fails these checks, repair it or report the remaining mismatch.
+
+Describe editability precisely: layered PNG rigs support part transforms, drawing replacement and timing edits; they do not expose internal ink/fills as vector paths. Preserve the generated source and lossless part masters. Fully editable vector illustration requires separately authored or supervised traced curves and its own visual review. Never promise an automatic raster-to-vector conversion will retain the selected drawing quality.
 
 ## Motion and delivery
 

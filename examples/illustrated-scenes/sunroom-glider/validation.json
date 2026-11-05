@@ -1,0 +1,95 @@
+{
+  "date": "2026-11-05",
+  "generator": "Built-in image_gen; required Detailed visual anchors attached, no API fallback",
+  "browser": "Chrome/156.0.8078.80",
+  "renderer": "Application StageCanvas + snapshotStage + renderVideo",
+  "duration": 8,
+  "tail": 0,
+  "fixtureTests": {
+    "new": 6,
+    "legacy": 6,
+    "result": "PASS"
+  },
+  "browserJourneys": {
+    "new": "PASS",
+    "legacy": "PASS",
+    "import": true,
+    "drawingEdit": true,
+    "poseEdit": true,
+    "saveReopen": true,
+    "rigExport": true,
+    "compositionExport": true,
+    "reducedMotionPaused": true,
+    "pageExceptions": 0,
+    "viewports": [
+      1440,
+      390
+    ]
+  },
+  "composer": {
+    "result": "PASS",
+    "duration": 8,
+    "tail": 0,
+    "hashLink": "Over 60000-character budget; JSON only",
+    "loader": "Existing installed tsx 4 via task-local cache"
+  },
+  "visualReview": {
+    "status": "Candidate; not user-approved",
+    "limitations": [
+      "More hair highlights/tonal finish than style anchor",
+      "Held three-angle head turn with some feature/hair shifts, not mesh interpolation",
+      "Single bird wing pose; reset hidden by opacity",
+      "Native OpenRaster paint-editor round trip untested"
+    ]
+  },
+  "files": {
+    "source/key-pose.png": {
+      "bytes": 1823653,
+      "sha256": "90c90e5fe0607ed63701477a76ffa0edb6aa2a8eb609e788fcd5853edea08b50"
+    },
+    "source/clean-plate.png": {
+      "bytes": 1811099,
+      "sha256": "ae3540601aff414eccfceaabba1077ba7ba8211e22bcfb9092b5c1e60c0f38f8"
+    },
+    "source/extracted-parts.png": {
+      "bytes": 1132146,
+      "sha256": "67959b8b8c2c7593ea5bf14f37dbf020a72feb81225c0bffd2594b0208eff478"
+    },
+    "source/head-open.png": {
+      "bytes": 381067,
+      "sha256": "1302caeb2db9a4c9047bcfd6f37a5325929ebc8bc6eeaacd9433c713ba5579e1"
+    },
+    "source/head-blink.png": {
+      "bytes": 870147,
+      "sha256": "514bd3e9acf5d6e00a3b98684c554d829d1f4c4027d5d57d58d0004120cca99f"
+    },
+    "source/head-mid.png": {
+      "bytes": 1070772,
+      "sha256": "7b47ea51214c63e1971f3b0d67eee6d4ca418a8389506a72d2c06ded3910e458"
+    },
+    "source/head-turn.png": {
+      "bytes": 974665,
+      "sha256": "fa5b3c73eac6b58940977d75e36c3576730dfd6caa5d222729f77fc33278676d"
+    },
+    "source/cuff-front.png": {
+      "bytes": 537572,
+      "sha256": "d89043b4a145ba7b6684ed78a53e4c7a7e077a1311a41e0ae6a48105cc405cc1"
+    },
+    "sunroom-glider.animatron.json": {
+      "bytes": 3204863,
+      "sha256": "8ead15fe3f1f5945748d8e23f6885393a236a0b41a108ec207908c8b1ce12b97"
+    },
+    "sunroom-glider.playback.animatron.json": {
+      "bytes": 3141069,
+      "sha256": "534913b8cab524aeb8d38e3a42e12e38aee8133bd1b069c949336d91e7c6b430"
+    },
+    "sunroom-glider.ora": {
+      "bytes": 5072358,
+      "sha256": "6919478fb92839efc55e72861dc84c57820360b95bc957dc8f80368eb8a4414d"
+    },
+    "preview.mp4": {
+      "bytes": 2994413,
+      "sha256": "1f6e76a7d4eeb458caa3f2453e810772a6f1f7d048770f1392c620fc3ff17004"
+    }
+  }
+}

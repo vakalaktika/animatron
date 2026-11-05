@@ -5,8 +5,10 @@ import { createServer } from "node:http";
 import { readFileSync, existsSync, mkdirSync, writeFileSync, statSync } from "node:fs";
 import { resolve, extname, join } from "node:path";
 import puppeteer from "puppeteer-core";
+import { isDeepStrictEqual } from "node:util";
 const root = resolve(import.meta.dirname, "../out");
-const output = resolve(import.meta.dirname, "../examples/illustrated-scenes/qa");
+const [sceneFile, outputDirectory] = process.argv.slice(2);
+const output = outputDirectory ? resolve(outputDirectory) : resolve(import.meta.dirname, "../examples/illustrated-scenes/qa");
 mkdirSync(output, { recursive: true });
 const types = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".woff2": "font/woff2" };
 const server = createServer((req, res) => {
@@ -45,22 +47,29 @@ try {
     }, {}, text);
   };
   await click("Compositions");
-  const file = resolve(import.meta.dirname, "../examples/illustrated-scenes/garden-glider/garden-glider-layered.animatron.json");
+  const file = sceneFile ? resolve(sceneFile) : resolve(import.meta.dirname, "../examples/illustrated-scenes/garden-glider/garden-glider-layered.animatron.json");
   const input = await page.$('input[type="file"][multiple]');
   await input.uploadFile(file);
   const document = JSON.parse(readFileSync(file, "utf8"));
+  const sceneIndex = document.clips.findIndex(c => c.type === "rig" && c.rig.bones.some(b => b.id === "lift"));
+  if (sceneIndex < 0) throw new Error("QA fixture must contain an illustrated lift rig.");
+  const sourceRig = document.clips[sceneIndex].rig;
+  const headSet = sourceRig.drawingSets.find(s => s.drawings.some(d => d.id === "turn" || d.id === "side"));
+  const drawingId = headSet.drawings.some(d => d.id === "turn") ? "turn" : "side";
+  const visibleGroup = headSet.drawings.find(d => d.id === drawingId).svgIds[0];
+  const hiddenGroup = headSet.drawings.find(d => d.id === headSet.defaultDrawingId).svgIds[0];
   const name = document.name;
   await click("Open " + name);
   await page.waitForSelector('[data-rig-part="lift"] image');
   // Select the scene's layer from its timeline/layer row.
-  await click(document.clips[0].name);
+  await click(document.clips[sceneIndex].name);
   await page.waitForSelector("select");
   assert.equal(await page.evaluate(() => !!Array.from(document.querySelectorAll("button")).find(b => b.getAttribute("aria-label") === "Play")), true, "reduced motion must remain paused after opening a project");
   for (const select of await page.$$("select")) {
-    if (await select.evaluate(e => Array.from(e.options).some(o => o.value === "side"))) await select.select("side");
+    if (await select.evaluate((e, id) => Array.from(e.options).some(o => o.value === id), drawingId)) await select.select(drawingId);
   }
-  await page.waitForFunction(() => document.querySelector('[data-rig-part="head-side"]').getAttribute("opacity") === "1");
-  assert.equal(await page.$eval('[data-rig-part="head-front"]', e => e.getAttribute("opacity")), "0");
+  await page.waitForFunction(id => document.querySelector(`[data-rig-part="${id}"]`).getAttribute("opacity") === "1", {}, visibleGroup);
+  assert.equal(await page.$eval(`[data-rig-part="${hiddenGroup}"]`, e => e.getAttribute("opacity")), "0");
   await click("lift");
   const turn = await page.waitForSelector('input[aria-label="Turn lift in °"]');
   await turn.evaluate(el => {
@@ -68,28 +77,29 @@ try {
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
   });
-  await page.waitForFunction(() => {
+  await page.waitForFunction((id, index) => {
     const store = JSON.parse(localStorage.getItem("animatron.projects.v1"));
     const current = store.projects.find(p => p.id === store.currentId);
-    const animation = current.doc.clips[0].rig.animations[0];
-    return animation.drawingTracks[0].keys.some(k => k.time === 0 && k.drawingId === "side") && animation.tracks.find(t => t.boneId === "lift").keys[0].rotation === -6;
-  });
+    const animation = current.doc.clips[index].rig.animations[0];
+    return animation.drawingTracks[0].keys.some(k => k.time === 0 && k.drawingId === id) && animation.tracks.find(t => t.boneId === "lift").keys[0].rotation === -6;
+  }, {}, drawingId, sceneIndex);
   await click("Save rig (.mci.json)");
   await page.waitForFunction(() => window.__exportedJson.length > 0);
   const rig = JSON.parse(await page.evaluate(() => window.__exportedJson.at(-1).text()));
-  assert.equal(rig.rasterAttachments.length, 2);
-  assert.equal(rig.animations[0].drawingTracks[0].keys[0].drawingId, "side");
+  assert.ok(isDeepStrictEqual(rig.rasterAttachments, sourceRig.rasterAttachments), "all raster payloads and registrations survive rig export");
+  assert.equal(rig.animations[0].drawingTracks[0].keys[0].drawingId, drawingId);
   assert.equal(rig.animations[0].tracks.find(t => t.boneId === "lift").keys[0].rotation, -6);
   writeFileSync(join(output, "edited-export.mci.json"), JSON.stringify(rig));
   await page.reload({ waitUntil: "networkidle0" });
-  await page.waitForSelector('[data-rig-part="head-side"]');
-  assert.equal(await page.$eval('[data-rig-part="head-side"]', e => e.getAttribute("opacity")), "1", "drawing edit survives save/reopen");
+  await page.waitForSelector(`[data-rig-part="${visibleGroup}"]`);
+  assert.equal(await page.$eval(`[data-rig-part="${visibleGroup}"]`, e => e.getAttribute("opacity")), "1", "drawing edit survives save/reopen");
   await click("Share");
   await click("Download JSON");
   await page.waitForFunction(() => window.__exportedJson.length > 0);
   const composition = JSON.parse(await page.evaluate(() => window.__exportedJson.at(-1).text()));
   assert.equal(composition.timeline.tailSeconds, 0);
-  assert.deepEqual(composition.clips[0].rig, rig);
+  assert.ok(isDeepStrictEqual(composition.clips[sceneIndex].rig, rig), "edited rig survives composition export");
+  assert.ok(isDeepStrictEqual(composition.clips.filter((_,i) => i !== sceneIndex), document.clips.filter((_,i) => i !== sceneIndex)), "other scene clips survive export");
   writeFileSync(join(output, "edited-export.animatron.json"), JSON.stringify(composition));
   await page.keyboard.press("Escape");
   await page.screenshot({ path: join(output, "editor-desktop.png") });

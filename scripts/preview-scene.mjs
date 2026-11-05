@@ -36,7 +36,9 @@ try {
     const result = await page.evaluate(fn);
     writeFileSync(`${output}${suffix}`, Buffer.from(result.split(",")[1], "base64"));
   };
-  const moments = flags.includes("--stills-only") ? [1.08, 1.15, 1.25, 2.5] : [0, 1, 2, 3, 4, 5, 6, 7, duration - 1 / 24];
+  const timeFlag = flags.find(flag => flag.startsWith("--times="));
+  const moments = timeFlag ? timeFlag.slice(8).split(",").map(Number) : flags.includes("--stills-only") ? [1.08, 1.15, 1.25, 2.5] : [0, 1, 2, 3, 4, 5, 6, 7, duration - 1 / 24];
+  if (!moments.length || moments.some(t => !Number.isFinite(t) || t < 0 || t > duration)) throw new Error("Preview times must be finite seconds within the composition duration.");
   for (const at of moments) {
     await page.evaluate((t) => window.scene.seek(t), at);
     await exportData(`.frame-${at.toFixed(2)}.png`, () => window.scene.still());

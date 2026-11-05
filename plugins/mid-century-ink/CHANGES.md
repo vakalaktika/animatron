@@ -1,3 +1,11 @@
+# Mid-century Ink 1.7.1 — illustration fidelity correction
+
+- Require actual generated artwork when demonstrating preservation of generated illustration quality. Rasterized code-drawn SVGs remain attachment fixtures, not evidence of Detailed style fidelity.
+- Compare complete face construction, anatomy, hands and silhouette against the actual anchor before rigging; record visual shortcomings separately from structural PASS.
+- Review generated clean plates, transparent extractions and registered head replacements for drift. Inspect rebuilt stills and joints, including foreground cuff/neck overlaps.
+- Describe layered editability precisely: part poses, drawing replacement and timing are editable; internal painted strokes are not vector paths. Retain source art separately from playback derivatives.
+- Existing Original/Detailed authorities, saved characters and approval records remain unchanged. The generated Sunroom glider candidate and application proof live in the owning Animatron PR.
+
 # Mid-century Ink 1.7.0 — illustrated scene pipeline
 
 - Art direction and a finished illustration precede rig finalization. Rich settings work in both Original and Detailed; construction volumes remain optional aids, not mandatory finished contours.

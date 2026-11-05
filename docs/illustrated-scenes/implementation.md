@@ -1,5 +1,7 @@
 # Illustrated scene pipeline
 
+**Visual acceptance correction (2026-11-05):** The structural implementation and tests below remain evidence for compatibility and behavior. The old Garden glider artwork does not meet the Detailed visual target; its raster edition is derived from the same SVG. Treat both original examples as technical fixtures, not proof of style fidelity. The new [illustration fidelity execution plan](illustration-fidelity-plan.md) separates generated artwork quality, part registration and technical validation.
+
 Source audit: 2026-11-04, Animatron baseline `0998d30`, Mid-century Ink backend release `pluginrel_6aec0bed0654819181bf277b9ad75164` (1.6.0), Composer `pluginrel_6aec0e82ecf88191837a64a3a451ceae` (0.4.4). Owning editable plugin inventories were checked against the installed packages before copying them into `plugins/`. These source snapshots preserve the original manifests, artwork authorities and identity records. This branch becomes the reviewable source for the upgrades; packaged updates must trace to its commit and PR.
 
 ## Audit and architecture
