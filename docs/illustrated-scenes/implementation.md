@@ -34,7 +34,7 @@ The corgi weakness is primarily artwork/workflow: primitive volume projection wa
 - [x] Two finished, self-contained illustrated editable scenes, with stills, rigs, compositions and rendered previews.
 - [x] Inspect representative frames, head/blink transitions, hand/plane contact, layer order and visual/motion loop seams separately.
 - [x] Import → pose/edit → save → reopen → export evidence, reduced-motion behavior and old-format/security regressions.
-- [ ] Versioned packages, changelogs, source commit and PR; no application publication/deployment.
+- [x] Versioned packages, changelogs, source commits and PR; no application publication/deployment.
 
 ## Migration, security and resource constraints
 
@@ -69,3 +69,14 @@ The local Node 24.6 runtime completed tests/builds but npm warns that current js
 Visual observations, exact files, renderer qualifications and missing-reference limitations are recorded in `examples/illustrated-scenes/README.md`. Private full plugin snapshots are local only; the public PR carries reviewed update overlays, while unchanged private reference art remains in existing plugin releases.
 
 Task attachments are absent from the conversation payload. The bundled Detailed primary paper-airplane reference and adult crops are available and were viewed directly by the artwork worker; Original historical reference images were also inspected. Direct comparison with the requested bicycle and bedtime attachments remains blocked; no substitute image becomes a new style authority.
+
+## Release record
+
+[Application PR #25](https://github.com/vakalaktika/animatron/pull/25) contains implementation commit `19bef47035844e5b287d783a3b6db6358f16618c` and Composer pin/package commit `13f96f5e41100100fe06c0ff508696f111225293`. The PR is open and unmerged; application production deployment was not performed. Pre-push hooks repeated typecheck, all 596 tests and the production build successfully.
+
+The private plugin updates were applied through Plugin Creator with expected-release guards and unchanged identities/audiences. All 21 MCI and 23 Composer uploaded source files were read back and matched the committed overlay contents:
+
+- Mid-century Ink **1.7.0**: `pluginrel_6aec34426b5c819183e3cab6dca33106`.
+- Animatron Composer **0.5.0**: `pluginrel_6aec344dd4c881918a99adc413851aee`.
+
+Installable update ZIPs and SHA-256/source-commit provenance are generated in `dist/` by `scripts/package-pipeline.mjs`. Unchanged private artwork remains in the existing plugin releases. The saved plugin release was verified through source read-back; a fresh end-user host reload was not separately tested.
