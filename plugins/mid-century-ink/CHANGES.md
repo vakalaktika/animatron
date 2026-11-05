@@ -1,3 +1,9 @@
+## 1.8.0 — native sparse tween authoring
+
+- Native Rig 3 eased part tracks replace dense sampled keys for ordinary transform motion; Rig 1/2 and legacy baking remain supported.
+- Human endpoint/object and per-part editing use the application evaluator; Composer accepts compact independent object/bone tracks and validates before atomic file output.
+- Preserve art, bindings, drawing states, identity records and unchanged tracks. Target the updated app checkout for Rig 3; updating this plugin alone does not deploy the app.
+
 # Mid-century Ink 1.7.1 — illustration fidelity correction
 
 - Require actual generated artwork when demonstrating preservation of generated illustration quality. Rasterized code-drawn SVGs remain attachment fixtures, not evidence of Detailed style fidelity.

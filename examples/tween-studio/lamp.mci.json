@@ -1,0 +1,284 @@
+{
+  "format": "mid-century-ink-rig",
+  "version": 3,
+  "name": "Articulated desk lamp",
+  "canvas": {
+    "width": 800,
+    "height": 600
+  },
+  "bones": [
+    {
+      "id": "root",
+      "parentId": null,
+      "rest": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "length": 0
+    },
+    {
+      "id": "lower",
+      "name": "Lower arm",
+      "parentId": "root",
+      "rest": {
+        "x": 340,
+        "y": 490,
+        "rotation": -105
+      },
+      "length": 165
+    },
+    {
+      "id": "upper",
+      "name": "Upper arm",
+      "parentId": "lower",
+      "rest": {
+        "x": 165,
+        "y": 0,
+        "rotation": 70
+      },
+      "length": 185
+    },
+    {
+      "id": "shade",
+      "name": "Lamp shade",
+      "parentId": "upper",
+      "rest": {
+        "x": 185,
+        "y": 0,
+        "rotation": 35
+      },
+      "length": 0
+    }
+  ],
+  "bindings": [
+    {
+      "id": "root",
+      "svgId": "root",
+      "boneId": "root",
+      "bindMatrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "lower",
+      "svgId": "lower",
+      "boneId": "lower",
+      "bindMatrix": [
+        -0.2588190451025208,
+        0.9659258262890681,
+        -0.9659258262890681,
+        -0.2588190451025208,
+        561.3021302165005,
+        -201.59344883804795
+      ]
+    },
+    {
+      "id": "upper",
+      "svgId": "upper",
+      "boneId": "upper",
+      "bindMatrix": [
+        0.8191520442889917,
+        0.5735764363510463,
+        -0.5735764363510463,
+        0.8191520442889917,
+        -53.89256489497987,
+        -441.3512076312868
+      ]
+    },
+    {
+      "id": "shade",
+      "svgId": "shade",
+      "boneId": "shade",
+      "bindMatrix": [
+        1,
+        2.220446049250313e-16,
+        -2.220446049250313e-16,
+        1,
+        -448.8379857515475,
+        -224.5105979373603
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "id": "lamp",
+      "name": "A considered nod",
+      "duration": 6,
+      "loop": true,
+      "tracks": [
+        {
+          "boneId": "lower",
+          "keys": [
+            {
+              "time": 0,
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 1.5,
+              "x": 0,
+              "y": 0,
+              "rotation": 12,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 3,
+              "x": 0,
+              "y": 0,
+              "rotation": 12,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 4.5,
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 6,
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            }
+          ]
+        },
+        {
+          "boneId": "upper",
+          "keys": [
+            {
+              "time": 0,
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 1.5,
+              "x": 0,
+              "y": 0,
+              "rotation": -24,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 3,
+              "x": 0,
+              "y": 0,
+              "rotation": -24,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 4.5,
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 6,
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            }
+          ]
+        },
+        {
+          "boneId": "shade",
+          "keys": [
+            {
+              "time": 0,
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 1.7,
+              "x": 0,
+              "y": 0,
+              "rotation": 12,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 3,
+              "x": 0,
+              "y": 0,
+              "rotation": 12,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 4.7,
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            },
+            {
+              "time": 6,
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "easing": "linear",
+              "tween": {
+                "name": "inOut"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 600\">\n<g id=\"root\"><path d=\"M80 510 H720 V523 H80Z\" fill=\"#bf7756\"/><path d=\"M300 490 Q340 471 380 490 L400 505 H280Z\" fill=\"#243f46\"/>\n<path d=\"M590 483 L686 483 L705 501 L580 501Z\" fill=\"#e5bf66\"/><path d=\"M590 476 L678 476 L686 483 L590 483Z\" fill=\"#f5ebd4\"/><path d=\"M602 472 L690 472\" stroke=\"#466569\" stroke-width=\"5\"/></g>\n<g id=\"lower\"><path d=\"M340,490 L297.29485755808406,330.62223866230374\" stroke=\"#31585c\" stroke-width=\"23\" stroke-linecap=\"round\"/><path d=\"M335,490 L292.29485755808406,330.62223866230374\" stroke=\"#7b9990\" stroke-width=\"4\"/><circle cx=\"340\" cy=\"490\" r=\"15\" fill=\"#243f46\"/></g>\n<g id=\"upper\"><path d=\"M297.29485755808406,330.62223866230374 L448.83798575154754,224.5105979373602\" stroke=\"#31585c\" stroke-width=\"20\" stroke-linecap=\"round\"/><circle cx=\"297.29485755808406\" cy=\"330.62223866230374\" r=\"18\" fill=\"#c36b4c\"/><circle cx=\"297.29485755808406\" cy=\"330.62223866230374\" r=\"7\" fill=\"#f1d393\"/></g>\n<g id=\"shade\"><circle cx=\"448.83798575154754\" cy=\"224.5105979373602\" r=\"13\" fill=\"#243f46\"/><path d=\"M426.83798575154754 216.5105979373602 Q483.83798575154754 174.5105979373602 532.8379857515475 229.5105979373602 L557.8379857515475 271.5105979373602 Q488.83798575154754 297.5105979373602 413.83798575154754 271.5105979373602Z\" fill=\"#d27450\"/><path d=\"M413.83798575154754 271.5105979373602 Q488.83798575154754 297.5105979373602 557.8379857515475 271.5105979373602 Q478.83798575154754 254.5105979373602 413.83798575154754 271.5105979373602Z\" fill=\"#f3d38b\"/></g></svg>"
+}

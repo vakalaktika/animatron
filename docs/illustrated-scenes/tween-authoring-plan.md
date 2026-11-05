@@ -19,3 +19,17 @@ No renderer replacement, new dependencies, automatic image separation, mesh defo
 ## Evidence ledger
 
 Implementation and final checks are recorded below as they complete.
+
+### Completed implementation and evidence
+
+- Rig3 extension, strict validation, shared runtime and schema; old formats retained. Native timing matches app at sampled preset/custom/hold boundaries. Generated dependency-free easing is checked against source.
+- Object endpoint form, selected-part keys, direct time/value/curve edits, baseline seed and numeric closing-key edits implemented. Whole-pose recording preserves curves/holds. Collision-tolerant endpoints survive reopening.
+- Composer sparse command validates against actual app before atomic output; MCI native sparse command retains legacy bake separately. Contact consumers sample correctly or fail explicitly.
+- Two actual-app exported previews delivered in `examples/tween-studio`. Family transform records386→14; lamp15articulatedbonekeys+5objectkeys. Art payloads preserved; reduced-key motion is a reinterpretation rather than lossless compression.
+- RED: missing module/new behavior and existing baseline/endtime failures reproduced. Review RED: near-key collision, held boundary and lost whole-pose easing reproduced; corresponding GREEN checks pass.
+- New tween modules:100% statements/lines/functions and98.5% branches. Full verification evidence and source-control/release status recorded with delivery.
+- Built Chrome156 journeys PASS for new controls and existing family drawing edits; save/reopen/export, reduced-motion paused and1440/390viewports. Previews use actual StageCanvas/renderVideo; ffprobe confirms6s/8s24fps exports. Nativepainteditors and other browsers remain untested.
+
+### Deferred boundaries
+
+No mesh bending, AE project export, automatic part separation, automatic constraints, full character rerig, graph-editor replacement or app deployment. Exact loop endpoint remains wrapped on canvas; closing-key numeric controls edit the end pose. A separated rigid forearm is still rigid. Better acting needs intentional additional parts, contact planning and selected replacement drawings, not more sampled keys.

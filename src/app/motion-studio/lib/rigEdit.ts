@@ -35,7 +35,26 @@ const wrap = (deg: number) => ((((deg + 180) % 360) + 360) % 360) - 180;
 export function localTime(clip: RigClip, t: number): number {
   const anim = activeAnimation(clip);
   if (!anim) return 0;
+  if (Math.abs(t - clip.start - anim.duration) <= 1e-6) return anim.duration;
   return Number(animationTime(anim, Math.max(0, t - clip.start)).toFixed(2));
+}
+
+/** Editing can address the closing pose; playback still wraps a looping clip. */
+export function editablePoseAt(clip: RigClip, t: number): RigPose {
+  const anim = activeAnimation(clip);
+  if (!anim || Math.abs(t - clip.start - anim.duration) > 1e-6) return rigPoseAt(clip, t);
+  return rigPoseAt({ ...clip, rig: { ...clip.rig, animations: clip.rig.animations.map(a => a.id === anim.id ? { ...a, loop: false } : a) } }, t);
+}
+
+/** Capture a selected part without creating tracks for untouched parts. */
+export function captureBoneKey(clip: RigClip, t: number, boneId: string): RigClip {
+  const anim = activeAnimation(clip);
+  if (!anim || !clip.rig.bones.some(b => b.id === boneId)) return clip;
+  const at = localTime(clip, t);
+  const pose = editablePoseAt(clip, t);
+  const seeded = at > 0 && !anim.tracks.some(track => track.boneId === boneId)
+    ? upsertKey(clip.rig, anim.id, boneId, 0, poseOf(pose, boneId)) : clip.rig;
+  return { ...clip, rig: upsertKey(seeded, anim.id, boneId, at, poseOf(pose, boneId)) };
 }
 
 /**
@@ -46,7 +65,7 @@ export function localTime(clip: RigClip, t: number): number {
 export function commitPose(clip: RigClip, t: number, next: RigPose, onlyBones?: string[]): RigClip {
   const anim = activeAnimation(clip);
   if (!anim) return { ...clip, pose: tidyPose(clip.rig, next) };
-  const current = rigPoseAt(clip, t);
+  const current = editablePoseAt(clip, t);
   const at = localTime(clip, t);
   const changed = (clip.rig.bones.map((b) => b.id)).filter((id) => {
     if (onlyBones && !onlyBones.includes(id)) return false;
@@ -54,13 +73,17 @@ export function commitPose(clip: RigClip, t: number, next: RigPose, onlyBones?: 
     const b = poseOf(next, id);
     return Math.abs(a.x - b.x) > 1e-6 || Math.abs(a.y - b.y) > 1e-6 || Math.abs(a.rotation - b.rotation) > 1e-6;
   });
-  const rig = changed.reduce((acc, id) => upsertKey(acc, anim.id, id, at, poseOf(next, id)), clip.rig);
+  const rig = changed.reduce((acc, id) => {
+    const seeded = at > 0 && !anim.tracks.some(track => track.boneId === id)
+      ? upsertKey(acc, anim.id, id, 0, poseOf(current, id)) : acc;
+    return upsertKey(seeded, anim.id, id, at, poseOf(next, id));
+  }, clip.rig);
   return { ...clip, rig };
 }
 
 /** Sets one bone's delta (clamped) through `commitPose`. */
 export function setBoneDelta(clip: RigClip, t: number, boneId: string, delta: Partial<RigDelta>): RigClip {
-  const pose = rigPoseAt(clip, t);
+  const pose = editablePoseAt(clip, t);
   return commitPose(clip, t, setPoseDelta(clip.rig, pose, boneId, delta), [boneId]);
 }
 
@@ -75,7 +98,7 @@ export function dragRigHandle(clip: RigClip, t: number, boneId: string, handle: 
   const { rig } = clip;
   const bone = rig.bones.find((b) => b.id === boneId);
   if (!bone) return clip;
-  const pose = rigPoseAt(clip, t);
+  const pose = editablePoseAt(clip, t);
   const worlds = world(rig, pose);
   const parent = bone.parentId ? worlds[bone.parentId] : ([1, 0, 0, 1, 0, 0] as Matrix);
   const origin = applyMatrix(worlds[boneId], { x: 0, y: 0 });

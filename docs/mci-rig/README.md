@@ -1,3 +1,10 @@
+# Mid-century Ink rig contracts
+
+- [Rig 3: native sparse tweens](mci-rig-v3.md) and [schema](mci-rig-v3.schema.json).
+- [Rig 2: raster attachments and replacement drawings](mci-rig-v2.md).
+- [Rig 1: rigid vector skeletons](mci-rig-v1.md).
+
+The application reads all three. Rig 3 requires an updated application revision; plugin installation does not deploy it. Existing contracts, SVG protections and image budgets remain enforced. Shared runtime and the application use matching timing functions.
 # Mid-century Ink Rig 1 in Animatron
 
 The shared skeletal-animation contract Animatron, Agent Torres and the Mid-century Ink generator exchange.

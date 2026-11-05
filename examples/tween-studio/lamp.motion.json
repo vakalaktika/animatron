@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "duration": 6,
+  "loop": true,
+  "targets": [
+    {
+      "clipId": "lamp",
+      "animationId": "lamp",
+      "bones": {
+        "lower": [
+          {
+            "time": 0,
+            "rotation": 0,
+            "ease": "inOut"
+          },
+          {
+            "time": 1.5,
+            "rotation": 12,
+            "ease": "inOut"
+          },
+          {
+            "time": 3,
+            "rotation": 12,
+            "ease": "inOut"
+          },
+          {
+            "time": 4.5,
+            "rotation": 0,
+            "ease": "inOut"
+          },
+          {
+            "time": 6,
+            "rotation": 0,
+            "ease": "inOut"
+          }
+        ],
+        "upper": [
+          {
+            "time": 0,
+            "rotation": 0,
+            "ease": "inOut"
+          },
+          {
+            "time": 1.5,
+            "rotation": -24,
+            "ease": "inOut"
+          },
+          {
+            "time": 3,
+            "rotation": -24,
+            "ease": "inOut"
+          },
+          {
+            "time": 4.5,
+            "rotation": 0,
+            "ease": "inOut"
+          },
+          {
+            "time": 6,
+            "rotation": 0,
+            "ease": "inOut"
+          }
+        ],
+        "shade": [
+          {
+            "time": 0,
+            "rotation": 0,
+            "ease": "inOut"
+          },
+          {
+            "time": 1.7,
+            "rotation": 12,
+            "ease": "inOut"
+          },
+          {
+            "time": 3,
+            "rotation": 12,
+            "ease": "inOut"
+          },
+          {
+            "time": 4.7,
+            "rotation": 0,
+            "ease": "inOut"
+          },
+          {
+            "time": 6,
+            "rotation": 0,
+            "ease": "inOut"
+          }
+        ]
+      }
+    },
+    {
+      "clipId": "paper",
+      "properties": {
+        "rotation": [
+          {
+            "time": 0,
+            "value": -4,
+            "ease": "inOut"
+          },
+          {
+            "time": 1.8,
+            "value": 3,
+            "ease": "inOut"
+          },
+          {
+            "time": 3,
+            "value": 3,
+            "ease": "inOut"
+          },
+          {
+            "time": 4.8,
+            "value": -4,
+            "ease": "inOut"
+          },
+          {
+            "time": 6,
+            "value": -4,
+            "ease": "inOut"
+          }
+        ]
+      }
+    }
+  ]
+}

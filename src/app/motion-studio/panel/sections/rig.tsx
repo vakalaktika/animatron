@@ -19,16 +19,19 @@ import {
   removeAnimation,
   removeBone,
   removeKey,
+  retimeKeys,
   replaceAnimation,
   RIG_LIMITS,
-  rigPoseAt,
   setAnimationDuration,
   upsertKey,
 } from "@/app/components/motion-studio/engine/rig";
 import { drawingVisibility, setDrawing } from "@/app/components/motion-studio/engine/rigV2";
-import type { RigAsset, RigBone, RigClip, RigKey } from "@/app/components/motion-studio/types";
+import { setRigKeyTween } from "@/app/components/motion-studio/engine/rigTween";
+import { DEFAULT_BEZIER, EASE_LABELS } from "@/app/components/motion-studio/engine/easing";
+import type { EaseName, RigAsset, RigBone, RigClip } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
-import { localTime, setBoneDelta, type RigMode } from "../../lib/rigEdit";
+import { captureBoneKey, editablePoseAt, localTime, setBoneDelta, type RigMode } from "../../lib/rigEdit";
+import { EaseField } from "../EaseField";
 import { BUTTON_ROW, ChipField, MoreFields, NumField, SelectField, TextField, ToggleField } from "../fields";
 import type { PanelSection } from "../PanelGroup";
 
@@ -67,7 +70,7 @@ function SkeletonFields({ clip, onChange, rig }: { clip: RigClip; onChange: (c: 
   const rows = boneRows(asset);
   const bone = asset.bones.find((b) => b.id === rig.selectedBone) ?? null;
   const anim = activeAnimation(clip);
-  const pose = rigPoseAt(clip, now);
+  const pose = editablePoseAt(clip, now);
   const delta = bone ? poseOf(pose, bone.id) : null;
   const limits = bone?.limits ?? { min: -180, max: 180 };
   const span = Math.max(asset.canvas.width, asset.canvas.height);
@@ -216,10 +219,7 @@ export function skeletonSection(clip: RigClip, onChange: (c: RigClip) => void, r
 
 // ----- Animation -------------------------------------------------------------
 
-const EASINGS: { value: RigKey["easing"]; label: string }[] = [
-  { value: "linear", label: "Glide to the next" },
-  { value: "hold", label: "Hold until the next" },
-];
+const TWEENS: (EaseName | "hold")[] = ["inOut", "smoothOut", "linear", "hold", "flight", "backOut", "anticipate", "snap", "custom"];
 
 function AnimationFields({ clip, onChange, rig }: { clip: RigClip; onChange: (c: RigClip) => void; rig: RigActions }) {
   const asset = clip.rig;
@@ -246,10 +246,10 @@ function AnimationFields({ clip, onChange, rig }: { clip: RigClip; onChange: (c:
           <TextField label="Clip name" value={anim.name ?? ""} placeholder={anim.id} onChange={(v) => change(replaceAnimation(asset, { ...anim, name: v || undefined }))} />
           <NumField label="Length" unit="s" value={fmt(anim.duration)} min={0.1} max={RIG_LIMITS.duration} step={0.1} onChange={(v) => change(setAnimationDuration(asset, anim.id, v))} />
           <ToggleField label="Loop" value={anim.loop} onChange={(v) => change(replaceAnimation(asset, { ...anim, loop: v }))} />
-          <p className="atm-help">Keys are moments where bones have a set position; the rig glides between them. The diamonds on the timeline are the keys; drag one to move it.</p>
+          <p className="atm-help">Pose a selected bone at the start, key it, then move the playhead and pose it again. Animatron tweens between these poses; no drawings or keys are needed for the frames between. Use the closing key to edit the end of a loop.</p>
           <div className={BUTTON_ROW}>
-            <Button size="xs" onClick={() => change(record(asset, anim.id, at, rigPoseAt(clip, now)))}>
-              Record the pose at {at.toFixed(2)} s
+            <Button size="xs" disabled={!bone} onClick={() => bone && onChange(captureBoneKey(clip, now, bone.id))}>
+              Key selected bone at {at.toFixed(2)} s
             </Button>
             {times.length > 0 && (
               <>
@@ -277,13 +277,28 @@ function AnimationFields({ clip, onChange, rig }: { clip: RigClip; onChange: (c:
                         Remove
                       </Button>
                     </div>
-                    <ChipField label="Then" value={k.easing} options={EASINGS} onChange={(v) => change(upsertKey(asset, anim.id, bone.id, k.time, k, v))} />
+                    <NumField label={`Time of key ${k.time.toFixed(2)} s`} unit="s" value={k.time} min={0} max={anim.duration} step={0.01} onChange={v => change(retimeKeys(asset, anim.id, bone.id, k.time, v))} />
+                    <NumField label={`Turn at ${k.time.toFixed(2)} s`} unit="°" value={k.rotation} min={bone.limits?.min ?? -360} max={bone.limits?.max ?? 360} step={1} onChange={v => change(upsertKey(asset, anim.id, bone.id, k.time, { ...k, rotation:v }))} />
+                    <MoreFields label="Position values">
+                      <NumField label={`X at ${k.time.toFixed(2)} s`} unit="px" value={k.x} min={-10000} max={10000} step={1} onChange={v => change(upsertKey(asset, anim.id, bone.id, k.time, { ...k, x:v }))} />
+                      <NumField label={`Y at ${k.time.toFixed(2)} s`} unit="px" value={k.y} min={-10000} max={10000} step={1} onChange={v => change(upsertKey(asset, anim.id, bone.id, k.time, { ...k, y:v }))} />
+                    </MoreFields>
+                    <SelectField label={`Tween at ${k.time.toFixed(2)} s`} value={k.easing === "hold" ? "hold" : k.tween?.name ?? "linear"} options={TWEENS.map(value => ({ value, label: value === "hold" ? "Hold until next pose" : EASE_LABELS[value] }))} onChange={name => {
+                      const cleared = setRigKeyTween(asset, anim.id, bone.id, k.time, null);
+                      const next = upsertKey(cleared, anim.id, bone.id, k.time, k, name === "hold" ? "hold" : "linear");
+                      change(name === "hold" || name === "linear" ? next : setRigKeyTween(next, anim.id, bone.id, k.time, name === "custom" ? { name, custom: DEFAULT_BEZIER } : { name }));
+                    }} />
+                    {k.easing !== "hold" && k.tween?.name === "custom" && <EaseField label="Custom pose timing" value={k.tween} onChange={tween => change(setRigKeyTween(asset, anim.id, bone.id, k.time, tween))} />}
                   </div>
                 );
               })}
             </MoreFields>
           )}
           {!bone && <p className="atm-help">Pick a bone to see and edit its keys.</p>}
+          <MoreFields label="Whole-pose recording">
+            <p className="atm-help">Capture every bone together when you intentionally want a synchronized pose.</p>
+            <Button size="xs" variant="outline" onClick={() => change(record(asset, anim.id, at, editablePoseAt(clip, now)))}>Record all bones at {at.toFixed(2)} s</Button>
+          </MoreFields>
         </>
       ) : (
         <p className="atm-help">The rig holds whatever pose you give it. Add a clip to make it move; its length then sets how long the layer runs.</p>

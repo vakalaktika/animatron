@@ -79,7 +79,7 @@ describe("validateRig", () => {
   });
 
   it.each([
-    ["an unsupported version", { ...asset, version: 3 }, /version 3/],
+    ["an unsupported version", { ...asset, version: 4 }, /version 4/],
     ["a studio document in disguise", { version: 2, name: "x", stage: {}, clips: [] }, /mid-century-ink-rig/],
     ["a missing parent", { ...asset, bones: asset.bones.map((b) => (b.id === "head" ? { ...b, parentId: "nowhere" } : b)) }, /Missing parent/],
     ["a cycle", { ...asset, bones: asset.bones.map((b) => (b.id === "root" ? { ...b, parentId: "torso" } : b)) }, /root bone|cycle/],

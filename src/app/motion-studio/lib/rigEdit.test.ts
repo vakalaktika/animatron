@@ -3,7 +3,7 @@ import path from "node:path";
 import { applyMatrix, rigPoseAt, transforms, validateRig, world } from "@/app/components/motion-studio/engine/rig";
 import type { RigAsset, RigClip } from "@/app/components/motion-studio/types";
 import { canTrim, trimClip } from "./trim";
-import { commitPose, dragRigHandle, localTime, setBoneDelta } from "./rigEdit";
+import { captureBoneKey, commitPose, dragRigHandle, editablePoseAt, localTime, setBoneDelta } from "./rigEdit";
 
 const fixture = (): RigAsset => JSON.parse(readFileSync(path.resolve(__dirname, "../../../../docs/mci-rig/example-character.mci.json"), "utf8")) as RigAsset;
 const clipWith = (over: Partial<RigClip> = {}): RigClip => ({
@@ -32,6 +32,24 @@ describe("localTime", () => {
   });
   it("lets the human edit the closing key at the end of the first loop", () => {
     expect(localTime(clipWith({ animationId: "wave" }), 3)).toBe(2);
+  });
+  it("reads and edits a closing pose independently of the opening pose", () => {
+    const clip = clipWith({animationId:"nod"});
+    const changed = setBoneDelta(clip, 3, "head", {rotation:20});
+    expect(editablePoseAt(changed, 3).head.rotation).toBe(20);
+    expect(rigPoseAt(changed, 3).head.rotation).toBe(0);
+    expect(changed.rig.animations[1].tracks[0].keys.at(-1)?.rotation).toBe(20);
+    expect(changed.rig.animations[1].tracks[0].keys[0].rotation).toBe(0);
+  });
+  it("captures only one bone, seeding its start when first keyed later", () => {
+    const clip = clipWith({animationId:"nod"});
+    const captured = captureBoneKey(clip, 2, "torso");
+    expect(captured.rig.animations[1].tracks.at(-1)).toEqual({boneId:"torso", keys:[
+      {time:0, x:0, y:0, rotation:0, easing:"linear"},
+      {time:1, x:0, y:0, rotation:0, easing:"linear"},
+    ]});
+    expect(captureBoneKey(clipWith(), 2, "torso").animationId).toBeNull();
+    expect(captureBoneKey(clip, 2, "ghost")).toBe(clip);
   });
 });
 

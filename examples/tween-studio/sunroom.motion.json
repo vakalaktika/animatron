@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "duration": 8,
+  "loop": true,
+  "targets": [
+    {
+      "clipId": "scene",
+      "animationId": "sunroom-loop",
+      "bones": {
+        "lift": [
+          {
+            "time": 0,
+            "rotation": 0,
+            "ease": "inOut"
+          },
+          {
+            "time": 0.6,
+            "rotation": 0,
+            "ease": "inOut"
+          },
+          {
+            "time": 0.9,
+            "rotation": 0.6,
+            "ease": "inOut"
+          },
+          {
+            "time": 2.2,
+            "rotation": -4,
+            "ease": "inOut"
+          },
+          {
+            "time": 4.6,
+            "rotation": -4,
+            "ease": "inOut"
+          },
+          {
+            "time": 5.7,
+            "rotation": 0.3,
+            "ease": "inOut"
+          },
+          {
+            "time": 6.4,
+            "rotation": 0,
+            "ease": "inOut"
+          },
+          {
+            "time": 8,
+            "rotation": 0,
+            "ease": "inOut"
+          }
+        ]
+      }
+    },
+    {
+      "clipId": "outside-bird",
+      "animationId": "bird-pass",
+      "bones": {
+        "bird": [
+          {
+            "time": 0,
+            "x": 150,
+            "y": 0,
+            "rotation": 0,
+            "ease": "linear"
+          },
+          {
+            "time": 0.6,
+            "x": 150,
+            "y": 0,
+            "rotation": 0,
+            "ease": "linear"
+          },
+          {
+            "time": 5.6,
+            "x": -270,
+            "y": -35,
+            "rotation": -3,
+            "ease": "linear"
+          },
+          {
+            "time": 6,
+            "x": -300,
+            "y": -35,
+            "rotation": -3,
+            "ease": "linear"
+          },
+          {
+            "time": 6.01,
+            "x": 150,
+            "y": 0,
+            "rotation": 0,
+            "ease": "linear"
+          },
+          {
+            "time": 8,
+            "x": 150,
+            "y": 0,
+            "rotation": 0,
+            "ease": "linear"
+          }
+        ]
+      }
+    }
+  ]
+}

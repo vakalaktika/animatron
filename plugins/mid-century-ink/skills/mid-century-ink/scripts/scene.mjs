@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Scene rigs: several Rig 1 or Rig 2 assets combined into ONE rig, so characters that
+// Scene rigs: compatible Rig 1, 2 or 3 assets combined into ONE rig, so characters that
 // touch or are tied together (a leash, a hand-hold, a rider on a horse, a
 // cup in a hand that belongs to another rig) move as one layer and share one
 // clock in Animatron, and a rope or prop can be solved between their bones.
@@ -213,7 +213,7 @@ export function scene(spec, { baseDir = "." } = {}) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><title>${spec.name ?? "Scene"}</title>${groups.join("")}</svg>`;
   const rig = {
     format: "mid-century-ink-rig",
-    version: members.some((member) => member.rig.version === 2) ? 2 : 1,
+    version: Math.max(...members.map(member=>member.rig.version)),
     name: spec.name ?? "Scene",
     canvas: { width, height },
     svg,

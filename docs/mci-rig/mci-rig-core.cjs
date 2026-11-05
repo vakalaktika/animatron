@@ -5,8 +5,15 @@
   else host.MCIRig = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  const FORMAT = 'mid-century-ink-rig', VERSION = 2;
-  const V2 = typeof require === 'function' ? require('./mci-rig-v2.cjs') : (globalThis.MCIRigV2 || { validateRigV2: asset => asset.version === 2 ? ['Load mci-rig-v2.cjs before mci-rig-core.cjs for browser Rig 2 support.'] : [] });
+  const FORMAT = 'mid-century-ink-rig', VERSION = 3;
+  const V2 = typeof require === 'function' ? require('./mci-rig-v2.cjs') : (globalThis.MCIRigV2 || { validateRigV2: asset => asset.version >= 2 ? ['Load mci-rig-v2.cjs before mci-rig-core.cjs for browser Rig 2/3 support.'] : [] });
+  const Easing = typeof require === 'function' ? require('./mci-easing.cjs') : globalThis.MCIEasing;
+  const easeNames = new Set(['linear','smoothOut','inOut','flight','backOut','anticipate','snap','custom']);
+  function validTween(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value) || !easeNames.has(value.name)) return false;
+    if (value.name !== 'custom') return value.custom === undefined;
+    return Array.isArray(value.custom) && value.custom.length === 4 && value.custom.every(v=>typeof v==='number' && Number.isFinite(v) && Math.abs(v)<=10) && value.custom[0]>=0 && value.custom[0]<=1 && value.custom[2]>=0 && value.custom[2]<=1;
+  }
   const ID = /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/;
   const isId = value => typeof value === 'string' && ID.test(value);
   const identity = () => [1, 0, 0, 1, 0, 0];
@@ -32,7 +39,8 @@
     try { if (new TextEncoder().encode(JSON.stringify(asset)).length > 4000000) return {ok:false,errors:['Rig exceeds 4 MB.']}; } catch { return {ok:false,errors:['Rig must be JSON serializable.']}; }
     if (asset.name !== undefined && (typeof asset.name !== 'string' || asset.name.length > 200)) fail('Invalid asset name.');
     if (asset.metadata !== undefined && (!asset.metadata || typeof asset.metadata !== 'object' || Array.isArray(asset.metadata))) fail('Metadata must be an object.');
-    if (asset.format !== FORMAT || ![1,2].includes(asset.version)) fail('Expected mid-century-ink-rig version 1 or 2.');
+    if (asset.format !== FORMAT || ![1,2,3].includes(asset.version)) fail('Expected mid-century-ink-rig version 1, 2 or 3.');
+    if (asset.version === 3 && !Easing) fail('Load mci-easing.cjs before mci-rig-core.cjs for browser Rig 3 support.');
     errors.push(...V2.validateRigV2(asset));
     if (!asset.canvas || !finite(asset.canvas.width) || !finite(asset.canvas.height) || asset.canvas.width <= 0 || asset.canvas.height <= 0) fail('Canvas dimensions must be positive numbers.');
     if (typeof asset.svg !== 'string' || asset.svg.length > 2_000_000 || !asset.svg.includes('<svg')) fail('Expected SVG artwork, up to 2 MB.');
@@ -84,6 +92,7 @@
           for (const k of t.keys) {
             count++;
             if (!k || !['time','x','y','rotation'].every(f=>finite(k[f])) || k.time < 0 || k.time > a.duration || k.time <= previous || !['linear','hold'].includes(k.easing)) fail('Invalid or unsorted animation keyframe.');
+            if (k && k.tween !== undefined && (asset.version !== 3 || !validTween(k.tween))) fail('Valid tween curves require Rig version 3.');
             previous = k && k.time;
           }
         }
@@ -99,7 +108,11 @@
     for (const track of a.tracks) {
       const keys = track.keys; let left = keys[0], right = left;
       for (const k of keys) { if (k.time<=time) left=k; if (k.time>=time) {right=k;break;} right=k; }
-      const f = right.time===left.time || left.easing==='hold' ? 0 : clamp((time-left.time)/(right.time-left.time),0,1);
+      let f = right.time===left.time || left.easing==='hold' ? 0 : clamp((time-left.time)/(right.time-left.time),0,1);
+      if (left.tween && left.easing !== 'hold' && f>0 && f<1) {
+        if (!Easing) throw new Error('Load mci-easing.cjs for Rig 3 tween playback.');
+        f=Easing.resolveEase(left.tween)(f);
+      }
       pose[track.boneId] = Object.fromEntries(['x','y','rotation'].map(k=>[k,left[k]+(right[k]-left[k])*f]));
     }
     return pose;
@@ -149,7 +162,8 @@
     for(const b of output.bones){
       let track=a.tracks.find(t=>t.boneId===b.id);
       if(!track){track={boneId:b.id,keys:[]};a.tracks.push(track);}
-      const p=Object.hasOwn(pose,b.id)?pose[b.id]:{}, k={time,x:p.x||0,y:p.y||0,rotation:clamp(p.rotation||0,b.limits?.min??-3600,b.limits?.max??3600),easing:'linear'};
+      const previous=track.keys.find(k=>Math.abs(k.time-time)<=1e-6);
+      const p=Object.hasOwn(pose,b.id)?pose[b.id]:{}, k={time,x:p.x||0,y:p.y||0,rotation:clamp(p.rotation||0,b.limits?.min??-3600,b.limits?.max??3600),easing:previous?.easing??'linear',...(previous?.tween?{tween:clone(previous.tween)}:{})};
       track.keys=track.keys.filter(k=>Math.abs(k.time-time)>1e-6).concat(k).sort((a,b)=>a.time-b.time);
     }
     return output;
