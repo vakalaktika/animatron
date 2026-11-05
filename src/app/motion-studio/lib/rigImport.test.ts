@@ -41,9 +41,9 @@ describe("rigClipFrom", () => {
   });
 
   it("refuses an unsupported version with a clear message and never produces a clip", () => {
-    const result = rigClipFrom({ ...fixture(), version: 3 }, STAGE);
+    const result = rigClipFrom({ ...fixture(), version: 4 }, STAGE);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.message).toMatch(/version 3/);
+    if (!result.ok) expect(result.message).toMatch(/version 4/);
   });
 
   it("refuses artwork outside the SVG subset", () => {
