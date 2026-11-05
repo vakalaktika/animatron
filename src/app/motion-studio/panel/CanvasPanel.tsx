@@ -6,6 +6,7 @@ import { Button, Select, Slider } from "@/app/components/shared-components";
 import { FRAME_SIZES } from "../presets";
 import { BUTTON_ROW, ColorField, NumField, TextField, ToggleField } from "./fields";
 import { MusicIcon } from "./icons";
+import { SceneReviewFields } from "./SceneReviewFields";
 import { PanelGroup, type PanelSection } from "./PanelGroup";
 
 interface Props {
@@ -57,6 +58,7 @@ export function CanvasPanel({ doc, onChangeDoc, onImport }: Props) {
   const preset = FRAME_SIZES.some((f) => `${f.width}x${f.height}` === frameValue) ? frameValue : "custom";
 
   const sections: PanelSection[] = [
+    { id: "motion-structure", title: "Motion structure", content: <SceneReviewFields doc={doc} onChange={onChangeDoc} /> },
     {
       id: "canvas",
       title: "Canvas",

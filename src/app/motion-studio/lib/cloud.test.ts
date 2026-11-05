@@ -252,3 +252,9 @@ describe("accounts", () => {
     expect(calls.at(-1)).toMatchObject({ method: "POST", body: { id: "p2", name: "Shared", doc: null, deleted: true, updated_at: "2026-10-03T00:00:00Z" } });
   });
 });
+
+test("scene-contract short sharing refuses before network or card upload",async()=>{
+ const {supabase,calls}=fakeSupabase();
+ await expect(shareWithPreview(supabase,{...doc,version:3},{card:null,duration:4},()=>"abcdefghij")).rejects.toThrow(/updated application/i);
+ expect(calls).toEqual([]);
+});

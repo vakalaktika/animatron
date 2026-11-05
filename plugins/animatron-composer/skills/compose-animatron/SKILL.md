@@ -5,6 +5,10 @@ description: "Writes valid Animatron studio compositions (JSON) from a plain-lan
 
 # Compose for Animatron
 
+## Scene structure before animation
+
+Read `references/scene-production.md` for illustrated animation. First declare action-specific independent parts, scene space/occluders, contact carriers and artwork facing. Do not call a sparse rigid gesture natural acting. Rebuild missing artwork before promising the action, or explicitly preserve the unmet requirement. Composer must run `scene-check.mjs` with the actual app evaluator on the stored scene plan; new masked masters use document3 and JSON-only handoff. Technical validity, fewer keys and successful export do not establish visual quality or user approval.
+
 ## Sparse object and part tweens
 
 Read `references/tweening.md` for editable motion. Use `scripts/tween.mjs` to turn a compact seconds-based specification into independent object and bone tracks, validated by the target app before writing. Prefer two/few authored poses per part plus a curve instead of frame-by-frame JSON. Preserve supplied art and all unaddressed tracks. Native eased bone keys require Rig 3 and the updated application; use explicit `--repo` or a verified supporting revision. This private plugin update does not deploy the app. Keep discrete replacement drawings for true head angles, blinks and mouths; do not call a sliding flattened illustration articulated animation.

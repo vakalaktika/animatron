@@ -1,5 +1,8 @@
+import { validScenePlan } from "@/app/components/motion-studio/engine/sceneReview";
+import { validStageMask } from "@/app/components/motion-studio/engine/stageMask";
 import {
   DOC_VERSION,
+  SCENE_DOC_VERSION,
   RIG_FORMAT,
   type Clip,
   type LogoClip,
@@ -572,18 +575,22 @@ export type ImportResult =
 export function parseImport(json: unknown, stage: Pick<StageConfig, "width" | "height"> = { width: 1920, height: 1080 }): ImportResult {
   if (typeof json !== "object" || json === null) return { kind: "error", message: "Not a JSON object" };
   const v = json as Record<string, unknown>;
+  if (v.scenePlan !== undefined && !validScenePlan(v.scenePlan)) return { kind: "error", message: "Invalid scene motion plan." };
   // A Mid-century Ink rig is its own format, never a studio document: it
   // becomes one rigged layer, or is refused with the reason.
   if (v.format === RIG_FORMAT) {
     const rig = rigClipFrom(json, stage);
     return rig.ok ? { kind: "rig", clip: rig.clip } : { kind: "error", message: rig.message };
   }
-  if (typeof v.version === "number" && v.version >= 1 && v.version <= DOC_VERSION && Array.isArray(v.clips) && typeof v.stage === "object") {
+  if (typeof v.version === "number" && Number.isInteger(v.version) && v.version >= 1 && v.version <= SCENE_DOC_VERSION && Array.isArray(v.clips) && typeof v.stage === "object") {
     if (!v.clips.every(isClip)) return { kind: "error", message: "A clip in this file is malformed" };
+    if (v.version < SCENE_DOC_VERSION && (v.scenePlan !== undefined || v.clips.some(c => c.stageMask !== undefined))) return { kind: "error", message: "Stage masks and scene plans require document version 3; refused rather than silently changing scene structure." };
+    if (v.clips.some(c => c.stageMask !== undefined && !validStageMask(c.stageMask))) return { kind: "error", message: "A clip has an invalid stage mask; refused rather than revealing masked artwork." };
     return { kind: "doc", ...normalizeDoc(json as RawDoc) };
   }
-  if (v.version !== undefined) return { kind: "error", message: `This file is version ${String(v.version)}; the studio reads up to ${DOC_VERSION}` };
+  if (v.version !== undefined) return { kind: "error", message: `This file is version ${String(v.version)}; the studio reads up to ${SCENE_DOC_VERSION}` };
   if (isClip(json)) {
+    if (json.stageMask !== undefined && !validStageMask(json.stageMask)) return { kind: "error", message: "Invalid stage mask; refused rather than revealing masked artwork." };
     // A saved rig layer carries its asset; the asset must pass the contract like any rig file.
     if (json.type === "rig") {
       const rig = rigClipFrom((json as { rig?: unknown }).rig, stage);

@@ -68,7 +68,15 @@ export interface PropKey {
   ease?: Ease;
 }
 
+/** Static stage-space visibility regions; independent of layer/parent movement. */
+export interface StageMask {
+  /** Union of 1–16 polygons, each 3–64 stage-pixel points. */
+  regions: Vec2[][];
+}
+
 export interface ClipBase {
+  /** Visible only through these stage regions, e.g. behind a window frame. */
+  stageMask?: StageMask;
   id: string;
   name: string;
   enabled: boolean;
@@ -600,9 +608,13 @@ export interface AudioTrack {
 }
 
 export const DOC_VERSION = 2;
+/** Opt-in document contract for stage masks and declared scene intent. */
+export const SCENE_DOC_VERSION = 3;
 
 export interface StudioDoc {
-  version: typeof DOC_VERSION;
+  /** Authored intent and review obligations; never proof of visual approval. */
+  scenePlan?: import("./engine/sceneReview").ScenePlan;
+  version: typeof DOC_VERSION | typeof SCENE_DOC_VERSION;
   name: string;
   /** A sentence about the piece, shown on its share page and link preview. */
   description?: string;

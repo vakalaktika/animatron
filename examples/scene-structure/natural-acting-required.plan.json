@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "actors": [
+    {
+      "clipId": "room",
+      "action": "still"
+    },
+    {
+      "clipId": "scene",
+      "action": "articulated",
+      "requiredParts": [
+        "torso",
+        "upper-arm",
+        "forearm",
+        "hand",
+        "head",
+        "hair"
+      ]
+    },
+    {
+      "clipId": "outside-bird",
+      "action": "rigid",
+      "requiredParts": [
+        "bird"
+      ]
+    }
+  ],
+  "travels": [
+    {
+      "clipId": "outside-bird",
+      "boneId": "bird",
+      "restFacing": "right",
+      "mode": "forward",
+      "space": "exterior"
+    }
+  ]
+}

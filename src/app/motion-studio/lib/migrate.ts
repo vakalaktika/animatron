@@ -1,3 +1,5 @@
+import { validScenePlan } from "@/app/components/motion-studio/engine/sceneReview";
+import { validStageMask } from "@/app/components/motion-studio/engine/stageMask";
 import { loopMemberIds } from "@/app/components/motion-studio/engine/hierarchy";
 import { AUTO_TAIL_LENGTH, AUTO_TAIL_POSITION } from "@/app/components/motion-studio/engine/text";
 import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
@@ -6,6 +8,7 @@ import { tidyPose, validateRig } from "@/app/components/motion-studio/engine/rig
 import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
 import {
   DOC_VERSION,
+  SCENE_DOC_VERSION,
   type Clip,
   type LineStyle,
   type RibbonClip,
@@ -31,6 +34,7 @@ export interface RawDoc {
   stage: StudioDoc["stage"];
   clips: Clip[];
   timeline?: StudioDoc["timeline"];
+  scenePlan?: StudioDoc["scenePlan"];
 }
 
 /** Fields the first studio build stored on bubbles before attachment became universal. */
@@ -197,6 +201,11 @@ function pictureIsInline(clip: Clip): boolean {
 export function normalizeDoc(raw: RawDoc): Normalized {
   const warnings: string[] = [];
   const clips = raw.clips
+    .filter(c => {
+      if (c.stageMask === undefined || validStageMask(c.stageMask)) return true;
+      warnings.push(`"${c.name}" had an invalid stage mask; removed to keep hidden artwork hidden.`);
+      return false;
+    })
     .map(normalizeClip)
     .filter((c) => {
       if (rigIsSound(c)) return true;
@@ -220,7 +229,8 @@ export function normalizeDoc(raw: RawDoc): Normalized {
   const tail = raw.timeline?.tailSeconds;
   const validTimeline = typeof tail === "number" && Number.isFinite(tail) && tail >= 0 && tail <= 60;
   if (raw.timeline !== undefined && !validTimeline) warnings.push("Invalid timeline tail; restored the default one second hold.");
-  const doc: StudioDoc = { ...raw, version: DOC_VERSION, clips: withParents, ...(raw.timeline !== undefined ? { timeline: validTimeline ? { tailSeconds: tail! } : undefined } : {}) };
+  const version = raw.version === SCENE_DOC_VERSION || withParents.some(c => c.stageMask !== undefined) || validScenePlan(raw.scenePlan) ? SCENE_DOC_VERSION : DOC_VERSION;
+  const doc: StudioDoc = { ...raw, version, clips: withParents, ...(raw.timeline !== undefined ? { timeline: validTimeline ? { tailSeconds: tail! } : undefined } : {}) };
   const looped = loopMemberIds(doc);
   const repaired = doc.clips.map((c) => {
     if (!looped.has(c.id)) return c;

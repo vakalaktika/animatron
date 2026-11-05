@@ -1,9 +1,10 @@
 "use client";
 
 import type { MotionValue } from "motion/react";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
+import { validStageMask } from "./engine/stageMask";
 import { ClipView } from "./clips/ClipView";
-import type { StudioDoc } from "./types";
+import type { Clip, StudioDoc } from "./types";
 
 interface Props {
   doc: StudioDoc;
@@ -15,6 +16,21 @@ interface Props {
   className?: string;
   /** Let art run past the stage edges (a ribbon bleeding off a hero band). */
   overflow?: "hidden" | "visible";
+}
+
+/** Clip the complete layer (including its trail) in the stationary stage frame. */
+function StageLayer({ clip, doc, time }: { clip: Clip; doc: StudioDoc; time: MotionValue<number> }) {
+  const id = `stage-mask-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const mask = clip.stageMask;
+  if (mask === undefined) return <ClipView clip={clip} doc={doc} time={time} />;
+  // Fail closed even for an invalid in-memory document that bypassed import.
+  if (!validStageMask(mask)) return null;
+  return <div data-stage-mask={clip.id} className="absolute left-0 top-0" style={{ width: doc.stage.width, height: doc.stage.height, clipPath: `url(#${id})` }}>
+    <svg width="0" height="0" aria-hidden="true" style={{ position: "absolute" }}>
+      <defs><clipPath id={id} clipPathUnits="userSpaceOnUse">{mask.regions.map((points, i) => <polygon key={i} clipRule="evenodd" points={points.map(p => `${p.x},${p.y}`).join(" ")} />)}</clipPath></defs>
+    </svg>
+    <ClipView clip={clip} doc={doc} time={time} />
+  </div>;
 }
 
 /**
@@ -38,7 +54,7 @@ export function StageCanvas({ doc, time, zoom = 1, children, className, overflow
       {doc.clips
         .filter((clip) => clip.enabled)
         .map((clip) => (
-          <ClipView key={clip.id} clip={clip} doc={doc} time={time} />
+          <StageLayer key={clip.id} clip={clip} doc={doc} time={time} />
         ))}
       {children}
     </div>

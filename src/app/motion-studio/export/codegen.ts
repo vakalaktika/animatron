@@ -35,7 +35,7 @@ export function clipComponentCode(doc: StudioDoc, clip: Clip): string {
   return `"use client";
 
 import {
-  ClipView,
+  ${local.stageMask ? "StageCanvas" : "ClipView"},
   clipDuration,
   useStudioClock,
   type Clip,
@@ -68,7 +68,7 @@ export function ${name}({
       className="relative overflow-hidden"
       style={{ width: STAGE.stage.width, height: STAGE.stage.height }}
     >
-      <ClipView clip={CLIP} doc={STAGE} time={time} />
+      ${local.stageMask ? "<StageCanvas doc={{ ...STAGE, stage: { ...STAGE.stage, transparent: true } }} time={time} />" : "<ClipView clip={CLIP} doc={STAGE} time={time} />"}
     </div>
   );
 }
@@ -106,5 +106,5 @@ export const HANDOFF_NOTES = `Handoff
 4. Every value in the generated CLIP / DOC object is editable by hand. Re-export from the studio to replace it.
 5. Lottie clips export without their JSON payload. Import the .json in your component and assign it to \`data\`.
 6. Video layers and the sound track point at files in the studio's browser media store (\`mediaId\`). Host those files yourself and load them with your own media hook; the runtime's VideoArt takes a URL from \`useMediaUrl\`, which you can replace.
-7. Rig layers carry their whole Mid-century Ink Rig 1 or 2 asset in \`rig\` (docs/mci-rig/); the runtime's RigClipView validates the artwork, raster attachments and drawing states, and poses it from \`animationId\` or \`pose\`. "Save rig" writes the asset back out as .mci.json. Keep Rig 2 assets at version 2; legacy runtimes cannot render the extension.
-8. Attached clips keep their \`parentId\`; the runtime composes each child's transform from its parent every frame. A child's x / y are its offset in the parent's frame, so change those to move it relative to the parent. A single-clip export is detached with its resting stage position baked in.`;
+7. Rig layers carry their whole Mid-century Ink Rig 1, 2 or 3 asset in \`rig\` (docs/mci-rig/); the runtime's RigClipView validates the artwork, raster attachments and drawing states, and poses it from \`animationId\` or \`pose\`. "Save rig" writes the asset back out as .mci.json. Preserve each rig version; old runtimes reject unsupported extensions.
+8. Attached clips keep their \`parentId\`; the runtime composes each child's transform from its parent every frame. A child's x / y are its offset in the parent's frame, so change those to move it relative to the parent. A single-clip export is detached with its resting stage position baked in.\n9. Document 3 stage-space masks require the updated StageCanvas runtime; single-clip exports retain the aperture and use a transparent stage.`;

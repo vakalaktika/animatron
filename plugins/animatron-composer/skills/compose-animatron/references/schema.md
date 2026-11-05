@@ -213,3 +213,7 @@ purple), warm (red, orange, yellow), full (all six in that order).
 ## Explicit timeline tail (illustrated-scene pipeline)
 
 A composition may include `"timeline": { "tailSeconds": 0 }`. `tailSeconds` is a finite number from 0 through 60. Absent timeline metadata preserves the legacy one-second hold. Duration remains latest enabled clip end plus this tail; it does not crop a longer animation. For an exact 8-second loop, use an 8-second animation with `loop: true` and a zero tail. Verify both rendered continuity and spacing/velocity around the seam. Import, share, save and reopen must retain the field. Older applications may omit it and add the old hold; deliver the JSON and identify the required app revision.
+
+## Document3 scene structure extension
+
+Default legacy documents remain version2. `version:3` adds optional `stageMask: {regions: [[{x,y},...],...]}` to a clip, static in stage pixels, and `scenePlan` to the document (see scene-production.md). Masks contain1..16nonzero-area polygons of3..64finite points, coordinate absolute bound1e7; no raw SVG/CSS. Paint order remains the clip list. Invalid masks fail closed. Mask/plan fields require document3 on import. New3documents are JSON-only handoffs; opening/hash/short links are intentionally unavailable. Older app builds reject3JSON instead of ignoring the mask.

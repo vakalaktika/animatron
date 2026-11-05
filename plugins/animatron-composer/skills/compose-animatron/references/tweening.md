@@ -80,3 +80,7 @@ create missing anatomy, hidden paint, mesh deformation, or automatic lip sync.
 Deliver the sparse editable composition/master, a same-renderer preview and a
 reduced-motion still. Retain baked copies only for legacy playback, constraints
 that actually need sampling, or explicitly requested delivery formats.
+
+## Production preflight
+
+Before illustrated motion, read scene-production.md. Store `scenePlan` in a document3 composition, then run `node scripts/scene-check.mjs scene.json --repo /path/to/updated/app --offline`. `tween.mjs` also refuses a failing stored plan before writing. Legacy no-plan files keep technical validation only; they do not acquire an acting-quality claim. A required torso/arm/hand control missing from the actual prepared art is a production failure, not something to approximate with a gliding plate.

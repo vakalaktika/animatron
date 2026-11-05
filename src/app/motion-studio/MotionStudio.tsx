@@ -7,7 +7,7 @@ import { clipEnd, docDuration, loopsForever } from "@/app/components/motion-stud
 import type { AudioTrack, Clip, RigClip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import { retimePropKeys, setPropAt, shiftPosition } from "@/app/components/motion-studio/engine/keys";
 import { retimeKeys } from "@/app/components/motion-studio/engine/rig";
-import { RIG_FORMAT } from "@/app/components/motion-studio/types";
+import { RIG_FORMAT, SCENE_DOC_VERSION } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
 import { ExportDialog } from "./dialogs/ExportDialog";
 import { GalleryDialog } from "./dialogs/GalleryDialog";
@@ -40,7 +40,7 @@ import {
   type ProjectStore,
 } from "./lib/projects";
 import { hasMedia, hydrateClipMedia, hydrateMedia, inlineClipMedia, inlineMedia, pruneMedia } from "./lib/mediaDoc";
-import { docFromHash, shareUrl } from "./lib/share";
+import { docFromHash, shareUrl, requiresNewerAppForSharing, SCENE_SHARE_NOTICE } from "./lib/share";
 import { SHORT_SHARE_PARAM } from "./lib/cloud";
 import { useCloud } from "./lib/useCloud";
 import { useCloudSync } from "./lib/useCloudSync";
@@ -111,7 +111,10 @@ export function MotionStudio() {
    */
   const setDoc = useCallback((next: StudioDoc | ((d: StudioDoc) => StudioDoc), key?: string) => {
     setHistory((h) => {
-      const resolved = typeof next === "function" ? next(h.present) : next;
+      const candidate = typeof next === "function" ? next(h.present) : next;
+      // Pasted/imported masked layers also opt in; no write path may export them as legacy documents.
+      const resolved: StudioDoc = candidate.version !== SCENE_DOC_VERSION && (candidate.scenePlan !== undefined || candidate.clips.some(c => c.stageMask !== undefined))
+        ? { ...candidate, version: SCENE_DOC_VERSION } : candidate;
       const clips = normalizeOrder(resolved.clips);
       return record(h, clips === resolved.clips ? resolved : { ...resolved, clips }, { key });
     });
@@ -224,7 +227,7 @@ export function MotionStudio() {
   const selectedBone = selected?.type === "rig" && boneSelection?.clipId === selected.id && selected.rig.bones.some((b) => b.id === boneSelection.boneId) ? boneSelection.boneId : null;
 
   const updateClip = useCallback((next: Clip) => {
-    setDoc((d) => ({ ...d, clips: d.clips.map((c) => (c.id === next.id ? next : c)) }), `clip:${next.id}`);
+    setDoc((d) => ({ ...d, ...(next.stageMask ? { version: SCENE_DOC_VERSION } : {}), clips: d.clips.map((c) => (c.id === next.id ? next : c)) }), `clip:${next.id}`);
   }, [setDoc]);
 
   const setClipStart = useCallback((id: string, start: number) => {
@@ -747,6 +750,7 @@ export function MotionStudio() {
     });
 
   const makeShareLink = async (): Promise<{ ok: true; url: string; note?: string } | { ok: false; reason: string }> => {
+    if (requiresNewerAppForSharing(doc)) return { ok: false, reason: SCENE_SHARE_NOTICE };
     if (hasMedia(doc)) return { ok: false as const, reason: "Video and sound files are too big for a link. Download the composition as a JSON file instead; the media travels inside it." };
     if (cloud.enabled) {
       const description = doc.description?.trim();
@@ -762,6 +766,7 @@ export function MotionStudio() {
     }
     const result = shareUrl(doc, window.location);
     if (result.ok) return result;
+    if (result.reason === "requires-newer-app") return { ok: false, reason: SCENE_SHARE_NOTICE };
     return { ok: false as const, reason: "This composition has pictures in it, which are too big for a link. Download it as a JSON file instead." };
   };
 

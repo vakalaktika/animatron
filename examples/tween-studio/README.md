@@ -1,3 +1,5 @@
+> Correction: this example proves sparse interpolation only. It failed directed travel and scene-space review, and its family artwork cannot support natural articulated acting. See [scene structure correction](../scene-structure/README.md). Fewer keys were not a visual-quality improvement by themselves.
+
 # Tween Studio — sparse editable motion
 
 Create artwork once, separate inspected moving parts, author a few poses and choose how each part travels between them. The application evaluates the times between poses. Editable JSON stores keys/curves; rendered MP4 necessarily stores video frames.

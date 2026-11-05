@@ -5,11 +5,12 @@ import { render, screen } from "@testing-library/react";
 import { validStageMask, pointInStageMask } from "./stageMask";
 import { StageCanvas } from "../StageCanvas";
 import { makeText, parseImport } from "@/app/motion-studio/presets";
+import { docFromJson } from "@/app/motion-studio/lib/importDoc";
 import { normalizeDoc } from "@/app/motion-studio/lib/migrate";
 import type { StudioDoc } from "../types";
 const region = [{x:10,y:10},{x:90,y:10},{x:90,y:80},{x:10,y:80}];
 const mask = {regions:[region]};
-const fixture = (): StudioDoc => ({version:2,name:"Window",stage:{width:100,height:100,background:"#fff",transparent:false},clips:[{...makeText({id:"bird",text:"Bird",x:50,y:50,start:0}),stageMask:mask}]});
+const fixture = (): StudioDoc => ({version:3,name:"Window",stage:{width:100,height:100,background:"#fff",transparent:false},clips:[{...makeText({id:"bird",text:"Bird",x:50,y:50,start:0}),stageMask:mask}]});
 describe("stage-space visibility regions",()=>{
  test("validates bounded polygon unions and rejects malformed or degenerate regions",()=>{
   expect(validStageMask(mask)).toBe(true);
@@ -54,4 +55,20 @@ describe("stage-space visibility regions",()=>{
   expect(view.container.querySelector('[data-clip-id="plain"]')).not.toBeNull();
   expect(view.container.querySelector('[data-stage-mask]')).toBeNull();
  });
+});
+
+test("scene features opt into document 3; legacy documents retain version 2",()=>{
+ const doc=fixture();
+ expect(parseImport({...doc,version:2}).kind).toBe("error");
+ expect(parseImport({...doc,version:4}).kind).toBe("error");
+ expect(parseImport({...doc,version:2.5}).kind).toBe("error");
+ expect(normalizeDoc({...doc,version:2}).doc.version).toBe(3);
+ expect(normalizeDoc({...doc,clips:[],version:2}).doc.version).toBe(2);
+ expect(normalizeDoc({...doc,clips:[],version:3}).doc.version).toBe(3);
+ const lone=docFromJson(JSON.stringify(doc.clips[0]),"bird.clip.json");
+ expect(lone.ok).toBe(true);
+ if(lone.ok)expect(lone.doc.version).toBe(3);
+ const planned={...doc,clips:[],scenePlan:{version:1 as const,actors:[],travels:[]}};
+ expect(parseImport({...planned,version:2}).kind).toBe("error");
+ expect(normalizeDoc({...planned,version:2}).doc.version).toBe(3);
 });

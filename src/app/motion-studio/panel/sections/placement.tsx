@@ -7,6 +7,7 @@ import { arrivalTime } from "@/app/components/motion-studio/engine/ribbon";
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
 import { BUTTON_ROW, MoreFields, NumField, SelectField, TextField, ToggleField } from "../fields";
+import { StageMaskFields } from "../StageMaskFields";
 import { ObjectTween } from "../ObjectTween";
 import { KeyEaseField, KeyedNumField } from "../KeyedFields";
 import type { PanelSection } from "../PanelGroup";
@@ -62,6 +63,7 @@ export function placementSection(
           {clip.type !== "ribbon" && <KeyedNumField {...keyed} prop="rotation" label="Turn" unit="°" min={-180} max={180} step={1} />}
           <KeyedNumField {...keyed} prop="opacity" label="Opacity" min={0} max={1} step={0.01} />
         </div>
+        <StageMaskFields key={`mask-${clip.id}`} clip={clip} stage={doc.stage} onChange={onChange} />
         <ObjectTween key={clip.id} clip={clip} time={time} onChange={onChange} />
         {hasKeys(clip) && <KeyEaseField clip={clip} time={time} onChange={onChange} />}
         {!attached && (

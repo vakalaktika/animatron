@@ -1,3 +1,10 @@
+## 0.7.0 — scene intent, direction and space
+
+- Require action-ready independent artwork for coordinated acting; withdraw the family sparse-tween example as natural-acting proof.
+- Declare facing, forward/backward travel, scene space and articulation needs. Composer preflight uses actual evaluation and refuses failing stored plans before writing.
+- Document3 opts into real stage-space masks and saved scene plans; legacy formats remain supported. JSON-only delivery avoids old viewers silently ignoring masks.
+- Structural checks remain separate from visual acting review and user approval.
+
 ## 0.6.0 — native sparse tween authoring
 
 - Native Rig 3 eased part tracks replace dense sampled keys for ordinary transform motion; Rig 1/2 and legacy baking remain supported.

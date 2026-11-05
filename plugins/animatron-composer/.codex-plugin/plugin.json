@@ -11,7 +11,7 @@
     "shortDescription": "Compose and animate scenes"
   },
   "name": "animatron-composer",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Writes Animatron studio compositions from a plain-language brief, validated with the studio's own import and repair code, and returns a JSON file plus a #share= link; on request makes short animatron-share links with preview cards drawn by the studio's own renderer; places and animates Mid-century Ink rigged characters with the studio's rig engine.",
   "author": {
     "name": "Eduardo Guillen",

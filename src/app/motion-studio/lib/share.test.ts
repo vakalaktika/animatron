@@ -1,3 +1,4 @@
+import { compressToEncodedURIComponent } from "lz-string";
 import { makeImageSprite, welcomePreset } from "../presets";
 import { docFromHash, SHARE_PARAM, shareUrl } from "./share";
 
@@ -32,4 +33,13 @@ describe("share links", () => {
     expect(docFromHash("#other=1")).toBeNull();
     expect(docFromHash(`#${SHARE_PARAM}=not-a-real-payload`)).toBeNull();
   });
+});
+
+it("refuses scene-contract links until the destination application is verified",()=>{
+ const doc={...welcomePreset(),version:3 as const};
+ expect(shareUrl(doc,location)).toEqual({ok:false,reason:"requires-newer-app"});
+ const encoded=compressToEncodedURIComponent(JSON.stringify(doc));
+ expect(docFromHash(`#share=${encoded}`)?.version).toBe(3);
+ const future=compressToEncodedURIComponent(JSON.stringify({...doc,version:4}));
+ expect(docFromHash(`#share=${future}`)).toBeNull();
 });
