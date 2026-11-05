@@ -1,7 +1,7 @@
 "use client";
 
-import { useAnimationFrame, useMotionValue, type MotionValue } from "motion/react";
-import { useCallback, useState } from "react";
+import { useAnimationFrame, useMotionValue, useReducedMotion, type MotionValue } from "motion/react";
+import { useCallback, useEffect, useState } from "react";
 
 export interface ClockOptions {
   autoplay?: boolean;
@@ -30,7 +30,12 @@ export function useStudioClock(
   { autoplay = true, loop = false, speed = 1 }: ClockOptions = {},
 ): StudioClock {
   const time = useMotionValue(0);
-  const [playing, setPlaying] = useState(autoplay);
+  const reducedMotion = useReducedMotion();
+  const [playing, setPlaying] = useState(autoplay && !reducedMotion);
+  // Explicit Play remains available; preference changes stop autonomous motion.
+  useEffect(() => {
+    if (reducedMotion) setPlaying(false);
+  }, [reducedMotion]);
 
   useAnimationFrame((_, delta) => {
     if (!playing) return;

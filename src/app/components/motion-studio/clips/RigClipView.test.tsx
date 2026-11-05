@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { motionValue } from "motion/react";
 import { StageCanvas } from "../StageCanvas";
 import { matrixString, rigPoseAt, transforms } from "../engine/rig";
@@ -28,6 +28,24 @@ const rigClip = (over: Partial<RigClip> = {}): RigClip => ({
 });
 
 describe("RigClipView", () => {
+  it("renders Rig2 PNG alpha and registered drawings through the live stage clock", async () => {
+    const asset = JSON.parse(readFileSync(path.resolve(__dirname,"../../../../../docs/mci-rig/example-illustrated-part.mci.json"),"utf8")) as RigAsset;
+    const time=motionValue(0);
+    const clip=rigClip({rig:asset,animationId:"turn"});
+    const {container,unmount}=render(<StageCanvas doc={docWith(clip)} time={time}/>);
+    const front=container.querySelector('[data-rig-part="front"]')!;
+    const side=container.querySelector('[data-rig-part="side"]')!;
+    expect(front.getAttribute("opacity")).toBe("1");
+    expect(side.getAttribute("opacity")).toBe("0");
+    expect(front.querySelector("image")?.getAttribute("href")).toBe(asset.rasterAttachments![0].src);
+    await act(async()=>{ time.set(1.2); await new Promise(resolve=>setTimeout(resolve,30)); });
+    expect(front.getAttribute("opacity")).toBe("0");
+    expect(side.getAttribute("opacity")).toBe("1");
+    await act(async()=>{ time.set(2); await new Promise(resolve=>setTimeout(resolve,30)); });
+    expect(front.getAttribute("opacity")).toBe("1");
+    expect(side.getAttribute("opacity")).toBe("0");
+    unmount();
+  });
   it("draws every bound group inline, wrapped in its posed bone transform", () => {
     const clip = rigClip();
     const time = motionValue(0.7);

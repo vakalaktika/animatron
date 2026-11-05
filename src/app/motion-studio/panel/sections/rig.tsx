@@ -25,6 +25,7 @@ import {
   setAnimationDuration,
   upsertKey,
 } from "@/app/components/motion-studio/engine/rig";
+import { drawingVisibility, setDrawing } from "@/app/components/motion-studio/engine/rigV2";
 import type { RigAsset, RigBone, RigClip, RigKey } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
 import { localTime, setBoneDelta, type RigMode } from "../../lib/rigEdit";
@@ -176,6 +177,16 @@ function SkeletonFields({ clip, onChange, rig }: { clip: RigClip; onChange: (c: 
             </Button>
           </div>
         </>
+      )}
+      {(asset.drawingSets?.length ?? 0) > 0 && (
+        <MoreFields label="Replacement drawings" defaultOpen>
+          <p className="atm-help">Choose a registered drawing. With an animation selected, this records a held drawing key at the playhead; otherwise it changes the master’s default drawing.</p>
+          {asset.drawingSets?.map(set => {
+            const visible = drawingVisibility(asset, clip.animationId, Math.max(0, now - clip.start));
+            const selected = set.drawings.find(d => d.svgIds.every(id => visible[id] !== false))?.id ?? set.defaultDrawingId;
+            return <SelectField key={set.id} label={set.id} value={selected} options={set.drawings.map(d => ({ value:d.id, label:d.id }))} onChange={drawingId => change(setDrawing(asset,set.id,drawingId,clip.animationId,localTime(clip,now)))} />;
+          })}
+        </MoreFields>
       )}
       <MoreFields label={`Artwork parts (${asset.bindings.length})`}>
         <p className="atm-help">Each drawn part follows one bone. Changing the bone keeps the part where it is drawn.</p>

@@ -90,7 +90,7 @@ export function clipEnd(clip: Clip): number {
 }
 
 /** Total composition length: the latest clip end, with a short hold after. */
-export function docDuration(doc: StudioDoc, tail = 1): number {
+export function docDuration(doc: StudioDoc, tail = doc.timeline?.tailSeconds ?? 1): number {
   const ends = doc.clips.filter((c) => c.enabled).map(clipEnd);
   return ends.length ? Math.max(...ends) + tail : tail;
 }

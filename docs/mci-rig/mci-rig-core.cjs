@@ -5,7 +5,8 @@
   else host.MCIRig = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  const FORMAT = 'mid-century-ink-rig', VERSION = 1;
+  const FORMAT = 'mid-century-ink-rig', VERSION = 2;
+  const V2 = typeof require === 'function' ? require('./mci-rig-v2.cjs') : (globalThis.MCIRigV2 || { validateRigV2: asset => asset.version === 2 ? ['Load mci-rig-v2.cjs before mci-rig-core.cjs for browser Rig 2 support.'] : [] });
   const ID = /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/;
   const isId = value => typeof value === 'string' && ID.test(value);
   const identity = () => [1, 0, 0, 1, 0, 0];
@@ -28,9 +29,11 @@
   function validate(asset) {
     const errors = [], fail = m => errors.push(m);
     if (!asset || typeof asset !== 'object' || Array.isArray(asset)) return {ok:false,errors:['Expected an asset object.']};
+    try { if (new TextEncoder().encode(JSON.stringify(asset)).length > 4000000) return {ok:false,errors:['Rig exceeds 4 MB.']}; } catch { return {ok:false,errors:['Rig must be JSON serializable.']}; }
     if (asset.name !== undefined && (typeof asset.name !== 'string' || asset.name.length > 200)) fail('Invalid asset name.');
     if (asset.metadata !== undefined && (!asset.metadata || typeof asset.metadata !== 'object' || Array.isArray(asset.metadata))) fail('Metadata must be an object.');
-    if (asset.format !== FORMAT || asset.version !== VERSION) fail('Expected mid-century-ink-rig version 1.');
+    if (asset.format !== FORMAT || ![1,2].includes(asset.version)) fail('Expected mid-century-ink-rig version 1 or 2.');
+    errors.push(...V2.validateRigV2(asset));
     if (!asset.canvas || !finite(asset.canvas.width) || !finite(asset.canvas.height) || asset.canvas.width <= 0 || asset.canvas.height <= 0) fail('Canvas dimensions must be positive numbers.');
     if (typeof asset.svg !== 'string' || asset.svg.length > 2_000_000 || !asset.svg.includes('<svg')) fail('Expected SVG artwork, up to 2 MB.');
     if (!Array.isArray(asset.bones) || asset.bones.length < 1 || asset.bones.length > 128) return {ok:false,errors:[...errors,'Expected 1–128 bones.']};
@@ -163,5 +166,5 @@
       {id:'wave',duration:2,loop:true,tracks:[track('arm.left.upper',[[0,0],[.4,-40],[1.6,-40],[2,0]]),track('arm.left.forearm',[[0,0],[.4,-70],[.7,-95],[1,-65],[1.3,-95],[1.6,-70],[2,0]]),track('arm.left.hand',[[0,0],[.4,0],[.7,20],[1,-20],[1.3,20],[1.6,0],[2,0]])]};
     output.animations=output.animations.filter(x=>x.id!==a.id).concat(a); return output;
   }
-  return {FORMAT,VERSION,identity,multiply,inverse,matrix,point,clone,validate,sample,world,transforms,rebind,solve,record,compatibleActions,preset};
+  return {FORMAT,VERSION,...V2,identity,multiply,inverse,matrix,point,clone,validate,sample,world,transforms,rebind,solve,record,compatibleActions,preset};
 });

@@ -7,6 +7,11 @@
 
 # production
 /build
+/coverage
+/dist
+# Local full private plugin snapshots. Only reviewed update-overlay files
+# are explicitly tracked; unchanged identity/style artwork stays private.
+/plugins
 
 # misc
 .DS_Store

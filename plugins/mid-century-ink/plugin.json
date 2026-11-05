@@ -1,0 +1,28 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "mid-century-ink",
+  "version": "1.7.0",
+  "description": "Create and restyle images in Mid-century Ink (Original or Detailed treatment) with bundled visual references; native SVGs and animation-ready rigs.",
+  "author": {
+    "name": "Ed"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Mid-century Ink",
+        "shortDescription": "1950s graphic illustration",
+        "longDescription": "Create and restyle illustrations in Mid-century Ink, 1950s Cartoon Modernism, in two treatments: Original / Classic graphic and Detailed storybook. Keeps a whole cast consistent and protects approved character identities. Also builds native SVGs and animation-ready rigged characters in 3D, with walks, gaits, scenes, ropes and slim rigs.",
+        "developerName": "Ed",
+        "category": "Creativity",
+        "defaultPrompt": [
+          "Use Mid-century Ink to illustrate my prompt or restyle my photo."
+        ],
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg",
+        "capabilities": [
+          "Interactive"
+        ]
+      }
+    }
+  }
+}

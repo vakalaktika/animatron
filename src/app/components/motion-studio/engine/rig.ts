@@ -1,5 +1,6 @@
 import type { RigAnimation, RigAsset, RigBone, RigClip, RigDelta, RigKey, RigPose } from "../types";
-import { RIG_FORMAT, RIG_VERSION } from "../types";
+import { RIG_FORMAT } from "../types";
+import { validateRigV2 } from "./rigV2";
 
 /**
  * Mid-century Ink Rig 1: the skeleton maths, validation and clip-editing
@@ -83,16 +84,14 @@ export function validateRig(asset: unknown): RigCheck {
   const errors: string[] = [];
   const fail = (m: string) => errors.push(m);
   if (!asset || typeof asset !== "object" || Array.isArray(asset)) return { ok: false, errors: ["Expected an asset object."] };
+  try {
+    if (new TextEncoder().encode(JSON.stringify(asset)).length > RIG_LIMITS.jsonBytes) return { ok: false, errors: ["Rig exceeds 4 MB."] };
+  } catch { return { ok: false, errors: ["Rig must be JSON serializable."] }; }
   const a = asset as Record<string, unknown>;
   if (a.name !== undefined && (typeof a.name !== "string" || a.name.length > 200)) fail("Invalid asset name.");
   if (a.metadata !== undefined && (!a.metadata || typeof a.metadata !== "object" || Array.isArray(a.metadata))) fail("Metadata must be an object.");
-  if (a.format !== RIG_FORMAT || a.version !== RIG_VERSION) {
-    fail(
-      a.format === RIG_FORMAT && typeof a.version === "number"
-        ? `This rig is version ${a.version}; the studio reads Mid-century Ink Rig version ${RIG_VERSION}.`
-        : "Expected mid-century-ink-rig version 1.",
-    );
-  }
+  if (a.format !== RIG_FORMAT || ![1, 2].includes(a.version as number)) fail(a.format === RIG_FORMAT ? `This rig is version ${a.version}; the studio reads Mid-century Ink Rig versions 1 and 2.` : "Expected mid-century-ink-rig version 1 or 2.");
+  errors.push(...validateRigV2(a));
   const canvas = a.canvas as { width?: unknown; height?: unknown } | undefined;
   if (!canvas || !finite(canvas.width) || !finite(canvas.height) || canvas.width <= 0 || canvas.height <= 0) fail("Canvas dimensions must be positive numbers.");
   if (typeof a.svg !== "string" || a.svg.length > RIG_LIMITS.svgChars || !a.svg.includes("<svg")) fail("Expected SVG artwork, up to 2 MB.");
@@ -536,6 +535,7 @@ export function setAnimationDuration(asset: RigAsset, animationId: string, durat
     duration: next,
     // Full precision: rounding could merge two keys and break the strict order.
     tracks: anim.tracks.map((t) => ({ ...t, keys: t.keys.map((k) => ({ ...k, time: k.time * f })) })),
+    ...(anim.drawingTracks ? { drawingTracks: anim.drawingTracks.map(t => ({ ...t, keys: t.keys.map(k => ({ ...k, time: k.time * f })) })) } : {}),
   });
 }
 
@@ -580,7 +580,9 @@ function retimedTracks(anim: RigAnimation, boneId: string | null, time: number):
 export function retimedKeyTime(anim: RigAnimation, boneId: string | null, time: number, to: number): number {
   let lo = 0;
   let hi = anim.duration;
-  for (const t of retimedTracks(anim, boneId, time)) {
+  const ownBone = boneId !== null && anim.tracks.some(t => t.boneId === boneId && t.keys.some(k => Math.abs(k.time-time) <= 1e-6));
+  const drawings = ownBone ? [] : (anim.drawingTracks ?? []).filter(t => t.keys.some(k => Math.abs(k.time-time) <= 1e-6));
+  for (const t of [...retimedTracks(anim, boneId, time), ...drawings]) {
     const i = t.keys.findIndex((k) => Math.abs(k.time - time) <= 1e-6);
     if (i > 0) lo = Math.max(lo, t.keys[i - 1].time + KEY_GAP);
     if (i < t.keys.length - 1) hi = Math.min(hi, t.keys[i + 1].time - KEY_GAP);
@@ -601,12 +603,14 @@ export function retimeKeys(asset: RigAsset, animationId: string, boneId: string 
   if (next === time) return asset;
   const moving = new Set(retimedTracks(anim, boneId, time).map((t) => t.boneId));
   const tracks = anim.tracks.map((t) => (moving.has(t.boneId) ? { ...t, keys: t.keys.map((k) => (Math.abs(k.time - time) <= 1e-6 ? { ...k, time: next } : k)) } : t));
-  return replaceAnimation(asset, { ...anim, tracks });
+  const ownBone = boneId !== null && anim.tracks.some(t => t.boneId === boneId && t.keys.some(k => Math.abs(k.time-time) <= 1e-6));
+  const drawingTracks = anim.drawingTracks?.map(t => ownBone ? t : ({ ...t, keys:t.keys.map(k => Math.abs(k.time-time) <= 1e-6 ? {...k,time:next} : k) }));
+  return replaceAnimation(asset, { ...anim, tracks, ...(drawingTracks ? {drawingTracks} : {}) });
 }
 
 /** Every distinct key time in the clip, ascending. */
 export function keyTimes(anim: RigAnimation): number[] {
-  return [...new Set(anim.tracks.flatMap((t) => t.keys.map((k) => k.time)))].sort((a, b) => a - b);
+  return [...new Set([...anim.tracks, ...(anim.drawingTracks ?? [])].flatMap((t) => t.keys.map((k) => k.time)))].sort((a, b) => a - b);
 }
 
 /** Bones in tree order, each with its depth, for a list view. */
