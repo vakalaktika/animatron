@@ -12,6 +12,12 @@ const fixture = (): RigAsset => JSON.parse(readFileSync(path.resolve(__dirname, 
 const STAGE = { width: 1920, height: 1080 };
 
 describe("rigClipFrom", () => {
+  it("enforces the same per-rig JSON budget in whole compositions and standalone imports", () => {
+    const asset = {...fixture(),metadata:{note:"é".repeat(2_000_001)}};
+    expect(rigClipFrom(asset,STAGE).ok).toBe(false);
+    const doc = { ...welcomePreset(), clips:[makeRig(asset,STAGE)] };
+    expect(normalizeDoc(doc).doc.clips).toHaveLength(0);
+  });
   it("opens the cross-tool fixture as a rig layer centred on the stage, playing its first clip", () => {
     const result = rigClipFrom(fixture(), STAGE);
     expect(result.ok).toBe(true);

@@ -1,0 +1,9 @@
+{
+  "plugin_id": "plugins_6ac48990546c8191a6d586e78c552157",
+  "base_release_id": "pluginrel_6aec34426b5c819183e3cab6dca33106",
+  "base_version": "1.7.0",
+  "scope": "USER",
+  "visibility": "PRIVATE",
+  "source": "Backend 1.7.0 current-release inventory and all five edited source files read back and matched to the committed overlay before the illustration-fidelity correction on 2026-11-05. Prior base provenance remains in Git history.",
+  "publication": "Candidate source only; preserve identity/audience. Guard update using the observed release ID after commit and PR."
+}

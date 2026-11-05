@@ -201,6 +201,11 @@ export function MotionStudio() {
   // scrub and edit; Play still works when they want to see it move.
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const clock = useStudioClock(duration, { autoplay: !reducedMotion, loop: loop || hasLoopingClip, speed });
+  const replayArrival = useCallback(() => {
+    clock.seek(0);
+    if (reducedMotion) clock.pause();
+    else clock.play();
+  }, [clock, reducedMotion]);
 
   const selected = doc.clips.find((c) => c.id === selectedId) ?? null;
   const extras = useMemo(() => new Set([...extraIds].filter((id) => id !== selectedId && doc.clips.some((c) => c.id === id))), [extraIds, selectedId, doc.clips]);
@@ -333,9 +338,9 @@ export function MotionStudio() {
       replaceDoc(shared);
       setSelectedId(null);
       notify(`Opened “${shared.name}” from a link. It is now one of your compositions.`);
-      clock.replay();
+      replayArrival();
     },
-    [replaceDoc, notify, clock],
+    [replaceDoc, notify, replayArrival],
   );
   const arrivalsTaken = useRef(false);
   useEffect(() => {
@@ -363,8 +368,8 @@ export function MotionStudio() {
     setDoc((d) => ({ ...d, clips: [...d.clips, clip] }));
     setSelectedId(clip.id);
     /* eslint-enable react-hooks/set-state-in-effect */
-    clock.replay();
-  }, [clock, doc.stage, setDoc, openArrival]);
+    replayArrival();
+  }, [clock, doc.stage, setDoc, openArrival, replayArrival]);
 
   // A short link (?s=…) names a composition kept in the cloud: fetch it and
   // open it as a new project, as a long link does. The address keeps the
@@ -455,7 +460,7 @@ export function MotionStudio() {
           addClip(result.clip);
           const { bones, animations } = result.clip.rig;
           notify(`Opened the rig “${result.clip.name}”: ${bones.length} bones, ${animations.length} ${animations.length === 1 ? "clip" : "clips"}. Pick a joint on the canvas to pose it.`);
-          clock.replay();
+          replayArrival();
         } else notify(result.message, { sticky: true });
         return;
       }
@@ -605,8 +610,8 @@ export function MotionStudio() {
     replaceDoc(next);
     setSelectedId(null);
     setDialog(null);
-    clock.replay();
-  }, [changeStore, replaceDoc, clock]);
+    replayArrival();
+  }, [changeStore, replaceDoc, replayArrival]);
 
   /**
    * JSON files from the gallery become compositions in the folder being
@@ -641,7 +646,7 @@ export function MotionStudio() {
     replaceDoc(project.doc);
     setSelectedId(null);
     setDialog(null);
-    clock.replay();
+    replayArrival();
   };
 
   /** Removes a composition from this browser, opening another if it was the open one. */

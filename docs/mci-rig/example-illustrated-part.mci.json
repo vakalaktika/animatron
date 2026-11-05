@@ -1,0 +1,112 @@
+{
+  "format": "mid-century-ink-rig",
+  "version": 2,
+  "name": "Illustrated attachment diagnostic",
+  "canvas": {
+    "width": 100,
+    "height": 100
+  },
+  "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><g id=\"front\"/><g id=\"side\"><path d=\"M25 25 Q60 10 55 65 L20 75Z\" fill=\"#d6a744\"/></g></svg>",
+  "bones": [
+    {
+      "id": "root",
+      "parentId": null,
+      "length": 0,
+      "rest": {
+        "x": 10,
+        "y": 20,
+        "rotation": 0
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "id": "front",
+      "svgId": "front",
+      "boneId": "root",
+      "bindMatrix": [
+        1,
+        0,
+        0,
+        1,
+        -10,
+        -20
+      ]
+    },
+    {
+      "id": "side",
+      "svgId": "side",
+      "boneId": "root",
+      "bindMatrix": [
+        1,
+        0,
+        0,
+        1,
+        -10,
+        -20
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "id": "turn",
+      "duration": 2,
+      "loop": true,
+      "tracks": [],
+      "drawingTracks": [
+        {
+          "setId": "head",
+          "keys": [
+            {
+              "time": 0,
+              "drawingId": "front"
+            },
+            {
+              "time": 1,
+              "drawingId": "side"
+            },
+            {
+              "time": 2,
+              "drawingId": "front"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "rasterAttachments": [
+    {
+      "id": "paint",
+      "svgId": "front",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DQAAAEgQGALFXOsAAAAABJRU5ErkJggg==",
+      "x": 5,
+      "y": 8,
+      "width": 20,
+      "height": 30
+    }
+  ],
+  "drawingSets": [
+    {
+      "id": "head",
+      "defaultDrawingId": "front",
+      "drawings": [
+        {
+          "id": "front",
+          "svgIds": [
+            "front"
+          ]
+        },
+        {
+          "id": "side",
+          "svgIds": [
+            "side"
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "purpose": "Format and transparency diagnostic; not an illustration or style reference",
+    "approval": "not-requested"
+  }
+}

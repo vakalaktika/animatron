@@ -5,6 +5,7 @@ import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
 import { docDuration } from "@/app/components/motion-studio/engine/timing";
 import { StageCanvas } from "@/app/components/motion-studio/StageCanvas";
 import type { StudioDoc } from "@/app/components/motion-studio/types";
+import { useMediaQuery } from "../lib/useMediaQuery";
 
 interface Props {
   doc: StudioDoc;
@@ -20,6 +21,7 @@ interface Props {
  * from the top and loops.
  */
 export function MiniPreview({ doc, active, className = "" }: Props) {
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const duration = useMemo(() => docDuration(doc), [doc]);
   const clock = useStudioClock(duration, { autoplay: false, loop: true });
   const { seek, replay, pause } = clock;
@@ -40,12 +42,12 @@ export function MiniPreview({ doc, active, className = "" }: Props) {
   }, []);
 
   useEffect(() => {
-    if (active) replay();
+    if (active && !reducedMotion) replay();
     else {
       pause();
       seek(Math.min(duration, Math.max(0.1, duration * 0.66)));
     }
-  }, [active, duration, replay, pause, seek]);
+  }, [active, reducedMotion, duration, replay, pause, seek]);
 
   const { width, height } = doc.stage;
   const zoom = box.width > 0 ? Math.min(box.width / width, box.height / height) : 0;

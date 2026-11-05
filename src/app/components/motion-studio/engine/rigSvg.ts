@@ -1,5 +1,6 @@
 import type { RigAsset } from "../types";
 import { isRigId, RIG_LIMITS } from "./rig";
+import { validateRigV2 } from "./rigV2";
 
 /**
  * The rig contract's SVG subset, checked before any of the artwork is drawn
@@ -87,7 +88,9 @@ function readNode(el: Element, isRoot: boolean, count: { n: number }): RigSvgNod
  * `0 0 canvas.width canvas.height`, every binding must name a direct-child
  * `<g id>` of the root, and every such group must be bound.
  */
-export function parseRigSvg(asset: Pick<RigAsset, "svg" | "canvas" | "bindings">): RigSvgResult {
+export function parseRigSvg(asset: Pick<RigAsset, "svg" | "canvas" | "bindings"> & Partial<Pick<RigAsset, "version" | "rasterAttachments">>): RigSvgResult {
+  const problems = validateRigV2({ version: asset.version ?? 1, bindings: asset.bindings, rasterAttachments: asset.rasterAttachments });
+  if (problems.length) return { ok: false, error: problems.join(" ") };
   if (typeof DOMParser === "undefined") return { ok: false, error: "This environment cannot parse SVG." };
   if (asset.svg.length > RIG_LIMITS.svgChars) return { ok: false, error: "The artwork is larger than 2 MB." };
   const doc = new DOMParser().parseFromString(asset.svg, "image/svg+xml");
@@ -113,12 +116,19 @@ export function parseRigSvg(asset: Pick<RigAsset, "svg" | "canvas" | "bindings">
   for (const id of groups.keys()) {
     if (!bound.has(id)) return { ok: false, error: `The artwork group "${id}" is not bound to any bone; every drawable group must be bound exactly once.` };
   }
+  for (const part of asset.rasterAttachments ?? []) {
+    const group = groups.get(part.svgId);
+    if (!group) return { ok: false, error: "Missing raster attachment group." };
+    // Trusted image nodes are constructed only after bounded PNG validation.
+    group.children.unshift({ tag: "image", attrs: { href: part.src, x: String(part.x), y: String(part.y), width: String(part.width), height: String(part.height), preserveAspectRatio: "none" }, children: [] });
+  }
   let elements = 0;
   const walk = (n: RigSvgNode) => {
     elements += 1;
     n.children.forEach(walk);
   };
   walk(node);
+  if (elements > RIG_LIMITS.svgElements) return { ok: false, error: `The artwork including raster attachments has more than ${RIG_LIMITS.svgElements} elements.` };
   return { ok: true, svg: { root: node, groups, elements } };
 }
 

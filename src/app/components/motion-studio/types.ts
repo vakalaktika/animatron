@@ -500,10 +500,31 @@ export interface RigAnimation {
   loop: boolean;
   /** At most one track per bone. */
   tracks: RigTrack[];
+  /** Rig 2 registered replacement drawings; discrete holds. */
+  drawingTracks?: RigDrawingTrack[];
 }
 
 export const RIG_FORMAT = "mid-century-ink-rig";
-export const RIG_VERSION = 1;
+export const RIG_VERSION = 2;
+export interface RigRasterAttachment {
+  id: string;
+  svgId: string;
+  /** Self-contained, bounded PNG. SVG image elements remain forbidden. */
+  src: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+export interface RigDrawingSet {
+  id: string;
+  defaultDrawingId: string;
+  drawings: { id: string; svgIds: string[] }[];
+}
+export interface RigDrawingTrack {
+  setId: string;
+  keys: { time: number; drawingId: string }[];
+}
 
 /**
  * The editable skeletal master exactly as exchanged with Agent Torres and
@@ -513,7 +534,7 @@ export const RIG_VERSION = 1;
  */
 export interface RigAsset {
   format: typeof RIG_FORMAT;
-  version: typeof RIG_VERSION;
+  version: 1 | typeof RIG_VERSION;
   name?: string;
   canvas: { width: number; height: number };
   /** The artwork; its viewBox is `0 0 canvas.width canvas.height`. */
@@ -521,6 +542,8 @@ export interface RigAsset {
   bones: RigBone[];
   bindings: RigBinding[];
   slots?: RigSlot[];
+  rasterAttachments?: RigRasterAttachment[];
+  drawingSets?: RigDrawingSet[];
   animations: RigAnimation[];
   /** Descriptive only, never executable. */
   metadata?: Record<string, unknown>;
@@ -581,6 +604,8 @@ export interface StudioDoc {
   name: string;
   /** A sentence about the piece, shown on its share page and link preview. */
   description?: string;
+  /** Explicit post-animation hold. Omitted on legacy documents: one second. */
+  timeline?: { tailSeconds: number };
   stage: StageConfig;
   clips: Clip[];
   audio?: AudioTrack | null;

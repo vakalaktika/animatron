@@ -30,6 +30,7 @@ export interface RawDoc {
   name: string;
   stage: StudioDoc["stage"];
   clips: Clip[];
+  timeline?: StudioDoc["timeline"];
 }
 
 /** Fields the first studio build stored on bubbles before attachment became universal. */
@@ -216,7 +217,10 @@ export function normalizeDoc(raw: RawDoc): Normalized {
     }
     return c;
   });
-  const doc: StudioDoc = { ...raw, version: DOC_VERSION, clips: withParents };
+  const tail = raw.timeline?.tailSeconds;
+  const validTimeline = typeof tail === "number" && Number.isFinite(tail) && tail >= 0 && tail <= 60;
+  if (raw.timeline !== undefined && !validTimeline) warnings.push("Invalid timeline tail; restored the default one second hold.");
+  const doc: StudioDoc = { ...raw, version: DOC_VERSION, clips: withParents, ...(raw.timeline !== undefined ? { timeline: validTimeline ? { tailSeconds: tail! } : undefined } : {}) };
   const looped = loopMemberIds(doc);
   const repaired = doc.clips.map((c) => {
     if (!looped.has(c.id)) return c;

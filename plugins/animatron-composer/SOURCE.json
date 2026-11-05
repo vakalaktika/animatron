@@ -1,0 +1,9 @@
+{
+  "plugin_id": "plugins_6aec0858af6c81919eef805b536032b4",
+  "base_release_id": "pluginrel_6aec0e82ecf88191837a64a3a451ceae",
+  "base_version": "0.4.4",
+  "scope": "USER",
+  "visibility": "PRIVATE",
+  "source": "Backend current-release inventory and targeted source read-back verified against installed cache on 2026-11-05 UTC.",
+  "publication": "Candidate source only; preserve identity/audience. Guard update using the observed release ID after commit and PR."
+}

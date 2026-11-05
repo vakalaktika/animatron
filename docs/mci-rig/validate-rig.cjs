@@ -7,9 +7,10 @@ try {
   if (!path) throw Error("Usage: node validate-rig.cjs asset.mci.json");
   const bytes = fs.statSync(path).size;
   if (bytes > 4000000) throw Error("Rig exceeds 4 MB.");
-  const check = C.validate(JSON.parse(fs.readFileSync(path, "utf8")));
+  const asset = JSON.parse(fs.readFileSync(path, "utf8"));
+  const check = C.validate(asset);
   if (!check.ok) throw Error(check.errors.join("\n"));
-  console.log("Rig 1 structural checks passed. SVG rendering and destination import still require verification.");
+  console.log(`Rig ${asset.version} structural checks passed. SVG rendering, raster decoding, and destination import still require verification.`);
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

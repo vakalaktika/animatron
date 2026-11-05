@@ -1,0 +1,34 @@
+{
+  "interface": {
+    "capabilities": [
+      "Interactive"
+    ],
+    "category": "Creativity",
+    "defaultPrompt": "Create an Animatron composition from my brief.",
+    "developerName": "Eduardo Guillen",
+    "displayName": "Animatron Composer",
+    "longDescription": "Create Animatron compositions from briefs, place supplied Mid-century Ink rigs, validate imports and share round trips with the studio source, and render preview frames when dependencies are available.",
+    "shortDescription": "Compose and animate scenes"
+  },
+  "name": "animatron-composer",
+  "version": "0.5.0",
+  "description": "Writes Animatron studio compositions from a plain-language brief, validated with the studio's own import and repair code, and returns a JSON file plus a #share= link; on request makes short animatron-share links with preview cards drawn by the studio's own renderer; places and animates Mid-century Ink rigged characters with the studio's rig engine.",
+  "author": {
+    "name": "Eduardo Guillen",
+    "email": "vakalaktika@gmail.com",
+    "url": "https://uxed.me"
+  },
+  "keywords": [
+    "animatron",
+    "animation",
+    "motion",
+    "composition",
+    "reel",
+    "short-link",
+    "preview-card",
+    "mid-century-ink"
+  ],
+  "homepage": "https://vakalaktika.github.io/animatron/",
+  "repository": "https://github.com/vakalaktika/animatron",
+  "skills": "./skills"
+}

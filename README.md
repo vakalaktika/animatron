@@ -4,6 +4,8 @@ A free, browser-based animation studio. Add text, speech bubbles, shapes, pictur
 
 Live app: https://vakalaktika.github.io/animatron/
 
+The illustrated-scene pipeline adds compatible Rig 2 transparent PNG attachments and registered replacement drawings, an explicit timeline tail, and reduced-motion presentation. See the [architecture and validation audit](docs/illustrated-scenes/implementation.md), [finished editable examples and MP4 previews](examples/illustrated-scenes/README.md), and [private plugin update workflow](docs/illustrated-scenes/plugin-updates.md). Rig 1 imports remain supported. The Rig 2 application changes require this revision and are not yet deployed to the live app.
+
 ## How it works
 
 - **Add** anything from the rail beside the canvas (or the floating **+** on a phone): text, a speech bubble, a shape, a picture or Lottie, a ribbon, a hand-drawn squiggle, Chippy, the logo rings.

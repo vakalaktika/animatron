@@ -1,0 +1,23 @@
+[
+  {
+    "name": "garden-glider",
+    "masterBytes": 157923,
+    "playbackBytes": 66940,
+    "semanticEquality": true,
+    "masterSha256": "e170c8cd9a4f568c4f89d09dc272d8073397dc1d37288b3424a83369ea0b9cb2"
+  },
+  {
+    "name": "goodnight-room",
+    "masterBytes": 193442,
+    "playbackBytes": 75695,
+    "semanticEquality": true,
+    "masterSha256": "712d317b56f23e03306c04484a31107fb3318eec6a18629c396add04d9723d42"
+  },
+  {
+    "name": "garden-glider-layered",
+    "masterBytes": 353433,
+    "playbackBytes": 262167,
+    "semanticEquality": true,
+    "masterSha256": "1e049d013ec8a913d817c933bea78fc9db4be885ed0250ae10d1286450145cb5"
+  }
+]
