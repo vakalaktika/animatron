@@ -78,8 +78,8 @@ export function slim(rig, { keep = null, tol = 0.05, master = false } = {}) {
   const before = size(rig);
   let r = JSON.parse(JSON.stringify(rig));
   if (keep) r.animations = r.animations.filter((a) => keep.includes(a.id));
-  if (r.version === 2) {
-    report.push("Rig 2 preserve-only optimization: artwork, PNG payloads, registrations, keys, drawing states and metadata retained exactly; only explicit --keep filters animations");
+  if (r.version >= 2) {
+    report.push(`Rig ${r.version} preserve-only optimization: artwork, PNG payloads, registrations, keys, drawing states and metadata retained exactly; only explicit --keep filters animations`);
     return { rig: r, report, before, after: size(r) };
   }
   const park = r.metadata?.swaps?.park?.x ?? 9000;

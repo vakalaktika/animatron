@@ -484,6 +484,8 @@ export type RigEasing = "linear" | "hold";
 export interface RigKey extends RigDelta {
   time: number;
   easing: RigEasing;
+  /** Rig 3: timing curve to the next pose. A hold always remains discrete. */
+  tween?: Ease;
 }
 
 export interface RigTrack {
@@ -505,7 +507,7 @@ export interface RigAnimation {
 }
 
 export const RIG_FORMAT = "mid-century-ink-rig";
-export const RIG_VERSION = 2;
+export const RIG_VERSION = 3;
 export interface RigRasterAttachment {
   id: string;
   svgId: string;
@@ -534,7 +536,7 @@ export interface RigDrawingTrack {
  */
 export interface RigAsset {
   format: typeof RIG_FORMAT;
-  version: 1 | typeof RIG_VERSION;
+  version: 1 | 2 | typeof RIG_VERSION;
   name?: string;
   canvas: { width: number; height: number };
   /** The artwork; its viewBox is `0 0 canvas.width canvas.height`. */

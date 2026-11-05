@@ -5,6 +5,10 @@ description: "Writes valid Animatron studio compositions (JSON) from a plain-lan
 
 # Compose for Animatron
 
+## Sparse object and part tweens
+
+Read `references/tweening.md` for editable motion. Use `scripts/tween.mjs` to turn a compact seconds-based specification into independent object and bone tracks, validated by the target app before writing. Prefer two/few authored poses per part plus a curve instead of frame-by-frame JSON. Preserve supplied art and all unaddressed tracks. Native eased bone keys require Rig 3 and the updated application; use explicit `--repo` or a verified supporting revision. This private plugin update does not deploy the app. Keep discrete replacement drawings for true head angles, blinks and mouths; do not call a sliding flattened illustration articulated animation.
+
 ## Quick action: Animatron
 
 Treat `Animatron: <brief>` as a request to complete an Animatron animation. Also accept `Animatron this` when the message includes an attachment or an unambiguous subject in context. These are natural-language shortcut phrases, not registered application slash commands or new UI controls. Questions about Animatron or quoted examples are not execution requests.

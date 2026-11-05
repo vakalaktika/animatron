@@ -52,7 +52,7 @@ export function validateRigV2(raw: unknown): string[] {
   if (!object(raw)) return ["Invalid rig extension."];
   const errors: string[] = [], fail = (message: string) => errors.push(message);
   const animations = Array.isArray(raw.animations) ? raw.animations : [];
-  if (raw.version !== 2) {
+  if (raw.version !== 2 && raw.version !== 3) {
     if (raw.rasterAttachments !== undefined || raw.drawingSets !== undefined || animations.some(a => object(a) && a.drawingTracks !== undefined)) fail("Raster attachments and drawing sets require Rig version 2.");
     return errors;
   }
@@ -140,5 +140,5 @@ export function setDrawing(asset: RigAsset, setId: string, drawingId: string, an
 
 /** Explicit lossless migration; legacy assets need no migration just to open. */
 export function upgradeRigToV2(asset: RigAsset): RigAsset {
-  return asset.version === 2 ? asset : { ...asset, version: 2 };
+  return asset.version >= 2 ? asset : { ...asset, version: 2 };
 }

@@ -9,6 +9,10 @@ Match the bundled references closely. Treat this as a specific illustration gram
 
 **Host adapter.** This file is the shared core. Read the adapter for the host you are running in before checking tools: `references/hosts/claude.md` or `references/hosts/chatgpt.md`. Adapters say which tools exist and how images reach a generator; they never change the style rules below. Use only tools the current host actually exposes.
 
+## Native tween production
+
+For editable motion, read `references/mci-rig-v3.md`. Plan named independently movable parts and a few poses in seconds. Prefer `scripts/sparse.mjs` and native Rig 3 curves over dense frame sampling for ordinary object/bone transforms. Keep `scripts/motion.mjs` baking for deliberate legacy delivery or procedural constraints; never silently approximate unsupported sparse curves. Preserve each existing treatment, identity, approval record and finished contour. Sparse tweening does not separate a flat picture or invent hidden parts. Review contacts and replacement transitions using the app renderer. Target the updated app checkout explicitly until the application release supporting Rig 3 is verified.
+
 ## Select the illustration treatment
 
 For new artwork, read `references/style-presets.md` and resolve the treatment without asking: the request's choice, else the project or source treatment, else a saved preference, else **Original / Classic graphic** (`classic-graphic`). **Newer / Detailed storybook** (`detailed-storybook`) is used only when chosen. Revisions and sequels retain their source treatment. Apply the selection to the core brief, prompt scaffold and guide defaults throughout the project, and to every medium: raster, native SVG, rigs and animation. The treatment applies to artwork, not functional UI or document formatting.

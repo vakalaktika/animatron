@@ -1,9 +1,9 @@
 {
   "repo": "https://github.com/vakalaktika/animatron",
-  "commit": "19bef47035844e5b287d783a3b6db6358f16618c",
-  "commitDate": "2026-11-04T23:43:50-08:00",
-  "subject": "feat: build an illustrated scene pipeline with compatible Rig 2 assets",
-  "refreshedAt": "2026-11-05T07:44:06.372Z",
+  "commit": "bc0c52421b547b2980807b985988ea3983becab5",
+  "commitDate": "2026-11-05T06:08:03-08:00",
+  "subject": "feat: author native sparse object and articulated part tweens",
+  "refreshedAt": "2026-11-05T14:08:18.368Z",
   "constants": {
     "docVersion": 2,
     "shareParam": "share",
@@ -121,7 +121,7 @@
     }
   },
   "fingerprints": {
-    "src/app/components/motion-studio/types.ts": "01067ce686348575",
+    "src/app/components/motion-studio/types.ts": "3038f3109bed4839",
     "src/app/motion-studio/lib/migrate.ts": "16b69652cb788e80",
     "src/app/motion-studio/lib/importDoc.ts": "cfee482f63142ca7",
     "src/app/motion-studio/lib/share.ts": "57c738d86692fb9d",
@@ -144,16 +144,20 @@
     "src/app/motion-studio/export/ShareCardRenderer.tsx": "238a7a7c619f4b5e",
     "src/app/motion-studio/export/shareCard.ts": "ce3dedaeebbca819",
     "src/app/layout-helpers.ts": "28795c779c2c9eb5",
-    "src/app/components/motion-studio/engine/rig.ts": "aaa1fe5183013b37",
+    "src/app/components/motion-studio/engine/rig.ts": "a2e94437097a2467",
     "src/app/components/motion-studio/engine/rigSvg.ts": "6c99af248fb2ff92",
-    "src/app/components/motion-studio/engine/rigV2.ts": "94dce6406b17784d",
+    "src/app/components/motion-studio/engine/rigV2.ts": "b327d6eacd7f91e0",
     "src/app/motion-studio/lib/rigImport.ts": "ad94895d7cb8e404",
     "docs/mci-rig/mci-rig-v1.md": "8dd3e76c79a58dfd",
     "docs/mci-rig/mci-rig-v1.schema.json": "5316050c33280b9b",
     "docs/mci-rig/mci-rig-v2.md": "610f0700e4500a3a",
     "docs/mci-rig/mci-rig-v2.schema.json": "b90f1baab080daf6",
-    "docs/mci-rig/mci-rig-core.cjs": "f696accfe408e2e1",
-    "docs/mci-rig/mci-rig-v2.cjs": "cd54e5bc568165a1",
+    "src/app/components/motion-studio/engine/rigTween.ts": "56be9d9649ad0468",
+    "docs/mci-rig/mci-rig-v3.md": "a1ba6e7aa22bd7bf",
+    "docs/mci-rig/mci-rig-v3.schema.json": "2c158707dee607b3",
+    "docs/mci-rig/mci-easing.cjs": "ee1de04d8b4f2a5d",
+    "docs/mci-rig/mci-rig-core.cjs": "414c879b1f2e3d67",
+    "docs/mci-rig/mci-rig-v2.cjs": "900acff507c2b02f",
     "docs/mci-rig/example-character.mci.json": "11ae865a3c841aeb",
     "supabase/migrations/ (file list)": "6caae936c6c808ea"
   }

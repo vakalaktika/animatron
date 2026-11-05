@@ -1,6 +1,7 @@
 import type { RigAnimation, RigAsset, RigBone, RigClip, RigDelta, RigKey, RigPose } from "../types";
 import { RIG_FORMAT } from "../types";
 import { validateRigV2 } from "./rigV2";
+import { rigTweenProgress, validRigTween } from "./rigTween";
 
 /**
  * Mid-century Ink Rig 1: the skeleton maths, validation and clip-editing
@@ -90,7 +91,7 @@ export function validateRig(asset: unknown): RigCheck {
   const a = asset as Record<string, unknown>;
   if (a.name !== undefined && (typeof a.name !== "string" || a.name.length > 200)) fail("Invalid asset name.");
   if (a.metadata !== undefined && (!a.metadata || typeof a.metadata !== "object" || Array.isArray(a.metadata))) fail("Metadata must be an object.");
-  if (a.format !== RIG_FORMAT || ![1, 2].includes(a.version as number)) fail(a.format === RIG_FORMAT ? `This rig is version ${a.version}; the studio reads Mid-century Ink Rig versions 1 and 2.` : "Expected mid-century-ink-rig version 1 or 2.");
+  if (a.format !== RIG_FORMAT || ![1, 2, 3].includes(a.version as number)) fail(a.format === RIG_FORMAT ? `This rig is version ${a.version}; the studio reads Mid-century Ink Rig versions 1, 2 and 3.` : "Expected mid-century-ink-rig version 1, 2 or 3.");
   errors.push(...validateRigV2(a));
   const canvas = a.canvas as { width?: unknown; height?: unknown } | undefined;
   if (!canvas || !finite(canvas.width) || !finite(canvas.height) || canvas.width <= 0 || canvas.height <= 0) fail("Canvas dimensions must be positive numbers.");
@@ -183,6 +184,7 @@ export function validateRig(asset: unknown): RigCheck {
           if (!k || time === null || !(["x", "y", "rotation"] as const).every((f) => finite(k[f])) || time < 0 || time > anim.duration || time <= previous || !["linear", "hold"].includes(k.easing as string)) {
             fail("Invalid or unsorted animation keyframe.");
           }
+          if (k && k.tween !== undefined && (a.version !== 3 || !validRigTween(k.tween))) fail("Tween curves require Rig version 3 and a valid timing curve.");
           previous = time ?? previous;
         }
       }
@@ -231,7 +233,7 @@ export function sample(asset: RigAsset, animationId: string, seconds: number): R
       }
       right = k;
     }
-    const f = right.time === left.time || left.easing === "hold" ? 0 : clamp((time - left.time) / (right.time - left.time), 0, 1);
+    const f = right.time === left.time ? 0 : rigTweenProgress(left, (time - left.time) / (right.time - left.time));
     pose[track.boneId] = { x: left.x + (right.x - left.x) * f, y: left.y + (right.y - left.y) * f, rotation: left.rotation + (right.rotation - left.rotation) * f };
   }
   return pose;
@@ -307,14 +309,15 @@ export function solve(asset: RigAsset, inputPose: RigPose, tipId: string, target
   return pose;
 }
 
-/** Saves every bone's current delta as a linear key at `time` (replacing a key already there). */
+/** Saves every bone's current delta, retaining existing outgoing timing; new keys are linear. */
 export function record(asset: RigAsset, animationId: string, time: number, pose: RigPose): RigAsset {
   const anim = asset.animations.find((x) => x.id === animationId);
   if (!anim) throw new Error("Select an animation before recording.");
   const at = clamp(time, 0, anim.duration);
   const keyed = (b: RigBone, track: RigAnimation["tracks"][number]) => {
     const p = poseOf(pose, b.id);
-    const key: RigKey = { time: at, x: p.x || 0, y: p.y || 0, rotation: clampRotation(b, p.rotation || 0), easing: "linear" };
+    const existing = track.keys.find(k => Math.abs(k.time - at) <= 1e-6);
+    const key: RigKey = { time: at, x: p.x || 0, y: p.y || 0, rotation: clampRotation(b, p.rotation || 0), easing: existing?.easing ?? "linear", ...(existing?.tween ? {tween:existing.tween} : {}) };
     return { ...track, keys: [...track.keys.filter((k) => Math.abs(k.time - at) > 1e-6), key].sort((l, r) => l.time - r.time) };
   };
   const map = bonesById(asset);
@@ -547,7 +550,7 @@ export function upsertKey(asset: RigAsset, animationId: string, boneId: string, 
   const at = Number(clamp(time, 0, anim.duration).toFixed(4));
   const track = anim.tracks.find((t) => t.boneId === boneId) ?? { boneId, keys: [] };
   const existing = track.keys.find((k) => Math.abs(k.time - at) <= 1e-6);
-  const key: RigKey = { time: at, x: delta.x || 0, y: delta.y || 0, rotation: clampRotation(bone, delta.rotation || 0), easing: easing ?? existing?.easing ?? "linear" };
+  const key: RigKey = { time: at, x: delta.x || 0, y: delta.y || 0, rotation: clampRotation(bone, delta.rotation || 0), easing: easing ?? existing?.easing ?? "linear", ...(existing?.tween ? { tween: existing.tween } : {}) };
   const keys = [...track.keys.filter((k) => Math.abs(k.time - at) > 1e-6), key].sort((l, r) => l.time - r.time);
   const tracks = anim.tracks.some((t) => t.boneId === boneId) ? anim.tracks.map((t) => (t.boneId === boneId ? { ...t, keys } : t)) : [...anim.tracks, { boneId, keys }];
   return replaceAnimation(asset, { ...anim, tracks });
