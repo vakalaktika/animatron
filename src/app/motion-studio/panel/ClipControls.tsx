@@ -14,6 +14,7 @@ import { placementSection } from "./sections/placement";
 import { flapSection, landingSection, motionSection, pathSection, type WaypointControls } from "./sections/sprite";
 import { containerSection, revealSection, textSection } from "./sections/text";
 import { trailSection } from "./sections/trail";
+import { MotionFields } from "./MotionFields";
 
 interface Props {
   doc: StudioDoc;
@@ -41,12 +42,14 @@ interface Props {
  */
 export function ClipControls({ doc, clip, onChange, onReparent, focusText = false, artwork, waypoints, rig, time }: Props) {
   const caps = capabilities(clip);
+  const motionReady=!!clip.motion||clip.type==="rig"&&(!!clip.rig.motion||!!clip.rig.meshes?.length);
   const sections: (PanelSection | null)[] = [
     // What the thing says comes before where it sits.
     caps.text && textSection(caps.text, onChange, focusText),
     // A video's own settings come first: the file is the point of the layer.
     caps.video && videoSection(caps.video, onChange, doc.stage),
-    // A rig's clips come first: which one plays decides what you see.
+    { id: "motion-controls", title: "Motion and contacts", defaultCollapsed:!motionReady, content: <MotionFields key={clip.id} doc={doc} clip={clip} time={time} onChange={onChange} /> },
+    // Legacy clip/bone controls remain available below semantic targets.
     caps.rig && rigAnimationSection(caps.rig, onChange, rig),
     caps.rig && skeletonSection(caps.rig, onChange, rig),
     placementSection(doc, clip, onChange, onReparent, time),

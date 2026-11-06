@@ -10,7 +10,8 @@
  */
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { join, basename } from "node:path";
-import { DOC_VERSION, type Clip, type StudioDoc } from "@/app/components/motion-studio/types";
+import { DOC_VERSION, MOTION_DOC_VERSION, type Clip, type StudioDoc } from "@/app/components/motion-studio/types";
+import { evaluateScene, hasMotion } from "@/app/components/motion-studio/engine/motionScene";
 import { EASE_LABELS } from "@/app/components/motion-studio/engine/easing";
 import { docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
 import { docFromJson } from "@/app/motion-studio/lib/importDoc";
@@ -99,7 +100,12 @@ function lint(doc: StudioDoc): { errors: string[]; notes: string[] } {
   };
   walkNumbers(doc, "$");
 
-  if (doc.version !== DOC_VERSION) errors.push(`version: write ${DOC_VERSION} (the current document version), not ${doc.version}`);
+  if (![DOC_VERSION,3,MOTION_DOC_VERSION].includes(doc.version)) errors.push(`Unsupported document version ${doc.version}.`);
+  if (hasMotion(doc)) for(let i=0;i<=64;i++) {
+    const at=docDuration(doc)*i/64;
+    for(const issue of evaluateScene(doc,at).diagnostics) errors.push(`Motion at ${at.toFixed(3)}s: ${issue.message}`);
+    if(errors.length>64)break;
+  }
   if (!doc.name || !doc.name.trim()) errors.push("name: give the composition a name");
   const s = doc.stage;
   if (!s || !Number.isInteger(s.width) || !Number.isInteger(s.height) || s.width <= 0 || s.height <= 0) errors.push("stage: width and height must be positive whole pixels");
@@ -214,7 +220,7 @@ function check(studioUrl: string, files: string[]): number {
         notes.push(...l.notes);
         // 2. The #share= link path: encode as the Share button does, open as a visitor's studio does.
         const share = shareUrl(imported.doc, { origin: url.origin, pathname: url.pathname });
-        if (!share.ok) notes.push(`too large for a #share= link (over ${SHARE_LIMIT} characters); hand over the JSON file only`);
+        if (!share.ok) notes.push(share.reason === "requires-newer-app" ? "document 3 requires the updated application; opening links disabled, hand over the JSON file only" : `too large for a #share= link (over ${SHARE_LIMIT} characters); hand over the JSON file only`);
         else {
           const reopened = docFromHash(share.url.slice(share.url.indexOf("#")));
           if (!reopened) problems.push("the #share= link would not open");
@@ -263,6 +269,7 @@ function constants() {
     JSON.stringify(
       {
         docVersion: DOC_VERSION,
+        motionDocVersion: MOTION_DOC_VERSION,
         shareParam: SHARE_PARAM,
         shareLimit: SHARE_LIMIT,
         frameSizes: FRAME_SIZES.map(({ name, width, height }) => ({ name, width, height })),

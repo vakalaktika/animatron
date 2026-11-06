@@ -1,9 +1,9 @@
 {
   "plugin_id": "plugins_6ac48990546c8191a6d586e78c552157",
-  "base_release_id": "pluginrel_6aec4071e188819190fc2620959eccd9",
-  "base_version": "1.7.1",
+  "base_release_id": "pluginrel_6aece0ef7a488191bea81bf80175a58a",
+  "base_version": "1.8.1",
   "scope": "USER",
   "visibility": "PRIVATE",
-  "source": "Backend current-release inventory and targeted manifest/skill source inspected before native tween authoring update on 2026-11-05. Preserve private assets and authority records.",
-  "publication": "Candidate source only; preserve identity/audience. Guard update using the observed release ID after commit and PR."
+  "source": "Verified current private release before controller-motion changes. Retain all omitted private style/identity assets and approval records.",
+  "publication": "Candidate source only; preserve plugin identity, USER scope and PRIVATE audience. Guard update using observed current release after commit and PR."
 }

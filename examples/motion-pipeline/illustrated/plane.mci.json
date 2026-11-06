@@ -1,0 +1,39 @@
+{
+  "format": "mid-century-ink-rig",
+  "version": 1,
+  "name": "Detailed — editable folded airplane",
+  "canvas": {
+    "width": 300,
+    "height": 180
+  },
+  "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 180\"><g id=\"plane\"><path d=\"M116 52 L265 38 L132 130 L140 90 Z\" fill=\"#fff5e9\"/><path d=\"M116 52 L155 77 L265 38 L140 90 L132 130 L150 83 Z\" fill=\"#c9ad98\"/><path d=\"M116 52 L155 77 L265 38 L150 83 L132 130 L140 90 Z\" fill=\"#fff5e9\"/></g></svg>",
+  "bones": [
+    {
+      "id": "root",
+      "parentId": null,
+      "role": "root",
+      "rest": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "length": 0
+    }
+  ],
+  "bindings": [
+    {
+      "id": "plane",
+      "svgId": "plane",
+      "boneId": "root",
+      "bindMatrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "animations": []
+}

@@ -68,7 +68,17 @@ export interface PropKey {
   ease?: Ease;
 }
 
+/** Static stage-space visibility regions; independent of layer/parent movement. */
+export interface StageMask {
+  /** Union of 1–16 polygons, each 3–64 stage-pixel points. */
+  regions: Vec2[][];
+}
+
 export interface ClipBase {
+  /** Document 4: editable object blocks and scene-space controller relationships. */
+  motion?: import("./engine/motionTypes").MotionProgram;
+  /** Visible only through these stage regions, e.g. behind a window frame. */
+  stageMask?: StageMask;
   id: string;
   name: string;
   enabled: boolean;
@@ -507,12 +517,14 @@ export interface RigAnimation {
 }
 
 export const RIG_FORMAT = "mid-century-ink-rig";
-export const RIG_VERSION = 3;
+export const RIG_VERSION = 4;
 export interface RigRasterAttachment {
   id: string;
   svgId: string;
   /** Self-contained, bounded PNG. SVG image elements remain forbidden. */
   src: string;
+  /** Rig 4: pixel rectangle from a shared PNG atlas. src may reference @sourceId. */
+  sourceRect?: { x: number; y: number; width: number; height: number };
   x: number;
   y: number;
   width: number;
@@ -536,7 +548,7 @@ export interface RigDrawingTrack {
  */
 export interface RigAsset {
   format: typeof RIG_FORMAT;
-  version: 1 | 2 | typeof RIG_VERSION;
+  version: 1 | 2 | 3 | typeof RIG_VERSION;
   name?: string;
   canvas: { width: number; height: number };
   /** The artwork; its viewBox is `0 0 canvas.width canvas.height`. */
@@ -545,8 +557,14 @@ export interface RigAsset {
   bindings: RigBinding[];
   slots?: RigSlot[];
   rasterAttachments?: RigRasterAttachment[];
+  /** Rig 4: self-contained PNG source pool, avoiding duplicated atlas payloads. */
+  rasterSources?: { id: string; src: string }[];
   drawingSets?: RigDrawingSet[];
   animations: RigAnimation[];
+  /** Rig 4: portable controllers and constraints, in rig-local coordinates. */
+  motion?: import("./engine/motionTypes").MotionProgram;
+  /** Rig 4: optional bounded skinning for validated raster artwork. */
+  meshes?: import("./engine/rigDeform").RigMeshAttachment[];
   /** Descriptive only, never executable. */
   metadata?: Record<string, unknown>;
 }
@@ -600,14 +618,19 @@ export interface AudioTrack {
 }
 
 export const DOC_VERSION = 2;
+/** Opt-in document contract for stage masks and declared scene intent. */
+export const SCENE_DOC_VERSION = 3;
+export const MOTION_DOC_VERSION = 4;
 
 export interface StudioDoc {
-  version: typeof DOC_VERSION;
+  /** Authored intent and review obligations; never proof of visual approval. */
+  scenePlan?: import("./engine/sceneReview").ScenePlan;
+  version: typeof DOC_VERSION | typeof SCENE_DOC_VERSION | typeof MOTION_DOC_VERSION;
   name: string;
   /** A sentence about the piece, shown on its share page and link preview. */
   description?: string;
   /** Explicit post-animation hold. Omitted on legacy documents: one second. */
-  timeline?: { tailSeconds: number };
+  timeline?: { tailSeconds: number; duration?: number; loop?: boolean };
   stage: StageConfig;
   clips: Clip[];
   audio?: AudioTrack | null;

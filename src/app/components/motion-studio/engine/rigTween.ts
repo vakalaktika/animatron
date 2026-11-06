@@ -28,7 +28,7 @@ export function setRigKeyTween(asset: RigAsset, animationId: string, boneId: str
   const track = animation?.tracks.find(t => t.boneId === boneId);
   if (!track?.keys.some(k => Math.abs(k.time - time) <= 1e-6)) return asset;
   return {
-    ...asset, version: tween ? 3 : asset.version,
+    ...asset, version: tween && asset.version < 3 ? 3 : asset.version,
     animations: asset.animations.map(a => a.id !== animationId ? a : {
       ...a, tracks: a.tracks.map(t => t.boneId !== boneId ? t : {
         ...t, keys: t.keys.map(k => {

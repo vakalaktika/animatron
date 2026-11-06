@@ -1,5 +1,5 @@
 import type { StudioDoc } from "@/app/components/motion-studio/types";
-import { RIG_FORMAT } from "@/app/components/motion-studio/types";
+import { RIG_FORMAT, SCENE_DOC_VERSION, MOTION_DOC_VERSION } from "@/app/components/motion-studio/types";
 import { FRAME_SIZES, makeLottie, parseImport } from "../presets";
 
 export type ImportedDoc = { ok: true; doc: StudioDoc; warnings: string[] } | { ok: false; message: string };
@@ -37,5 +37,6 @@ export function docFromJson(text: string, fileName: string): ImportedDoc {
     return { ok: true, doc, warnings: result.warnings };
   }
   const clip = { ...result.clip, x: width / 2, y: height / 2 };
-  return { ok: true, doc: { ...blankDoc(result.clip.name || stem(fileName), { width, height }), clips: [clip] }, warnings: [] };
+  const version = clip.motion !== undefined || clip.type === "rig" && clip.rig.version === 4 ? MOTION_DOC_VERSION : clip.stageMask ? SCENE_DOC_VERSION : 2;
+  return { ok: true, doc: { ...blankDoc(result.clip.name || stem(fileName), { width, height }), version, clips: [clip] }, warnings: [] };
 }

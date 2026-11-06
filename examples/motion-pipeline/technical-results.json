@@ -1,0 +1,41 @@
+[
+  {
+    "file": "examples/motion-pipeline/illustrated/detailed-illustrated.animatron.json",
+    "duration": 8,
+    "samples": 241,
+    "maxContactPixels": 2.6812987050722663e-13,
+    "maxGripPixels": 0,
+    "loopPoseError": 0,
+    "seamSpeedError": 0.06804906078655545,
+    "evaluationMs": 6.739958999999999,
+    "roundTrip": "PASS",
+    "sceneReadiness": "PASS",
+    "notes": "Technical sampling is separate from visual review. Masked travelers are excluded from pose seam comparison and require invisible resets."
+  },
+  {
+    "file": "examples/motion-pipeline/original-bedtime.animatron.json",
+    "duration": 8,
+    "samples": 241,
+    "maxContactPixels": 0,
+    "maxGripPixels": 0,
+    "loopPoseError": 0,
+    "seamSpeedError": 0,
+    "evaluationMs": 0.5304170000001704,
+    "roundTrip": "PASS",
+    "sceneReadiness": "PASS",
+    "notes": "Technical sampling is separate from visual review. Masked travelers are excluded from pose seam comparison and require invisible resets."
+  },
+  {
+    "file": "examples/deformation-proof/cloth.animatron.json",
+    "duration": 4,
+    "samples": 241,
+    "maxContactPixels": 0,
+    "maxGripPixels": 0,
+    "loopPoseError": 0,
+    "seamSpeedError": 0,
+    "evaluationMs": 0.38733300000012605,
+    "roundTrip": "PASS",
+    "sceneReadiness": "not-declared",
+    "notes": "Technical sampling is separate from visual review. Masked travelers are excluded from pose seam comparison and require invisible resets."
+  }
+]

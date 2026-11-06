@@ -10,3 +10,6 @@ export { DEFAULT_LINE_STYLE, lineSpans, lineFront, lineNeedsShape, type LineSubj
 export { arrivalTime, ribbonCoat, ribbonPath } from "./engine/ribbon";
 export { RAINBOW, RAINBOW_PRESETS, type Point, type Band } from "./engine/rainbow";
 export type * from "./types";
+export type * from "./engine/motionTypes";
+export { evaluateScene, hasMotion, motionEnd } from "./engine/motionScene";
+export { validateMotionDocument, validateRigMotion } from "./engine/motionValidation";

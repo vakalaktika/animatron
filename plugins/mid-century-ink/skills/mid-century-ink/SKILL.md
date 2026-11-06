@@ -5,9 +5,19 @@ description: "Create or restyle images in Ed's Mid-century Ink style (UPA-influe
 
 # Mid-century Ink
 
+## Illustration-led controllable animation
+
+For new editable animation, read `references/motion-controls.md`. Finish a convincing composed key pose in the selected treatment before preparing the rig. Declare action beats, gaze, support and grip contacts, independently moving parts, concealed paint and replacement views. Preserve authored contours and economical interior marks; construction volumes and joint circles guide proportion and registration rather than dictate the final silhouette. Review the illustration separately from rig validation and user approval.
+
+Use `scripts/controls.mjs` with an explicit supporting Animatron checkout to save Rig 4 portable targets and persistent IK/aim relationships. Composer adds scene-local motion blocks and cross-object attachments. The application evaluates contacts between sparse keys; a handful of correctly posed frames alone cannot prove contact continuity. Prepare registered perspective head drawings, real palms/fingers, joint overlaps and coherent props. Avoid universal drift; author anticipation, reaction, holds and settling. Small validated raster meshes may bend selected painted parts, but they do not separate a flattened illustration or reconstruct hidden anatomy automatically. Preserve existing identities, treatments and approval records unchanged.
+
 Match the bundled references closely. Treat this as a specific illustration grammar, not a broad retro aesthetic. Keep creative freedom in subject, palette, and setting within that grammar. Do not substitute a realistic portrait with vintage texture, a polished vector mascot, or a densely rendered children's-book scene.
 
 **Host adapter.** This file is the shared core. Read the adapter for the host you are running in before checking tools: `references/hosts/claude.md` or `references/hosts/chatgpt.md`. Adapters say which tools exist and how images reach a generator; they never change the style rules below. Use only tools the current host actually exposes.
+
+## Scene structure before animation
+
+Read `references/scene-production.md` for illustrated animation. First declare action-specific independent parts, scene space/occluders, contact carriers and artwork facing. Do not call a sparse rigid gesture natural acting. Rebuild missing artwork before promising the action, or explicitly preserve the unmet requirement. Composer must run `scene-check.mjs` with the actual app evaluator on the stored scene plan; new masked masters use document3 and JSON-only handoff. Technical validity, fewer keys and successful export do not establish visual quality or user approval.
 
 ## Native tween production
 

@@ -1,5 +1,6 @@
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import type { StudioDoc } from "@/app/components/motion-studio/types";
+import { MOTION_DOC_VERSION, type StudioDoc } from "@/app/components/motion-studio/types";
+import { requiresNewerAppForSharing, SCENE_SHARE_NOTICE } from "./share";
 import { normalizeDoc, type RawDoc } from "./migrate";
 import type { Project } from "./projects";
 
@@ -114,6 +115,7 @@ interface ShareOptions {
 
 /** Stores the composition as a short share and returns its id. */
 export async function createShare(supabase: SupabaseClient, doc: StudioDoc, { duration, makeId = newShareId }: ShareOptions = {}): Promise<string> {
+  if (requiresNewerAppForSharing(doc)) throw new Error(SCENE_SHARE_NOTICE);
   if (JSON.stringify(doc).length > SHARE_MAX_CHARS) {
     throw new Error("This composition is too big to share as a link (large pictures?). Download it as a JSON file instead.");
   }
@@ -176,7 +178,9 @@ export async function fetchShare(supabase: SupabaseClient, id: string): Promise<
   if (!raw || typeof raw !== "object") return null;
   const candidate = raw as Partial<RawDoc>;
   if (!Array.isArray(candidate.clips) || !candidate.stage) return null;
-  return normalizeDoc(candidate as RawDoc).doc;
+  if (typeof candidate.version === "number" && (!Number.isInteger(candidate.version) || candidate.version < 1 || candidate.version > MOTION_DOC_VERSION)) return null;
+  try { return normalizeDoc(candidate as RawDoc).doc; }
+  catch { return null; }
 }
 
 /** The short link for a share id on the current page. */

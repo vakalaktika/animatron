@@ -2,6 +2,7 @@ import { RIG_LIMITS, validateRig } from "@/app/components/motion-studio/engine/r
 import { parseRigSvg } from "@/app/components/motion-studio/engine/rigSvg";
 import type { RigAsset, RigClip, StageConfig } from "@/app/components/motion-studio/types";
 import { newId } from "./id";
+import { motionProgram } from "@/app/components/motion-studio/engine/motionScene";
 
 /**
  * A `.mci.json` rig on its way into the studio, and back out. The asset is
@@ -56,3 +57,11 @@ export function rigClipFrom(json: unknown, stage: Pick<StageConfig, "width" | "h
 
 /** File name for a saved rig. */
 export const rigFileName = (clip: RigClip) => `${(clip.rig.name || clip.name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "rig"}.mci.json`;
+
+/** Scene references cannot be represented in an independent rig master. */
+export function portableRigMaster(clip: RigClip): RigAsset | null {
+  if (!clip.motion) return clip.rig;
+  const motion = motionProgram(clip);
+  if (motion.controllers.some(c => c.space !== "rig") || motion.constraints.some(c => c.type === "attach")) return null;
+  return { ...clip.rig, version: 4, motion };
+}

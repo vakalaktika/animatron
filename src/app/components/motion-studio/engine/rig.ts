@@ -2,6 +2,8 @@ import type { RigAnimation, RigAsset, RigBone, RigClip, RigDelta, RigKey, RigPos
 import { RIG_FORMAT } from "../types";
 import { validateRigV2 } from "./rigV2";
 import { rigTweenProgress, validRigTween } from "./rigTween";
+import { validateRigMotion } from "./motionValidation";
+import { validateRigMeshes } from "./rigDeform";
 
 /**
  * Mid-century Ink Rig 1: the skeleton maths, validation and clip-editing
@@ -91,8 +93,9 @@ export function validateRig(asset: unknown): RigCheck {
   const a = asset as Record<string, unknown>;
   if (a.name !== undefined && (typeof a.name !== "string" || a.name.length > 200)) fail("Invalid asset name.");
   if (a.metadata !== undefined && (!a.metadata || typeof a.metadata !== "object" || Array.isArray(a.metadata))) fail("Metadata must be an object.");
-  if (a.format !== RIG_FORMAT || ![1, 2, 3].includes(a.version as number)) fail(a.format === RIG_FORMAT ? `This rig is version ${a.version}; the studio reads Mid-century Ink Rig versions 1, 2 and 3.` : "Expected mid-century-ink-rig version 1, 2 or 3.");
+  if (a.format !== RIG_FORMAT || ![1, 2, 3, 4].includes(a.version as number)) fail(a.format === RIG_FORMAT ? `This rig is version ${a.version}; the studio reads Mid-century Ink Rig versions 1, 2, 3 and 4.` : "Expected mid-century-ink-rig version 1, 2, 3 or 4.");
   errors.push(...validateRigV2(a));
+  errors.push(...validateRigMotion(a), ...validateRigMeshes(a));
   const canvas = a.canvas as { width?: unknown; height?: unknown } | undefined;
   if (!canvas || !finite(canvas.width) || !finite(canvas.height) || canvas.width <= 0 || canvas.height <= 0) fail("Canvas dimensions must be positive numbers.");
   if (typeof a.svg !== "string" || a.svg.length > RIG_LIMITS.svgChars || !a.svg.includes("<svg")) fail("Expected SVG artwork, up to 2 MB.");
@@ -184,7 +187,7 @@ export function validateRig(asset: unknown): RigCheck {
           if (!k || time === null || !(["x", "y", "rotation"] as const).every((f) => finite(k[f])) || time < 0 || time > anim.duration || time <= previous || !["linear", "hold"].includes(k.easing as string)) {
             fail("Invalid or unsorted animation keyframe.");
           }
-          if (k && k.tween !== undefined && (a.version !== 3 || !validRigTween(k.tween))) fail("Tween curves require Rig version 3 and a valid timing curve.");
+          if (k && k.tween !== undefined && ((a.version !== 3 && a.version !== 4) || !validRigTween(k.tween))) fail("Tween curves require Rig version 3 or 4 and a valid timing curve.");
           previous = time ?? previous;
         }
       }

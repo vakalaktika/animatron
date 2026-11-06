@@ -1,3 +1,10 @@
+## 0.7.0 — scene intent, direction and space
+
+- Require action-ready independent artwork for coordinated acting; withdraw the family sparse-tween example as natural-acting proof.
+- Declare facing, forward/backward travel, scene space and articulation needs. Composer preflight uses actual evaluation and refuses failing stored plans before writing.
+- Document3 opts into real stage-space masks and saved scene plans; legacy formats remain supported. JSON-only delivery avoids old viewers silently ignoring masks.
+- Structural checks remain separate from visual acting review and user approval.
+
 ## 0.6.0 — native sparse tween authoring
 
 - Native Rig 3 eased part tracks replace dense sampled keys for ordinary transform motion; Rig 1/2 and legacy baking remain supported.
@@ -11,3 +18,9 @@
 - Renderer bundle fingerprints include actual source contents, including dirty and new local files; a local preview no longer silently reuses a stale HEAD-only bundle.
 - Documented Rig 1/2 compatibility, illustrated scene handoff, independent visual review, explicit drawing states, and importable file delivery when links exceed the budget.
 - No application deployment or public hosting is part of plugin installation. Rig 2 requires the upgraded application revision.
+## 0.8.0 — editable motion controls
+
+- Add Document 4 motion-program authoring: sparse controllers, path/transform/oscillation blocks and persistent IK/aim/socket relationships, validated by the selected actual application evaluator.
+- Complete output is written through a private temporary file and atomically renamed; large illustrations never depend on giant JSON stdout results. Sampled contact/readiness failures leave previous output intact.
+- Preserve artwork and unaffected tracks; separate technical checks, full-size visual review and user approval. Explicit duration/loop/tail and legacy compatibility are documented.
+- Refresh the verified private source baseline; preserve identity, USER scope and PRIVATE audience. Application merge/deployment is separate.

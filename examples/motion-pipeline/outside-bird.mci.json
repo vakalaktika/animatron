@@ -1,0 +1,54 @@
+{
+  "format": "mid-century-ink-rig",
+  "version": 4,
+  "name": "Detailed — outside swallow",
+  "canvas": {
+    "width": 140,
+    "height": 120
+  },
+  "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 140 120\"><g id=\"bird\"><g transform=\"translate(70 60)\"><path d=\"M-38 8Q-21 2 -12 -7Q-24 -20 -20 -43Q-4 -33 5 -13Q12 -23 24 -22Q30 -22 34 -17L48 -15L34 -11Q28 4 12 10L-5 13L-29 29L-23 13Z\" fill=\"#263f49\"/><path d=\"M-6 -4Q5 -8 15 -2L22 7Q10 15 -4 9Z\" fill=\"#fff3d9\"/><path d=\"M7 -4L21 -1L16 8L3 7Z\" fill=\"#cc7259\"/><circle cx=\"28\" cy=\"-17\" r=\"2\" fill=\"#fff8e7\"/></g></g></svg>",
+  "bones": [
+    {
+      "id": "root",
+      "parentId": null,
+      "role": "root",
+      "rest": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "length": 0
+    }
+  ],
+  "bindings": [
+    {
+      "id": "bird",
+      "svgId": "bird",
+      "boneId": "root",
+      "bindMatrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "drawingSets": [],
+  "animations": [
+    {
+      "id": "performance",
+      "name": "Authored performance",
+      "duration": 8,
+      "loop": true,
+      "tracks": [],
+      "drawingTracks": []
+    }
+  ],
+  "metadata": {
+    "treatment": "detailed-storybook",
+    "identityStatus": "invented; provisional; not user-approved",
+    "artwork": "Native authored paths; private style sources are not embedded."
+  }
+}

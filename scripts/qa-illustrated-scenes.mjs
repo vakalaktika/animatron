@@ -61,6 +61,29 @@ try {
   const name = document.name;
   await click("Open " + name);
   await page.waitForSelector('[data-rig-part="lift"] image');
+  if(document.scenePlan) {
+    await click("Check motion structure");
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll('[role="status"]')).some(el=>el.textContent.includes("Declared structural checks passed")));
+    await page.evaluate(name=>{
+      const b=Array.from(document.querySelectorAll('button[aria-expanded]')).find(el=>el.textContent.trim()===name);
+      if(!b)throw new Error("Missing actor intent editor");b.click();
+    },document.clips[sceneIndex].name);
+    const action=await page.$('select[aria-label="Planned action"]')??await page.evaluateHandle(()=>Array.from(document.querySelectorAll("label")).find(el=>el.textContent.includes("Planned action"))?.querySelector("select"));
+    await action.select("articulated");
+    const required=await page.waitForSelector('input[placeholder="torso, upper-arm, forearm, hand, head"]');
+    const setRequired=async value=>required.evaluate((el,next)=>{
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(el,next);
+      el.dispatchEvent(new Event("input",{bubbles:true}));
+    },value);
+    await setRequired("torso, upper-arm, forearm, hand, head, hair");
+    await click("Check motion structure");
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll('[role="status"]')).some(el=>el.textContent.includes("Prepared artwork lacks required controls")));
+    await page.screenshot({path:join(output,"acting-readiness-rejected.png")});
+    await setRequired("lift, head");
+    await action.select("rigid");
+    await click("Check motion structure");
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll('[role="status"]')).some(el=>el.textContent.includes("Declared structural checks passed")));
+  }
   // Select the scene's layer from its timeline/layer row.
   await click(document.clips[sceneIndex].name);
   await page.waitForSelector("select");
