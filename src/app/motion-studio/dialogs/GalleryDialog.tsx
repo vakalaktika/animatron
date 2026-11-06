@@ -12,6 +12,7 @@ import { MiniPreview } from "../panel/MiniPreview";
 import { DuplicateIcon, FolderIcon, PlusIcon, TrashIcon, UploadIcon } from "../panel/icons";
 import { AccountStrip, type AccountControls } from "./AccountStrip";
 import { Dialog } from "./Dialog";
+import { downloadText } from "../export/recorder";
 
 interface Props {
   open: boolean;
@@ -325,6 +326,7 @@ export function GalleryDialog({
                 <li key={project.id} className={`${TILE} ${current ? "border-primary" : ""}`}>
                   <button
                     type="button"
+                    disabled={!!project.recoveryJson}
                     className="w-full text-left"
                     onMouseEnter={() => setHover(project.id)}
                     onMouseLeave={() => setHover((h) => (h === project.id ? null : h))}
@@ -333,12 +335,14 @@ export function GalleryDialog({
                     onClick={() => onOpenProject(project.id)}
                   >
                     <span className="sr-only">Open {project.doc.name}</span>
-                    <MiniPreview doc={project.doc} active={hover === project.id} />
+                    {project.recoveryJson?<span className="flex min-h-24 items-center justify-center p-3 text-sm text-ink-muted">Needs a supporting app</span>:<MiniPreview doc={project.doc} active={hover === project.id} />}
                   </button>
+                  {project.recoveryJson&&<div className="p-2"><p className="atm-help">Original data preserved. {project.recoveryReason}</p><Button size="xs" variant="outline" onClick={()=>downloadText(project.recoveryJson!,`${project.doc.name.replace(/[^a-z0-9]+/gi,"-")}.recovery.json`,"application/json")}>Download original JSON</Button></div>}
                   <div className="flex items-center gap-1 border-t border-hairline py-2 pr-1 pl-3">
                     <div className="min-w-0 flex-1">
                       <input
                         aria-label={`Name of ${project.doc.name}`}
+                        disabled={!!project.recoveryJson}
                         className="w-full truncate rounded-sm border border-transparent bg-transparent px-1 -mx-1 text-sm font-semibold text-ink hover:border-hairline focus:border-primary focus:outline-none"
                         defaultValue={project.doc.name}
                         key={project.doc.name}
@@ -368,6 +372,7 @@ export function GalleryDialog({
                         <button
                           type="button"
                           aria-label={`Duplicate ${project.doc.name}`}
+                          disabled={!!project.recoveryJson}
                           className="flex h-8 w-8 items-center justify-center rounded-md text-ink-secondary hover:bg-surface-sunken hover:text-ink pointer-coarse:h-11 pointer-coarse:w-11"
                           onClick={() => onDuplicateProject(project.id)}
                         >

@@ -67,3 +67,9 @@
 - A full Detailed character (body, hair groups, nose construction) has not been built and compared with the primary scene.
 - Animatron app round trip in the browser (import, pose, playback, save/reopen, export) was not run; only the studio's import code was.
 - The ChatGPT package was assembled from its 1.3.14 manifests but not installed in ChatGPT.
+## 1.9.0 — illustration-led editable performance
+
+- Strengthen action/beat/composition-first preparation, finished illustration review, concealed paint, registered drawings and pose-range checks without replacing either treatment's style authority or identity approvals.
+- Add Rig 4 portable controls authoring through the selected actual Animatron importer/evaluator, with atomic complete-file delivery and sampled intermediate contact checks.
+- Document sparse targets/blocks, persistent contacts, scene-versus-rig references and bounded real raster mesh deformation; retain deliberate legacy sparse/baking workflows and do not equate rigid rotation with bending.
+- Preserve omitted private assets and the existing plugin identity/audience. Application merge/deployment is separate.

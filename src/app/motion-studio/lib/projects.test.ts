@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { BUILT_IN_PRESETS, STORAGE_KEY as LEGACY_PRESETS_KEY, welcomePreset } from "../presets";
 import { DOC_STORAGE_KEY } from "./persistence";
+import { planSync } from "./cloudSync";
 import {
   addFolder,
   addProject,
@@ -23,8 +24,28 @@ import {
 describe("projects store", () => {
   afterEach(() => window.localStorage.clear());
 
+  it("does not duplicate a new-format illustrated master into the unsupported legacy autosave slot",()=>{
+    window.localStorage.setItem(DOC_STORAGE_KEY,JSON.stringify(welcomePreset()));
+    const legacy=window.localStorage.getItem(DOC_STORAGE_KEY);
+    const store=addProject(EMPTY_STORE,{...welcomePreset(),version:4,name:"Illustrated master"});
+    expect(saveProjects(store)).toBeNull();
+    expect(loadProjects().projects[0].doc.name).toBe("Illustrated master");
+    expect(window.localStorage.getItem(DOC_STORAGE_KEY)).toBe(legacy);
+  });
+
   it("starts empty on a fresh browser", () => {
     expect(loadProjects()).toEqual(EMPTY_STORE);
+  });
+  it("retains an unsupported saved composition for recovery while opening other projects",()=>{
+    const future={...welcomePreset(),version:5,name:"Future master"};
+    window.localStorage.setItem(PROJECTS_KEY,JSON.stringify({currentId:"future",folders:[],projects:[{id:"future",doc:future,updatedAt:"2026-11-05"}]}));
+    const store=loadProjects();
+    expect(store.projects).toHaveLength(1);
+    expect(store.projects[0]).toHaveProperty("recoveryJson",JSON.stringify(future));
+    expect(store.currentId).toBeNull();
+    expect(planSync(store.projects,[]).push).toEqual([]);
+    expect(saveProjects(store)).toBeNull();
+    expect(loadProjects().projects[0]).toHaveProperty("recoveryJson",JSON.stringify(future));
   });
 
   it("folds the old autosave slot and saved presets in on first read", () => {
@@ -129,6 +150,12 @@ describe("projects store", () => {
     const store = addProject(EMPTY_STORE, doc, "2026-01-01T00:00:00.000Z");
     expect(upsertCurrent(store, doc, "2026-05-05T00:00:00.000Z").projects[0].updatedAt).toBe("2026-01-01T00:00:00.000Z");
     expect(upsertCurrent(store, { ...doc }, "2026-05-05T00:00:00.000Z").projects[0].updatedAt).toBe("2026-05-05T00:00:00.000Z");
+  });
+
+  it("does not activate a recovery placeholder when deleting the current project", () => {
+    const store = addProject(EMPTY_STORE, welcomePreset());
+    const recovered = { id: "future", doc: welcomePreset(), updatedAt: "", recoveryJson: "original" };
+    expect(removeProject({ ...store, projects: [...store.projects, recovered] }, store.currentId!).currentId).toBeNull();
   });
 
   it("renames, duplicates and sorts by recency", () => {

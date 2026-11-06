@@ -1,6 +1,7 @@
 import type { Clip, StudioDoc } from "../types";
 import { LOGO_LAYER_COUNT } from "../assets/logoPaths";
 import { keysEnd } from "./keys";
+import { motionEnd } from "./motionScene";
 import { lineDuration, lineForever } from "./line";
 import { ribbonSubject } from "./ribbon";
 import { rigDuration, rigLoops } from "./rig";
@@ -13,7 +14,7 @@ export const LANDING_SQUASH_SECONDS = 0.45;
 
 /** Seconds a clip occupies on the clock, from its start: its own animation, or its last keyframe if later. */
 export function clipDuration(clip: Clip): number {
-  return Math.max(ownDuration(clip), keysEnd(clip));
+  return Math.max(ownDuration(clip), keysEnd(clip), motionEnd(clip));
 }
 
 function ownDuration(clip: Clip): number {
@@ -91,6 +92,7 @@ export function clipEnd(clip: Clip): number {
 
 /** Total composition length: the latest clip end, with a short hold after. */
 export function docDuration(doc: StudioDoc, tail = doc.timeline?.tailSeconds ?? 1): number {
+  if (doc.timeline?.duration !== undefined) return doc.timeline.duration + tail;
   const ends = doc.clips.filter((c) => c.enabled).map(clipEnd);
   return ends.length ? Math.max(...ends) + tail : tail;
 }

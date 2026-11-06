@@ -60,7 +60,7 @@ describe("stage-space visibility regions",()=>{
 test("scene features opt into document 3; legacy documents retain version 2",()=>{
  const doc=fixture();
  expect(parseImport({...doc,version:2}).kind).toBe("error");
- expect(parseImport({...doc,version:4}).kind).toBe("error");
+ expect(parseImport({...doc,version:5}).kind).toBe("error");
  expect(parseImport({...doc,version:2.5}).kind).toBe("error");
  expect(normalizeDoc({...doc,version:2}).doc.version).toBe(3);
  expect(normalizeDoc({...doc,clips:[],version:2}).doc.version).toBe(2);

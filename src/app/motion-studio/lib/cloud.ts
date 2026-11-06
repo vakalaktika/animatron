@@ -1,5 +1,5 @@
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import { SCENE_DOC_VERSION, type StudioDoc } from "@/app/components/motion-studio/types";
+import { MOTION_DOC_VERSION, type StudioDoc } from "@/app/components/motion-studio/types";
 import { requiresNewerAppForSharing, SCENE_SHARE_NOTICE } from "./share";
 import { normalizeDoc, type RawDoc } from "./migrate";
 import type { Project } from "./projects";
@@ -178,8 +178,9 @@ export async function fetchShare(supabase: SupabaseClient, id: string): Promise<
   if (!raw || typeof raw !== "object") return null;
   const candidate = raw as Partial<RawDoc>;
   if (!Array.isArray(candidate.clips) || !candidate.stage) return null;
-  if (typeof candidate.version === "number" && (!Number.isInteger(candidate.version) || candidate.version < 1 || candidate.version > SCENE_DOC_VERSION)) return null;
-  return normalizeDoc(candidate as RawDoc).doc;
+  if (typeof candidate.version === "number" && (!Number.isInteger(candidate.version) || candidate.version < 1 || candidate.version > MOTION_DOC_VERSION)) return null;
+  try { return normalizeDoc(candidate as RawDoc).doc; }
+  catch { return null; }
 }
 
 /** The short link for a share id on the current page. */

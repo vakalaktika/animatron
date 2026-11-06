@@ -52,14 +52,15 @@ export function isStarterDoc(doc: StudioDoc): boolean {
 export function planSync(local: Project[], remote: RemoteProject[]): SyncPlan {
   const remoteById = new Map(remote.map((r) => [r.id, r]));
   const localById = new Map(local.map((p) => [p.id, p]));
-  const keptLocal = local.filter((p) => hasMedia(p.doc));
+  const keptLocal = local.filter((p) => !!p.recoveryJson||hasMedia(p.doc));
   const push = local.filter((p) => {
-    if (hasMedia(p.doc) || isStarterDoc(p.doc)) return false;
+    if (p.recoveryJson || hasMedia(p.doc) || isStarterDoc(p.doc)) return false;
     const there = remoteById.get(p.id);
     return !there || time(p.updatedAt) > time(there.updatedAt);
   });
   const newerThere = (r: RemoteProject) => {
     const here = localById.get(r.id);
+    if(here?.recoveryJson)return false;
     return !here || time(r.updatedAt) > time(here.updatedAt);
   };
   const pull = remote.filter((r) => !r.deleted && newerThere(r));

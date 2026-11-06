@@ -7,12 +7,14 @@ import { clipEnd, docDuration, loopsForever } from "@/app/components/motion-stud
 import type { AudioTrack, Clip, RigClip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import { retimePropKeys, setPropAt, shiftPosition } from "@/app/components/motion-studio/engine/keys";
 import { retimeKeys } from "@/app/components/motion-studio/engine/rig";
-import { RIG_FORMAT, SCENE_DOC_VERSION } from "@/app/components/motion-studio/types";
+import { RIG_FORMAT, SCENE_DOC_VERSION, MOTION_DOC_VERSION } from "@/app/components/motion-studio/types";
+import { authoredClipEnd } from "@/app/components/motion-studio/engine/motionTimeline";
+import { hasMotion } from "@/app/components/motion-studio/engine/motionScene";
 import { Button } from "@/app/components/shared-components";
 import { ExportDialog } from "./dialogs/ExportDialog";
 import { GalleryDialog } from "./dialogs/GalleryDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
-import { clipComponentCode, docComponentCode, HANDOFF_NOTES } from "./export/codegen";
+import { clipComponentCode, clipExportDocument, docComponentCode, HANDOFF_NOTES } from "./export/codegen";
 import { downloadBlob, downloadText, startTabRecording, type Recording } from "./export/recorder";
 import { canRenderAlpha, canRenderOffline } from "./export/renderer";
 import { VideoExporter, type RenderOptions } from "./export/VideoExporter";
@@ -49,7 +51,7 @@ import { makeShape, type ShapeKind } from "./lib/shapes";
 import { svgSpriteFrom } from "./lib/svgSprite";
 import { attachedTextFor, detachRun, restoreRun, setRunText } from "./lib/textRuns";
 import { insertWaypointAt, retimeWaypoint } from "./lib/waypoints";
-import { rigFileName } from "./lib/rigImport";
+import { rigFileName, portableRigMaster } from "./lib/rigImport";
 import { dragRigHandle, type RigHandle, type RigMode } from "./lib/rigEdit";
 import { spriteTiming } from "@/app/components/motion-studio/engine/spriteTiming";
 import { useMediaQuery } from "./lib/useMediaQuery";
@@ -113,10 +115,14 @@ export function MotionStudio() {
     setHistory((h) => {
       const candidate = typeof next === "function" ? next(h.present) : next;
       // Pasted/imported masked layers also opt in; no write path may export them as legacy documents.
-      const resolved: StudioDoc = candidate.version !== SCENE_DOC_VERSION && (candidate.scenePlan !== undefined || candidate.clips.some(c => c.stageMask !== undefined))
+      const motion = candidate.clips.some(c => c.motion !== undefined || c.type === "rig" && c.rig.version === 4) || candidate.timeline?.duration !== undefined || candidate.timeline?.loop !== undefined;
+      const resolved: StudioDoc = motion ? { ...candidate, version: MOTION_DOC_VERSION } : candidate.version < SCENE_DOC_VERSION && (candidate.scenePlan !== undefined || candidate.clips.some(c => c.stageMask !== undefined))
         ? { ...candidate, version: SCENE_DOC_VERSION } : candidate;
-      const clips = normalizeOrder(resolved.clips);
-      return record(h, clips === resolved.clips ? resolved : { ...resolved, clips }, { key });
+      const lastMotion=Math.max(0,...resolved.clips.filter(c=>c.enabled).map(c=>c.start+authoredClipEnd(c)));
+      const timed=resolved.timeline?.duration!==undefined&&lastMotion>resolved.timeline.duration
+        ? {...resolved,timeline:{...resolved.timeline,duration:Math.min(600,lastMotion)}} : resolved;
+      const clips = normalizeOrder(timed.clips);
+      return record(h, clips === timed.clips ? timed : { ...timed, clips }, { key });
     });
   }, []);
   /** Opens a different document with a clean history (a project, a template, a link). */
@@ -131,7 +137,8 @@ export function MotionStudio() {
   // The clip just added by a "+" button: its text field gets focus once.
   const [freshId, setFreshId] = useState<string | null>(null);
   const [speed, setSpeed] = useState(1);
-  const [loop, setLoop] = useState(false);
+  const loop = doc.timeline?.loop ?? false;
+  const setLoop = (next: boolean) => setDoc(d => ({ ...d, timeline: { ...d.timeline, tailSeconds: d.timeline?.tailSeconds ?? 1, loop: next } }));
   const [clean, setClean] = useState(false);
   // The pen: strokes on the canvas become ribbons, or the selected picture's path.
   const [drawing, setDrawing] = useState(false);
@@ -203,7 +210,7 @@ export function MotionStudio() {
   // Someone who asked their system for less motion gets a still frame to
   // scrub and edit; Play still works when they want to see it move.
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const clock = useStudioClock(duration, { autoplay: !reducedMotion, loop: loop || hasLoopingClip, speed });
+  const clock = useStudioClock(duration, { autoplay: !reducedMotion, loop: doc.timeline?.loop ?? hasLoopingClip, speed });
   const replayArrival = useCallback(() => {
     clock.seek(0);
     if (reducedMotion) clock.pause();
@@ -579,8 +586,27 @@ export function MotionStudio() {
   );
 
   const saveRig = (clip: RigClip) => {
-    downloadText(JSON.stringify(clip.rig, null, 2), rigFileName(clip), "application/json");
-    notify(`Saved ${rigFileName(clip)} to your downloads. It opens in Agent Torres and the Mid-century Ink generator with every bone and clip.`);
+    const master = portableRigMaster(clip);
+    if (!master) {
+      void inlineMedia(doc).then(full => downloadText(JSON.stringify(full,null,2),`${slug(doc.name)}.studio.json`,"application/json"));
+      notify("Saved the composition instead: this rig uses scene targets or attachments that require its other objects.");
+      return;
+    }
+    downloadText(JSON.stringify(master, null, 2), rigFileName(clip), "application/json");
+    notify(`Saved ${rigFileName(clip)} with its portable artwork, animation and controls. Rig ${master.version} needs a supporting application.`);
+  };
+
+  const saveLayer = async (clip: Clip) => {
+    try {
+      if (hasMotion(doc) || clip.parentId) {
+        const full=await inlineMedia(clipExportDocument(doc,clip));
+        downloadText(JSON.stringify(full,null,2),`${slug(clip.name)}.studio.json`,"application/json");
+        notify("Saved this layer with the objects its animation depends on.");
+      } else {
+        const full=await inlineClipMedia(clip);
+        downloadText(JSON.stringify(full,null,2),`${slug(clip.name)}.clip.json`,"application/json");
+      }
+    } catch(error) { notify(error instanceof Error?error.message:"Could not save this layer."); }
   };
 
   const rigActions = {
@@ -1150,7 +1176,7 @@ export function MotionStudio() {
           <Button size="xs" variant="outline" onClick={() => duplicateClip(selected)}>
             Duplicate
           </Button>
-          <Button size="xs" variant="outline" onClick={() => void inlineClipMedia(selected).then((full) => downloadText(JSON.stringify(full, null, 2), `${slug(selected.name)}.clip.json`, "application/json"))}>
+          <Button size="xs" variant="outline" onClick={() => void saveLayer(selected)}>
             Save layer as JSON
           </Button>
           {selected.type === "rig" && (
