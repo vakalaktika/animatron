@@ -19,6 +19,10 @@ const actor = (): RigClip => ({
 const document = (rig = actor()): StudioDoc => ({ version: 4, name: "Recipes", stage: { width: 400, height: 300, background: "#fff", transparent: false }, timeline: { duration: 2, tailSeconds: 0, loop: false }, clips: [rig, makeText({ id: "plane", x: 220, y: 130, start: 0 })] });
 
 describe("editable motion recipes", () => {
+  test("refuses a recipe beyond the existing operator budget",()=>{
+    const doc=document();doc.clips[0].motion={blocks:Array.from({length:128},(_,i)=>({id:`move-${i}`,type:"transform",start:0,duration:1,from:{},to:{y:1}}))};
+    const result=createMotionRecipe(doc,"actor","target",1);expect(result.doc).toBe(doc);expect(result.error).toMatch(/budget|128|many|limit/i);
+  });
   test("advertises only implemented reusable recipes", () => {
     expect(MOTION_RECIPES.map(r => r.id)).toEqual(["target", "path", "lift", "breathing", "reach", "aim", "hold"]);
   });

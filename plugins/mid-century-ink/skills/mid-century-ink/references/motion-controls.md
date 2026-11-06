@@ -43,3 +43,13 @@ Prepare registered head angles, eyelids, mouths, grips and other action drawings
 Rig 4 `meshes` can deform a validated raster attachment with weighted bones and fixed triangles. Keep this to selected sleeves/cloth or another demonstrated need. It is not vector deformation, automatic separation, hidden-area reconstruction, or a full weight-painting UI. Inspect rest correspondence, transparent edges, seams, extreme poses and exported transitions. See `mci-rig-v4.md` and schema for fields and budgets.
 
 Maintain editable masters separately from optimized/baked copies. Deliver an importable rig plus source art, pose review, animation preview and reduced-motion still when rendering succeeds. Structural validation, visual quality and user approval are separate; do not advance identity approval based on any tool result.
+
+## Human node workspace
+
+A supporting Animatron checkout provides a **Nodes** workspace alongside the stage and timeline, with draggable cards, typed drag/tap/keyboard connections, a selected-object scope and a whole-scene scope. It derives cards from existing controllers, blocks, constraints, bones and sockets. Do not invent a separate executable nodes/edges payload. Give operators meaningful `name` values and stable IDs scoped to their owning character. Name sockets for their actual registration, such as `plane-grip`, rather than encoding timing into IDs.
+
+Motion blocks move an object or its controller additively; they are not serial effect chains. Controller outputs target IK/aim relationships. Object/socket frames drive attachments or coordinate spaces. The saved program and validators enforce these meanings, reject cycles and competing drivers, and preserve artwork. Paint order and stage masks remain separate scene controls.
+
+For a hand/prop action, expose a named hand target and direct limb chain; give the hand a registered grip socket; attach the prop in the composition; animate only sparse target poses and action timing. Human edits use the same data as agent commands. Existing rig controls are marked as inherited; scene edits override them. Removing an inherited operation suspends it rather than deleting the rig master or allowing the base control to reappear unexpectedly.
+
+Editor card positions/viewport may be saved under optional `editor.motionGraph` version 1. This metadata never changes playback. Let the app generate its safe scoped node IDs and layout; authoring does not require manually placing graph cards. A project remains valid without this metadata. Save the complete editable JSON and test reopen/export. Do not certify the deployed viewer from a local editor test.

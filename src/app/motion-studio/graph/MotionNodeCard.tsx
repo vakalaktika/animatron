@@ -37,6 +37,7 @@ export const MotionNodeCard = memo(function MotionNodeCard({ data, selected }: N
     <header className="border-b border-hairline px-3 py-2">
       <div className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-wide text-ink-muted"><span>{role[node.kind]}</span><span>{node.provenance === "rig" ? "From rig" : node.provenance === "override" ? "Scene override" : "Scene"}</span></div>
       <div className="mt-1 truncate text-xs font-semibold text-ink" title={node.label}>{node.label}</div>
+      {node.kind!=="object" && <div className="mt-1 truncate text-[10px] text-ink-muted" title={node.ownerName}>{node.ownerName}</div>}
       <div className="mt-1 flex items-center gap-1.5 text-[10px] text-ink-muted"><span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${!node.enabled ? "bg-border-control" : data.active ? "bg-primary" : "bg-info"}`} />{!node.enabled ? "Disabled" : data.active ? "Active at playhead" : "Outside active interval"}</div>
     </header>
     <div className="flex flex-col gap-1 py-2">{node.ports.map(port)}</div>

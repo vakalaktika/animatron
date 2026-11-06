@@ -1,3 +1,9 @@
+## 0.8.1 — editable node workspace
+
+- Name motion controls and sockets for the human graph, timeline, and canvas. The graph edits existing Doc 4 / Rig 4 programs; it is not a second animation format.
+- Explain typed wiring, scoped rig overrides, reusable recipe controls, preserved contact, and editor-only layout metadata.
+- Require a supporting app revision; this private instruction update does not merge or deploy Animatron. Existing artwork authorities and identity approvals stay intact.
+
 ## 0.7.0 — scene intent, direction and space
 
 - Require action-ready independent artwork for coordinated acting; withdraw the family sparse-tween example as natural-acting proof.

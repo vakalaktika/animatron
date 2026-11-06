@@ -15,6 +15,7 @@ import { Button } from "@/app/components/shared-components";
 import { ExportDialog } from "./dialogs/ExportDialog";
 import { GalleryDialog } from "./dialogs/GalleryDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
+import { Dialog } from "./dialogs/Dialog";
 import { clipComponentCode, clipExportDocument, docComponentCode, HANDOFF_NOTES } from "./export/codegen";
 import { downloadBlob, downloadText, startTabRecording, type Recording } from "./export/recorder";
 import { canRenderAlpha, canRenderOffline } from "./export/renderer";
@@ -1070,6 +1071,9 @@ export function MotionStudio() {
   );
 
   const saveLabel = saveStatus === "saving" ? "Saving…" : saveStatus === "failed" ? "Not saved" : "Saved";
+  const nodeWorkspace = <Suspense fallback={<p className="p-4 text-sm" role="status">Opening node editor…</p>}>
+    <MotionGraphWorkspace doc={doc} time={clock.time} selectedClipId={selectedId} onSelectClip={id => pickClip(id)} onChange={next => setDoc(next)} onClose={() => setNodesOpen(false)} onUndo={undo} onRedo={redo} />
+  </Suspense>;
 
   const slots: StudioSlots = {
     title: <TitleField value={doc.name} onChange={(name) => setDoc((d) => ({ ...d, name }), "name")} status={saveLabel} compact={mode !== "desktop"} />,
@@ -1112,12 +1116,10 @@ export function MotionStudio() {
         </span>
       </>
     ),
-    stage: nodesOpen ? <div className="flex h-full min-h-0 flex-col gap-2">
+    stage: nodesOpen && mode === "desktop" ? <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="min-h-[140px] flex-1">{stage}</div>
       <div className="h-[min(52dvh,540px)] min-h-[260px] shrink-0 overflow-auto rounded-lg border border-border-strong bg-surface-raised">
-        <Suspense fallback={<p className="p-4 text-sm" role="status">Opening node editor…</p>}>
-          <MotionGraphWorkspace doc={doc} time={clock.time} selectedClipId={selectedId} onSelectClip={id => pickClip(id)} onChange={next => setDoc(next)} onClose={() => setNodesOpen(false)} onUndo={undo} onRedo={redo} />
-        </Suspense>
+        {nodeWorkspace}
       </div>
     </div> : stage,
     playback: <Transport {...transportProps} layout="bar" />,
@@ -1237,6 +1239,10 @@ export function MotionStudio() {
     <>
       <style>{"nextjs-portal { display: none; }"}</style>
       {clean ? <div className="h-dvh">{stage}</div> : shell}
+      <Dialog open={nodesOpen && mode !== "desktop" && !clean} onClose={() => setNodesOpen(false)} title="Motion nodes" size="full">
+        <div className="mb-3 h-[160px]">{stage}</div>
+        {nodeWorkspace}
+      </Dialog>
       {doc.audio && dialog !== "render" && <AudioPlayer audio={doc.audio} time={clock.time} playing={clock.playing} duration={duration} speed={speed} />}
       <Toast toast={toast} onDismiss={dismissToast} />
       {cardJob && (

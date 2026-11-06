@@ -5,6 +5,7 @@ import { validateMotionDocument } from "@/app/components/motion-studio/engine/mo
 import { applyMatrix, world } from "@/app/components/motion-studio/engine/rig";
 import { toLocalPoint, toWorldPoint } from "@/app/components/motion-studio/engine/transform";
 import { changeConstraint, changeController, changeMotionBlock, editableMotion } from "./motionEdit";
+import { graphNodeId } from "./motionGraph";
 
 export type MotionRecipe = "target" | "path" | "lift" | "breathing" | "reach" | "aim" | "hold";
 export interface MotionRecipeOptions {
@@ -63,7 +64,7 @@ export function createMotionRecipe(doc: StudioDoc, clipId: string, recipe: Motio
   };
   const errors = validateMotionDocument(candidate);
   if (errors.length) return { doc, error: errors[0] };
-  return { doc: candidate, nodeId: JSON.stringify([clipId, result.kind, result.id]) };
+  return { doc: candidate, nodeId: graphNodeId(clipId, result.kind, result.id) };
 }
 
 interface RecipeContext {

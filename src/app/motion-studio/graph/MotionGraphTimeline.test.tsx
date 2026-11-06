@@ -51,7 +51,7 @@ test("keyboard timing nudge selects the matching node and changes a sparse block
  const { onChange, onSelectNode } = view();
  fireEvent.keyDown(screen.getByRole("button", { name: "Move Lift timing" }), { key: "ArrowRight" });
  expect(onChange.mock.calls[0][0].clips[0].motion.blocks[0].start).toBeCloseTo(.1);
- expect(onSelectNode).toHaveBeenCalledWith(JSON.stringify(["actor", "block", "lift"]));
+ expect(onSelectNode).toHaveBeenCalledWith(encodeURIComponent(JSON.stringify(["actor", "block", "lift"])));
 });
 test("playhead seeks composition time and no clip has a useful empty state", () => {
  const { time } = view(); fireEvent.change(screen.getByRole("slider", { name: "Motion playhead" }), { target: { value: "3" } });

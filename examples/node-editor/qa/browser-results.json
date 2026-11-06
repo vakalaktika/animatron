@@ -1,0 +1,16 @@
+{
+  "browser": "Chrome/156.0.8078.81",
+  "realCardDrag": "PASS",
+  "realWireDrag": "PASS",
+  "realTimingDrag": "PASS",
+  "accessibleConnect": "PASS",
+  "undoRedo": "PASS",
+  "saveReopenExport": "PASS",
+  "artworkPreserved": "PASS",
+  "reducedMotion": "PASS",
+  "viewports": [
+    1600,
+    390
+  ],
+  "consoleErrors": 0
+}

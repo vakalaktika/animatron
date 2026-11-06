@@ -21,6 +21,11 @@ const id = graphNodeId;
 const wire = (source: string, sourceHandle: string, target: string, targetHandle: string) => ({ source, sourceHandle, target, targetHandle });
 
 describe("motion graph adapter", () => {
+  it("projects a near-budget scene without losing operations or scoped references",()=>{
+    const clip=makeText({id:"large",start:0});clip.motion={blocks:Array.from({length:128},(_,i)=>({id:`move-${i}`,type:"transform",start:0,duration:1,from:{},to:{x:1}}))};
+    const doc=scene(clip),graph=buildMotionGraph(doc);expect(graph.nodes).toHaveLength(129);expect(graph.edges).toHaveLength(128);
+    expect(new Set(graph.edges.map(e=>e.id)).size).toBe(128);expect(connectMotionGraph(doc,wire(id("large","block","move-127"),"motion",id("large","object"),"motion"),0).error).toBeUndefined();
+  });
   it("uses selector-safe IDs for real drag handles",()=>{
     expect(graphNodeId('character/"A"',"controller","hand")).not.toMatch(/["\[\]\s]/);
   });

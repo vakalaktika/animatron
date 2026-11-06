@@ -72,3 +72,35 @@ test("search and scope do not alter the composition", () => {
   expect(screen.queryByRole("button", { name: "Select Move along path" })).toBeNull();
   expect(onChange).not.toHaveBeenCalled();
 });
+
+test("incompatible ports explain the error without altering the saved graph",()=>{
+ const {onChange}=mount();fireEvent.click(screen.getByRole("button",{name:"Move along path: Moves"}));fireEvent.click(screen.getByRole("button",{name:"Hand: Target"}));
+ expect(onChange).not.toHaveBeenCalled();expect(screen.getByRole("status")).toHaveTextContent(/output and an input/);
+ fireEvent.click(screen.getByRole("button",{name:"Move along path: Moves"}));expect(screen.getByRole("status")).toHaveTextContent(/cancelled/);
+});
+
+test("node duplication and suspension keep sparse programs editable",()=>{
+ const {onChange}=mount();fireEvent.click(screen.getByRole("button",{name:"Select Move along path"}));
+ fireEvent.click(screen.getByRole("button",{name:"Duplicate nodes"}));expect(onChange.mock.calls.at(-1)![0].clips[0].motion.blocks).toHaveLength(2);
+ fireEvent.click(screen.getByRole("button",{name:"Enable / disable"}));expect(onChange.mock.calls.at(-1)![0].clips[0].motion.blocks[0].enabled).toBe(false);
+ fireEvent.keyDown(screen.getByRole("region",{name:"Motion node editor"}),{key:"d",ctrlKey:true});expect(onChange.mock.calls.at(-1)![0].clips[0].motion.blocks).toHaveLength(2);
+ fireEvent.click(screen.getByRole("button",{name:"Remove nodes"}));expect(onChange.mock.calls.at(-1)![0].clips[0].motion.blocks).toHaveLength(0);
+});
+
+test("keyboard deletion and unsupported target suspension give clear outcomes",()=>{
+ const {onChange}=mount();fireEvent.click(screen.getByRole("button",{name:"Select Hand"}));
+ fireEvent.click(screen.getByRole("button",{name:"Enable / disable"}));expect(onChange).not.toHaveBeenCalled();expect(screen.getByRole("status")).toHaveTextContent(/Targets cannot/);
+ fireEvent.keyDown(screen.getByRole("region",{name:"Motion node editor"}),{key:"Delete"});expect(onChange.mock.calls.at(-1)![0].clips[0].motion.controllers).toHaveLength(0);
+});
+
+test("workspace undo shortcuts remain scoped to graph edits",()=>{
+ const onUndo=vi.fn(),onRedo=vi.fn();render(<MotionGraphWorkspace doc={initial()} time={motionValue(0)} selectedClipId="title" onChange={vi.fn()} onSelectClip={vi.fn()} onClose={vi.fn()} onUndo={onUndo} onRedo={onRedo}/>);
+ fireEvent.click(screen.getByRole("button",{name:"Undo"}));fireEvent.click(screen.getByRole("button",{name:"Redo"}));
+ fireEvent.keyDown(screen.getByRole("region",{name:"Motion node editor"}),{key:"z",ctrlKey:true});fireEvent.keyDown(screen.getByRole("region",{name:"Motion node editor"}),{key:"z",ctrlKey:true,shiftKey:true});expect(onUndo).toHaveBeenCalledTimes(2);expect(onRedo).toHaveBeenCalledTimes(2);
+});
+
+test("whole-scene scope exposes other layers and an empty search has guidance",()=>{
+ const doc=initial();doc.clips.push(makeText({id:"second",name:"Second"}));const {onSelectClip,onClose}=mount(doc);
+ fireEvent.change(screen.getByRole("combobox",{name:"Graph scope"}),{target:{value:"all"}});fireEvent.click(screen.getByRole("button",{name:"Select Second"}));expect(onSelectClip).toHaveBeenCalledWith("second");
+ fireEvent.change(screen.getByRole("searchbox",{name:"Find nodes"}),{target:{value:"nonexistent"}});expect(screen.getByText(/No matching nodes/)).toBeVisible();fireEvent.click(screen.getByRole("button",{name:"Expand"}));fireEvent.click(screen.getByRole("button",{name:"Compact"}));fireEvent.click(screen.getByRole("button",{name:"Close nodes"}));expect(onClose).toHaveBeenCalled();
+});

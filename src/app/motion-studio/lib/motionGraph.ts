@@ -19,6 +19,7 @@ export interface MotionGraphNode {
   kind: MotionGraphNodeKind;
   label: string;
   provenance: "scene" | "rig" | "override";
+  ownerName: string;
   enabled: boolean;
   ports: MotionGraphPort[];
 }
@@ -29,7 +30,7 @@ export interface MotionGraphResult { doc: StudioDoc; error?: string; nodeId?: st
 export type MotionGraphEdit = { type: "remove" | "duplicate" | "toggle"; nodeId: string };
 
 /** Array encoding avoids collisions between repeated rig IDs and punctuation in clip IDs. */
-export const graphNodeId = (clipId: string, kind: MotionGraphNodeKind, itemId = ""): string => JSON.stringify([clipId, kind, itemId]);
+export const graphNodeId = (clipId: string, kind: MotionGraphNodeKind, itemId = ""): string => encodeURIComponent(JSON.stringify([clipId, kind, itemId]));
 const port = (id: string, label: string, direction: MotionGraphPort["direction"], kind: MotionGraphPort["kind"]): MotionGraphPort => ({ id, label, direction, kind });
 const portsFor = (kind: MotionGraphNodeKind, attach = false): MotionGraphPort[] => {
   if (kind === "object") return [port("motion", "Moves", "input", "motion"), port("frame", "Object anchor", "output", "frame")];
@@ -51,11 +52,11 @@ export function buildMotionGraph(doc: StudioDoc): MotionGraph {
   const nodes: MotionGraphNode[] = [], edges: MotionGraphEdge[] = [];
   for (const clip of doc.clips) {
     const node = (kind: MotionGraphNodeKind, label: string, itemId?: string, source: MotionGraphNode["provenance"] = "scene", enabled = true, attach = false) => {
-      const value = { id: graphNodeId(clip.id, kind, itemId), clipId: clip.id, itemId, kind, label, provenance: source, enabled, ports: portsFor(kind, attach) };
+      const value = { id: graphNodeId(clip.id, kind, itemId), clipId: clip.id, itemId, kind, label, ownerName: clip.name || clip.id, provenance: source, enabled, ports: portsFor(kind, attach) };
       nodes.push(value); return value.id;
     };
     const edge = (source: string, sourceHandle: string, target: string, targetHandle: string, label: string, ownerNodeId: string, enabled = true) => {
-      edges.push({ id: JSON.stringify([ownerNodeId, targetHandle]), source, sourceHandle, target, targetHandle, label, ownerNodeId, enabled });
+      edges.push({ id: encodeURIComponent(JSON.stringify([ownerNodeId, targetHandle])), source, sourceHandle, target, targetHandle, label, ownerNodeId, enabled });
     };
     const objectId = node("object", clip.name || clip.id), program = editableMotion(clip);
     for (const c of program.controllers) {
@@ -83,6 +84,15 @@ export function buildMotionGraph(doc: StudioDoc): MotionGraph {
 }
 
 const failure = (doc: StudioDoc, error: string): MotionGraphResult => ({ doc, error });
+/** Rewire an operation's input/destination without silently leaving a second driver behind. */
+export function reconnectMotionGraph(doc: StudioDoc, edgeId: string, connection: MotionGraphConnection, time: number): MotionGraphResult {
+  const graph=buildMotionGraph(doc),edge=graph.edges.find(e=>e.id===edgeId);
+  if(!edge) return failure(doc,"This connection no longer exists.");
+  const owner=graph.nodes.find(n=>n.id===edge.ownerNodeId)!;
+  if(owner.kind==="block" ? connection.source!==owner.id || connection.sourceHandle!==edge.sourceHandle : connection.target!==owner.id || connection.targetHandle!==edge.targetHandle)
+    return failure(doc,"Reconnect this operation's driver or destination. Create a new relationship to control another operation.");
+  return connectMotionGraph(doc,connection,time);
+}
 function commit(doc: StudioDoc, next: Clip): MotionGraphResult {
   const candidate: StudioDoc = { ...doc, version: 4, clips: doc.clips.map(c => c.id === next.id ? next : c) };
   const errors = validateMotionDocument(candidate);

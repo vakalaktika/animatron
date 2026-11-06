@@ -5,11 +5,12 @@ import { useMotionValueEvent, type MotionValue } from "motion/react";
 import { ReactFlow, Background, Controls, applyNodeChanges, type Connection, type Edge, type NodeChange, type ReactFlowInstance } from "@xyflow/react";
 import type { StudioDoc } from "@/app/components/motion-studio/types";
 import { Button } from "@/app/components/shared-components";
-import { buildMotionGraph, connectMotionGraph, editMotionGraph, type MotionGraphConnection } from "../lib/motionGraph";
+import { buildMotionGraph, connectMotionGraph, reconnectMotionGraph, editMotionGraph, type MotionGraphConnection } from "../lib/motionGraph";
 import { MotionNodeCard, type MotionCardNode, type PortSelection } from "./MotionNodeCard";
 import { MotionNodeInspector, nodeActive } from "./MotionNodeInspector";
 import { MotionRecipePalette } from "./MotionRecipePalette";
 import { MotionGraphTimeline } from "./MotionGraphTimeline";
+import { sanitizeGraphEditor } from "../lib/graphLayout";
 
 export interface MotionGraphWorkspaceProps {
   doc: StudioDoc;
@@ -28,6 +29,7 @@ type Layout = { version: 1; positions: Record<string, Position>; viewport?: { x:
 /** A typed editing surface over the canonical program. No second playback graph is stored. */
 export function MotionGraphWorkspace({ doc, time, selectedClipId, onSelectClip, onChange, onClose, onUndo, onRedo }: MotionGraphWorkspaceProps) {
   const [now, setNow] = useState(time.get()), [query, setQuery] = useState(""), [scope, setScope] = useState("selected");
+  const [showJoints,setShowJoints]=useState(false);
   const [selected, setSelected] = useState<string[]>([]), [pending, setPending] = useState<PortSelection | null>(null);
   const [message, setMessage] = useState(""), [expanded, setExpanded] = useState(false), [draft, setDraft] = useState<Record<string, Position>>({});
   const flow = useRef<ReactFlowInstance<MotionCardNode, Edge> | null>(null);
@@ -63,14 +65,17 @@ export function MotionGraphWorkspace({ doc, time, selectedClipId, onSelectClip, 
   const visible = useMemo(() => {
     const direct = new Set(graph.nodes.filter(n => scope === "all" || !selectedClipId || n.clipId === selectedClipId).map(n => n.id));
     if (scope !== "all") graph.edges.forEach(e => { if (direct.has(e.source) || direct.has(e.target)) { direct.add(e.source); direct.add(e.target); } });
-    return graph.nodes.filter(n => direct.has(n.id) && (!query || `${n.label} ${doc.clips.find(c => c.id === n.clipId)?.name ?? ""}`.toLowerCase().includes(query.toLowerCase())));
-  }, [graph, scope, selectedClipId, query, doc.clips]);
-  const nodes: MotionCardNode[] = useMemo(() => visible.map((node, i) => ({ id: node.id, type: "motion", selected: selected.includes(node.id), position: draft[node.id] ?? layout?.positions[node.id] ?? { x: (i % 4) * 260, y: Math.floor(i / 4) * 240 }, data: { node, active: nodeActive(doc, node, now), pending, onPort, compatible } })), [visible, selected, draft, layout, doc, now, pending, onPort, compatible]);
+    const connected=new Set(graph.edges.flatMap(e=>[e.source,e.target]));
+    return graph.nodes.filter(n => direct.has(n.id) && (showJoints || n.kind!=="bone" || connected.has(n.id)));
+  }, [graph, scope, selectedClipId, showJoints]);
+  const filtered=visible.filter(n=>!query || `${n.label} ${doc.clips.find(c=>c.id===n.clipId)?.name??""}`.toLowerCase().includes(query.toLowerCase()));
+  useEffect(()=>{if(query) void flow.current?.fitView({padding:.25,minZoom:.3,maxZoom:1});},[query]);
+  const nodes: MotionCardNode[] = useMemo(() => filtered.map((node) => ({ id: node.id, type: "motion", selected: selected.includes(node.id), position: draft[node.id] ?? layout?.positions[node.id] ?? { x: (visible.indexOf(node) % 4) * 260, y: Math.floor(visible.indexOf(node) / 4) * 240 }, data: { node, active: nodeActive(doc, node, now), pending, onPort, compatible } })), [filtered, visible, selected, draft, layout, doc, now, pending, onPort, compatible]);
   const visibleIds = new Set(nodes.map(n => n.id));
   const edges: Edge[] = graph.edges.filter(e => visibleIds.has(e.source) && visibleIds.has(e.target)).map(edge => ({ ...edge, reconnectable: true, animated: false, style: { stroke: edge.enabled === false ? "var(--border-control)" : "var(--info)", strokeWidth: 2, strokeDasharray: edge.enabled === false ? "5 4" : undefined }, labelStyle: { fill: "var(--ink-secondary)", fontSize: 10 }, labelBgStyle: { fill: "var(--surface-raised)" } }));
   const persist = (positions: Record<string, Position>, viewport = layout?.viewport) => {
     const next: Layout = { version: 1, positions: { ...layout?.positions, ...positions }, ...(viewport ? { viewport } : {}) };
-    onChange({ ...doc, editor: { ...doc.editor, motionGraph: next } });
+    onChange({ ...doc, editor: sanitizeGraphEditor({ motionGraph: next }) });
   };
   const onNodesChange = (changes: NodeChange<MotionCardNode>[]) => {
     const next = applyNodeChanges(changes, nodes);
@@ -104,7 +109,8 @@ export function MotionGraphWorkspace({ doc, time, selectedClipId, onSelectClip, 
       <h2 className="mr-2 text-sm font-semibold">Motion nodes</h2>
       <input type="search" aria-label="Find nodes" placeholder="Find a node…" value={query} onChange={e => setQuery(e.target.value)} className="min-w-0 flex-1 rounded border border-border-control bg-surface-sunken px-2 py-1.5 text-xs sm:max-w-[180px]" />
       <select aria-label="Graph scope" className="rounded border border-border-control bg-surface-raised px-2 py-1.5 text-xs" value={scope} onChange={e => setScope(e.target.value)}><option value="selected">Selected object + connections</option><option value="all">Whole scene</option></select>
-      <Button size="xs" variant="outline" onClick={() => void flow.current?.fitView({ nodes: selected.length ? selected.map(id => ({ id })) : undefined, padding: .2 })}>Fit</Button>
+      <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={showJoints} onChange={e=>setShowJoints(e.target.checked)}/>All joints</label>
+      <Button size="xs" variant="outline" onClick={() => void flow.current?.fitView({ nodes: selected.some(id=>visibleIds.has(id)) ? selected.filter(id=>visibleIds.has(id)).map(id => ({ id })) : undefined, padding: .2 })}>Fit</Button>
       {onUndo && <Button size="xs" variant="outline" onClick={onUndo}>Undo</Button>}
       {onRedo && <Button size="xs" variant="outline" onClick={onRedo}>Redo</Button>}
       <Button size="xs" variant="outline" aria-pressed={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? "Compact" : "Expand"}</Button>
@@ -119,7 +125,8 @@ export function MotionGraphWorkspace({ doc, time, selectedClipId, onSelectClip, 
     </div>
     <div className="flex min-h-0 flex-col sm:flex-row" style={{ height: expanded ? "min(65dvh, 720px)" : 400 }}>
       <div className="relative min-h-[220px] min-w-0 flex-1" data-motion-graph-canvas>
-        <ReactFlow<MotionCardNode, Edge> nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onConnect={wireFromFlow} onReconnect={(_, wire) => wireFromFlow(wire)}
+        <ReactFlow<MotionCardNode, Edge> nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onConnect={wireFromFlow} onReconnect={(edge,wire) => { if(!wire.sourceHandle||!wire.targetHandle)return; const result=reconnectMotionGraph(doc,edge.id,wire as MotionGraphConnection,time.get());if(result.error)setMessage(result.error);else {onChange(result.doc);setMessage("Reconnected. Previous relationship replaced.");} }}
+          onEdgeClick={(_,edge)=>choose(graph.edges.find(e=>e.id===edge.id)!.ownerNodeId)}
           isValidConnection={wire => !!wire.sourceHandle && !!wire.targetHandle && !connectMotionGraph(doc, wire as MotionGraphConnection, time.get()).error}
           onNodeClick={(_, node) => { setSelected(previous => previous.includes(node.id) ? previous : [node.id]); onSelectClip(node.data.node.clipId); }}
           onNodeDragStop={(_, node, dragged) => persist(Object.fromEntries((dragged?.length ? dragged : [node]).map(n => [n.id, n.position])))}
