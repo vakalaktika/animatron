@@ -5,6 +5,12 @@ description: "Writes valid Animatron studio compositions (JSON) from a plain-lan
 
 # Compose for Animatron
 
+## Editable controls and motion blocks
+
+Read `references/motion-controls.md` for Document 4 / Rig 4 authoring. Use `scripts/motion-program.mjs` with an explicit supporting application checkout to add sparse controller tracks, reusable path/transform/oscillation blocks, persistent IK/aim constraints and directed socket attachments. Human canvas handles, timeline controls and optional relationship views edit the same saved program. The CLI validates actual evaluated intermediate times and writes an atomic complete file; stdout is a small report, never the composition payload. Preserve original artwork, identity records and all unaddressed tracks. This version does not establish that the deployed application supports the new contracts.
+
+Plan anticipation, coordinated body movement, expressive holds and settling before choosing motion blocks. A target contact is evaluated throughout its interval, not merely at recorded poses. Select registered head-angle drawings for perspective; rotating a flat face is not a head turn. Distinguish full-strength contact locks, partial influence, unreachable targets and visual approval. Review loops for position and velocity continuity and deliver reduced-motion artwork. Raster bending requires the explicit mesh capability and an inspected fixture; never infer it from rigid rotation or these controls alone.
+
 ## Scene structure before animation
 
 Read `references/scene-production.md` for illustrated animation. First declare action-specific independent parts, scene space/occluders, contact carriers and artwork facing. Do not call a sparse rigid gesture natural acting. Rebuild missing artwork before promising the action, or explicitly preserve the unmet requirement. Composer must run `scene-check.mjs` with the actual app evaluator on the stored scene plan; new masked masters use document3 and JSON-only handoff. Technical validity, fewer keys and successful export do not establish visual quality or user approval.
@@ -20,7 +26,7 @@ Treat `Animatron: <brief>` as a request to complete an Animatron animation. Also
 Use explicit user instructions first, then the referenced project's settings. For a new project with unspecified settings, choose Original / Classic graphic Mid-century Ink, an 8-second looping animation and a 1280×720 landscape stage. Illustrated scenes default to a complete composed setting with restrained motion; scene richness is independent of character treatment. Use Mid-century Ink's palette rules; preserve accepted palettes and identities for existing projects. An explicit Detailed choice overrides Original. Preserve the actual subject/action in an attachment or contextual reference and infer only modest motion consistent with the brief. Ask one short question only if there is no identifiable subject/action or a real identity conflict; routine visual choices do not need confirmation.
 
 Complete the following within the available host capabilities:
-1. Load Mid-century Ink and its selected treatment's required references. Reuse an appropriate supplied rig. If artwork or a rig is missing, use Mid-century Ink to create the character model, editable vector art, movement study, required views, bound Rig 1 master and baked motion. Do not ask the user to supply a rig for an invented subject merely because this composer does not draw. Preserve the editable master before slimming an output copy.
+1. Load Mid-century Ink and its selected treatment's required references. Reuse an appropriate supplied rig. If artwork or a rig is missing, use Mid-century Ink to create the character model, editable vector art, movement study, required views, versioned editable master (Rig 4 for persistent controls; legacy formats remain supported) and sparse motion. Do not ask the user to supply a rig for an invented subject merely because this composer does not draw. Preserve the editable master before slimming an output copy.
 2. Feed the resulting actual `.mci.json` file into this composer's inspect/place workflow; read `references/rigs.md` and `references/schema.md`. Do not hand-edit the rig to bypass its creator or replace a named subject with the demo fixture.
 3. Build the composition and validate using the studio importer, repair checks and share-hash round trip. Check duration and loop continuity separately: an 8-second animation cycle may coexist with the studio's final hold, and an importer PASS alone does not establish a seamless visual loop. Inspect key rendered moments when rendering is available, and report actual validation/rendering limits.
 4. Deliver the importable composition and any newly created editable model/rig assets, plus a preview when successfully rendered. Include the opening `#share=` link when validation generated one within the size limit; otherwise deliver the composition file. Do not promise a video export without an available, verified renderer. Creating a public short-link page still requires an explicit request.
@@ -161,6 +167,8 @@ example), and bump the plugin version.
 
 ## Out of scope
 
-Drawing or rigging characters (the Mid-century Ink tools do that), attaching
-things to rig slots, retargeting clips between different skeletons, video and
-sound, and any change to the studio repo itself.
+Drawing or rigging characters (the Mid-century Ink tools do that), automatic
+retargeting between different skeletons, arbitrary executable expressions,
+automatic flattened-image separation, and changing the studio repository.
+Use the explicit Document 4 attachment contract for scene-to-rig socket contacts;
+legacy placement commands do not acquire this capability automatically.

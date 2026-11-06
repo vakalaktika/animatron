@@ -9,7 +9,7 @@ import { MoreFields, SelectField, TextField } from "./fields";
 export function SceneReviewFields({doc,onChange}:{doc:StudioDoc;onChange:(doc:StudioDoc)=>void}) {
  const [checked,setChecked]=useState<{doc:StudioDoc;result:ReturnType<typeof reviewScene>}|null>(null);
  const plan=validScenePlan(doc.scenePlan)?doc.scenePlan:null;
- const update=(next:ScenePlan)=>onChange({...doc,version:3,scenePlan:next});
+ const update=(next:ScenePlan)=>onChange({...doc,version:doc.version>=3?doc.version:3,scenePlan:next});
  if(!plan)return <><p className="atm-help">Declare acting, facing and scene space before animating. Import validity and fewer keys do not establish good acting.</p><Button size="xs" onClick={()=>update({version:1,actors:[],travels:[]})}>Plan scene motion</Button></>;
  return <>
   <p className="atm-help">Checks cover declared actions only. Articulated acting needs independently bound parts; outside travel needs a real portal mask. Inspect acting quality separately.</p>

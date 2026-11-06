@@ -1,0 +1,123 @@
+{
+  "canvas": {
+    "width": 1672,
+    "height": 941
+  },
+  "parts": [
+    {
+      "id": "upper-sleeve",
+      "sourceRect": {
+        "x": 443,
+        "y": 0,
+        "width": 443,
+        "height": 443
+      },
+      "x": 868.5,
+      "y": 389.75,
+      "width": 199.35,
+      "height": 199.35,
+      "svgId": "upper-sleeve",
+      "src": "@atlas"
+    },
+    {
+      "id": "torso",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "width": 443,
+        "height": 443
+      },
+      "x": 646.25,
+      "y": 470.75,
+      "width": 376.55,
+      "height": 376.55,
+      "svgId": "torso",
+      "src": "@atlas"
+    },
+    {
+      "id": "forearm-paint",
+      "sourceRect": {
+        "x": 887,
+        "y": 0,
+        "width": 443,
+        "height": 443
+      },
+      "x": 941,
+      "y": 225.9,
+      "width": 292.38,
+      "height": 292.38,
+      "svgId": "forearm-paint",
+      "src": "@atlas"
+    },
+    {
+      "id": "hand-paint",
+      "sourceRect": {
+        "x": 1330,
+        "y": 0,
+        "width": 444,
+        "height": 443
+      },
+      "x": 1090.18,
+      "y": 198.79,
+      "width": 146.19,
+      "height": 146.19,
+      "svgId": "hand-paint",
+      "src": "@atlas"
+    },
+    {
+      "id": "head-open",
+      "sourceRect": {
+        "x": 0,
+        "y": 443,
+        "width": 443,
+        "height": 444
+      },
+      "x": 573.3,
+      "y": 230.7,
+      "width": 398.7,
+      "height": 399.6,
+      "svgId": "head-open",
+      "src": "@atlas"
+    },
+    {
+      "id": "head-turned",
+      "sourceRect": {
+        "x": 443,
+        "y": 443,
+        "width": 443,
+        "height": 444
+      },
+      "x": 590.4,
+      "y": 228,
+      "width": 398.7,
+      "height": 399.6,
+      "svgId": "head-turned",
+      "src": "@atlas"
+    },
+    {
+      "id": "head-blink",
+      "sourceRect": {
+        "x": 887,
+        "y": 443,
+        "width": 443,
+        "height": 444
+      },
+      "x": 613.8,
+      "y": 230.7,
+      "width": 398.7,
+      "height": 399.6,
+      "svgId": "head-blink",
+      "src": "@atlas"
+    }
+  ],
+  "slots": [
+    {
+      "id": "plane-grip",
+      "boneId": "hand",
+      "x": 50,
+      "y": -70,
+      "rotation": 0
+    }
+  ],
+  "notes": "Atlas crops are registered source rectangles; all pixel data remains editable in the original parts PNG. Reinspect seams after any artwork change."
+}

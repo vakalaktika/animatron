@@ -1,0 +1,54 @@
+{
+  "format": "mid-century-ink-rig",
+  "version": 4,
+  "name": "Detailed — folded paper airplane",
+  "canvas": {
+    "width": 180,
+    "height": 80
+  },
+  "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 180 80\"><g id=\"plane\"><g transform=\"translate(90 40)\"><path d=\"M-64 -21L72 -12L-19 18L-28 3Z\" fill=\"#fff8e7\"/><path d=\"M-64 -21L-9 -3L72 -12L-28 3L-19 18L-13 0Z\" fill=\"#dbc89c\"/></g></g></svg>",
+  "bones": [
+    {
+      "id": "root",
+      "parentId": null,
+      "role": "root",
+      "rest": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0
+      },
+      "length": 0
+    }
+  ],
+  "bindings": [
+    {
+      "id": "plane",
+      "svgId": "plane",
+      "boneId": "root",
+      "bindMatrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "drawingSets": [],
+  "animations": [
+    {
+      "id": "performance",
+      "name": "Authored performance",
+      "duration": 8,
+      "loop": true,
+      "tracks": [],
+      "drawingTracks": []
+    }
+  ],
+  "metadata": {
+    "treatment": "detailed-storybook",
+    "identityStatus": "invented; provisional; not user-approved",
+    "artwork": "Native authored paths; private style sources are not embedded."
+  }
+}

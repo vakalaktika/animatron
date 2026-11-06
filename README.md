@@ -4,6 +4,8 @@ A free, browser-based animation studio. Add text, speech bubbles, shapes, pictur
 
 Live app: https://vakalaktika.github.io/animatron/
 
+The motion-controls update adds editable object paths/blocks, persistent hand and foot targets, socket-held props, target-key timing, optional relationship nodes, and bounded raster bending. See the [implementation and verification](docs/illustrated-scenes/motion-implementation.md) and [Detailed / Original examples with previews and editable masters](examples/motion-pipeline/README.md). Document 4 / Rig 4 require this supporting revision; these changes have not been merged or deployed to the live app.
+
 The illustrated-scene pipeline adds compatible Rig 2 transparent PNG attachments and registered replacement drawings, an explicit timeline tail, and reduced-motion presentation. See the [architecture and validation audit](docs/illustrated-scenes/implementation.md), [finished editable examples and MP4 previews](examples/illustrated-scenes/README.md), and [private plugin update workflow](docs/illustrated-scenes/plugin-updates.md). Rig 1 imports remain supported. The Rig 2 application changes require this revision and are not yet deployed to the live app.
 
 ## How it works

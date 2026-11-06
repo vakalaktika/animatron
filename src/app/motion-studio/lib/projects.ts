@@ -17,6 +17,9 @@ export interface Project {
   updatedAt: string;
   /** Folder it is filed in; unset or null means unfiled. */
   folderId?: string | null;
+  /** Unsupported saved formats remain recoverable instead of being dropped. */
+  recoveryJson?: string;
+  recoveryReason?: string;
 }
 
 /** A flat, named grouping in the gallery. Folders hold compositions, not other folders. */
@@ -38,6 +41,13 @@ export const PROJECTS_KEY = "animatron.projects.v1";
 const isDocLike = (v: unknown): v is RawDoc =>
   !!v && typeof v === "object" && Array.isArray((v as RawDoc).clips) && !!(v as RawDoc).stage;
 
+function readableDoc(raw: RawDoc): Pick<Project,"doc"|"recoveryJson"|"recoveryReason"> {
+  try { return {doc:normalizeDoc(raw).doc}; }
+  catch(error) {
+    return {doc:{version:2,name:typeof raw.name==="string"?raw.name:"Recovered composition",stage:{width:1280,height:720,background:"#f7f5ee",transparent:false},clips:[]},recoveryJson:JSON.stringify(raw),recoveryReason:error instanceof Error?error.message:"This composition needs a supporting app."};
+  }
+}
+
 function readJson(key: string): unknown {
   try {
     const raw = window.localStorage.getItem(key);
@@ -54,15 +64,17 @@ function migrateLegacy(): ProjectStore {
   const current = readJson(DOC_STORAGE_KEY);
   let currentId: string | null = null;
   if (isDocLike(current)) {
-    currentId = newId();
-    projects.push({ id: currentId, doc: normalizeDoc(current).doc, updatedAt: now });
+    const restored = readableDoc(current),id=newId();
+    if (!restored.recoveryJson) currentId=id;
+    projects.push({id,...restored,updatedAt:now});
   }
   const presets = readJson(LEGACY_PRESETS_KEY);
   if (Array.isArray(presets)) {
     for (const p of presets as { name?: unknown; savedAt?: unknown; doc?: unknown }[]) {
       if (!isDocLike(p.doc)) continue;
-      const doc = normalizeDoc(p.doc).doc;
+      const restored = readableDoc(p.doc),doc=restored.doc;
       projects.push({
+        ...restored,
         id: newId(),
         doc: typeof p.name === "string" && p.name ? { ...doc, name: p.name } : doc,
         updatedAt: typeof p.savedAt === "string" ? p.savedAt : now,
@@ -83,14 +95,18 @@ export function loadProjects(): ProjectStore {
   );
   const projects = (Array.isArray(store.projects) ? store.projects : [])
     .filter((p): p is Project => !!p && typeof p === "object" && typeof p.id === "string" && isDocLike(p.doc))
-    .map((p) => ({
+    .flatMap((p) => {
+      const restored = readableDoc(p.doc);
+      return [{
+      ...restored,
+      ...(typeof p.recoveryJson==="string"?{recoveryJson:p.recoveryJson,recoveryReason:p.recoveryReason}:{}),
       id: p.id,
       updatedAt: typeof p.updatedAt === "string" ? p.updatedAt : new Date(0).toISOString(),
-      doc: normalizeDoc(p.doc).doc,
       // A folder that no longer exists leaves its compositions unfiled.
       folderId: typeof p.folderId === "string" && folders.some((f) => f.id === p.folderId) ? p.folderId : null,
-    }));
-  const currentId = typeof store.currentId === "string" && projects.some((p) => p.id === store.currentId) ? store.currentId : null;
+    }];
+    });
+  const currentId = typeof store.currentId === "string" && projects.some((p) => p.id === store.currentId&&!p.recoveryJson) ? store.currentId : null;
   return { currentId, projects, folders };
 }
 
@@ -102,7 +118,10 @@ export function saveProjects(store: ProjectStore): string | null {
     // Mirror the current document into the legacy slot so older links into
     // the autosave (tests, bookmarks of the previous build) still see it.
     const current = store.projects.find((p) => p.id === store.currentId);
-    if (current) window.localStorage.setItem(DOC_STORAGE_KEY, JSON.stringify(current.doc));
+    // A legacy build cannot read Document 4. Mirroring its large embedded
+    // artwork both wastes quota and incorrectly reports a successful primary
+    // project save as failed. Keep the previous legacy document untouched.
+    if (current && current.doc.version < 4) window.localStorage.setItem(DOC_STORAGE_KEY, JSON.stringify(current.doc));
     return null;
   } catch (err) {
     return err instanceof Error ? err.message : "Could not save";
@@ -138,7 +157,8 @@ export function fileProject(store: ProjectStore, doc: StudioDoc, folderId: strin
 
 export function removeProject(store: ProjectStore, id: string): ProjectStore {
   const projects = store.projects.filter((p) => p.id !== id);
-  const currentId = store.currentId === id ? (projects.length ? projects[projects.length - 1].id : null) : store.currentId;
+  const readable = projects.filter((p) => !p.recoveryJson);
+  const currentId = store.currentId === id ? (readable.length ? readable[readable.length - 1].id : null) : store.currentId;
   return { ...store, currentId, projects };
 }
 

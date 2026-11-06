@@ -7,6 +7,7 @@ import { spriteActiveDuration, spritePath, spriteProgress, waypointValuesAt } fr
 import { revealTransform } from "./text";
 import { flowsOnRibbon } from "./textFlow";
 import { LANDING_SQUASH_SECONDS } from "./timing";
+import { evaluateScene, hasMotion } from "./motionScene";
 
 /**
  * A clip's placement on the stage at one instant. Views render it as
@@ -192,8 +193,13 @@ function worldFrom(doc: StudioDoc, clipId: string, t: number, local: LocalFn): W
  * Every view derives its placement from this, so a clip riding another one
  * matches it frame for frame. A missing clip id yields the identity.
  */
-export function transformAt(doc: StudioDoc, clipId: string, t: number): WorldTransform {
+export function legacyTransformAt(doc: StudioDoc, clipId: string, t: number): WorldTransform {
   return worldFrom(doc, clipId, t, localTransformAt);
+}
+
+/** Shared scene evaluator preserves targets and attachments between authored keys. */
+export function transformAt(doc: StudioDoc, clipId: string, t: number): WorldTransform {
+  return hasMotion(doc) ? evaluateScene(doc, t).transforms[clipId] ?? IDENTITY : legacyTransformAt(doc, clipId, t);
 }
 
 /** Where the clip settles once every ancestor is at rest. */

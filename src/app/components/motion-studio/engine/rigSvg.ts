@@ -1,6 +1,6 @@
 import type { RigAsset } from "../types";
 import { isRigId, RIG_LIMITS } from "./rig";
-import { validateRigV2 } from "./rigV2";
+import { validateRigV2, rasterSource, pngDimensions } from "./rigV2";
 
 /**
  * The rig contract's SVG subset, checked before any of the artwork is drawn
@@ -88,8 +88,8 @@ function readNode(el: Element, isRoot: boolean, count: { n: number }): RigSvgNod
  * `0 0 canvas.width canvas.height`, every binding must name a direct-child
  * `<g id>` of the root, and every such group must be bound.
  */
-export function parseRigSvg(asset: Pick<RigAsset, "svg" | "canvas" | "bindings"> & Partial<Pick<RigAsset, "version" | "rasterAttachments">>): RigSvgResult {
-  const problems = validateRigV2({ version: asset.version ?? 1, bindings: asset.bindings, rasterAttachments: asset.rasterAttachments });
+export function parseRigSvg(asset: Pick<RigAsset, "svg" | "canvas" | "bindings"> & Partial<Pick<RigAsset, "version" | "rasterAttachments" | "rasterSources" | "meshes">>): RigSvgResult {
+  const problems = validateRigV2({ version: asset.version ?? 1, bindings: asset.bindings, rasterAttachments: asset.rasterAttachments, rasterSources: asset.rasterSources });
   if (problems.length) return { ok: false, error: problems.join(" ") };
   if (typeof DOMParser === "undefined") return { ok: false, error: "This environment cannot parse SVG." };
   if (asset.svg.length > RIG_LIMITS.svgChars) return { ok: false, error: "The artwork is larger than 2 MB." };
@@ -119,8 +119,15 @@ export function parseRigSvg(asset: Pick<RigAsset, "svg" | "canvas" | "bindings">
   for (const part of asset.rasterAttachments ?? []) {
     const group = groups.get(part.svgId);
     if (!group) return { ok: false, error: "Missing raster attachment group." };
+    if (asset.meshes?.some(mesh => mesh.rasterId === part.id) && (group.children.length > 0 || Object.keys(group.attrs).some(key => key !== "id"))) return { ok: false, error: "A deformed raster needs an empty id-only artwork group; separate vector overlays into their own bound group." };
     // Trusted image nodes are constructed only after bounded PNG validation.
-    group.children.unshift({ tag: "image", attrs: { href: part.src, x: String(part.x), y: String(part.y), width: String(part.width), height: String(part.height), preserveAspectRatio: "none" }, children: [] });
+    const src=rasterSource(asset,part),crop=part.sourceRect;
+    const image:RigSvgNode={tag:"image",attrs:{href:src,x:String(part.x),y:String(part.y),width:String(part.width),height:String(part.height),preserveAspectRatio:"none"},children:[]};
+    if(crop) {
+      const size=pngDimensions(src);
+      image.attrs={href:src,x:"0",y:"0",width:String(size.width),height:String(size.height)};
+      group.children.unshift({tag:"svg",attrs:{x:String(part.x),y:String(part.y),width:String(part.width),height:String(part.height),viewBox:`${crop.x} ${crop.y} ${crop.width} ${crop.height}`,preserveAspectRatio:"none",overflow:"hidden"},children:[image]});
+    } else group.children.unshift(image);
   }
   let elements = 0;
   const walk = (n: RigSvgNode) => {

@@ -5,6 +5,10 @@ import { docFromHash, SHARE_PARAM, shareUrl } from "./share";
 const location = { origin: "https://example.test", pathname: "/animatron/" };
 
 describe("share links", () => {
+  it("refuses new motion even when an unvalidated caller mislabels the document",()=>{
+    const doc=welcomePreset();doc.clips[0].motion={blocks:[]};
+    expect(shareUrl(doc,location)).toEqual({ok:false,reason:"requires-newer-app"});
+  });
   it("carries a composition through the URL hash and back", () => {
     const doc = { ...welcomePreset(), name: "Shared one" };
     const result = shareUrl(doc, location);
@@ -40,6 +44,6 @@ it("refuses scene-contract links until the destination application is verified",
  expect(shareUrl(doc,location)).toEqual({ok:false,reason:"requires-newer-app"});
  const encoded=compressToEncodedURIComponent(JSON.stringify(doc));
  expect(docFromHash(`#share=${encoded}`)?.version).toBe(3);
- const future=compressToEncodedURIComponent(JSON.stringify({...doc,version:4}));
+ const future=compressToEncodedURIComponent(JSON.stringify({...doc,version:5}));
  expect(docFromHash(`#share=${future}`)).toBeNull();
 });

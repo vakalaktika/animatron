@@ -1,5 +1,5 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
-import { DOC_VERSION, SCENE_DOC_VERSION, type StudioDoc } from "@/app/components/motion-studio/types";
+import { DOC_VERSION, MOTION_DOC_VERSION, type StudioDoc } from "@/app/components/motion-studio/types";
 import { normalizeDoc, type RawDoc } from "./migrate";
 
 /** Hash parameter that carries a composition. */
@@ -16,7 +16,7 @@ export type ShareResult = { ok: true; url: string } | { ok: false; reason: "too-
 
 export const SCENE_SHARE_NOTICE = "This scene requires the updated application. Download its JSON file and open it in a supporting build; share links are unavailable for this scene format.";
 /** Existing public receivers cannot safely preserve the opt-in scene contract yet. */
-export const requiresNewerAppForSharing = (doc: StudioDoc) => doc.version > DOC_VERSION || doc.scenePlan !== undefined || doc.clips.some(c => c.stageMask !== undefined);
+export const requiresNewerAppForSharing = (doc: StudioDoc) => doc.version > DOC_VERSION || doc.scenePlan !== undefined || doc.timeline?.duration!==undefined || doc.timeline?.loop!==undefined || doc.clips.some(c => c.stageMask !== undefined || c.motion!==undefined || c.type==="rig"&&(c.rig.version>=4||c.rig.motion!==undefined||c.rig.meshes!==undefined));
 
 /** The composition folded into the current page's URL. */
 export function shareUrl(doc: StudioDoc, location: { origin: string; pathname: string }): ShareResult {
@@ -37,7 +37,7 @@ export function docFromHash(hash: string): StudioDoc | null {
     if (!parsed || typeof parsed !== "object") return null;
     const candidate = parsed as Partial<RawDoc>;
     if (!Array.isArray(candidate.clips) || !candidate.stage) return null;
-    if (typeof candidate.version === "number" && (!Number.isInteger(candidate.version) || candidate.version < 1 || candidate.version > SCENE_DOC_VERSION)) return null;
+    if (typeof candidate.version === "number" && (!Number.isInteger(candidate.version) || candidate.version < 1 || candidate.version > MOTION_DOC_VERSION)) return null;
     return normalizeDoc(candidate as RawDoc).doc;
   } catch {
     return null;

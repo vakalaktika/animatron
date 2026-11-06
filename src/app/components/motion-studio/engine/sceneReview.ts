@@ -1,5 +1,6 @@
 import type { Clip, RigClip, StudioDoc, Vec2 } from "../types";
-import { applyMatrix, inverse, multiply, rigPoseAt, world } from "./rig";
+import { applyMatrix, inverse, multiply, world } from "./rig";
+import { sceneRigPoseAt } from "./evaluatedRig";
 import { toWorldPoint, transformAt } from "./transform";
 import { docDuration } from "./timing";
 import { validStageMask } from "./stageMask";
@@ -27,7 +28,7 @@ function position(doc: StudioDoc, clip: Clip, boneId: string | undefined, t: num
   const frame=transformAt(doc,clip.id,t);
   let p={x:0,y:0}, q={x:1,y:0};
   if(clip.type==="rig" && boneId) {
-    const matrix=world(clip.rig,rigPoseAt(clip,t))[boneId];
+    const matrix=world(clip.rig,sceneRigPoseAt(doc,clip,t))[boneId];
     const rest=world(clip.rig)[boneId];
     const deformation=multiply(matrix,inverse(rest));
     const origin=applyMatrix(deformation,{x:0,y:0}), ahead=applyMatrix(deformation,{x:1,y:0});
@@ -53,8 +54,12 @@ export function reviewScene(doc: StudioDoc, raw: unknown = doc.scenePlan): { ok:
     const refs=actor.requiredParts??[], bones=refs.map(ref=>partBone(clip,ref));
     if(bones.some(b=>!b))fail("missing-articulation",clip.id,`Prepared artwork lacks required controls: ${refs.filter((_,i)=>!bones[i]).join(", ")}. Rebuild parts before authoring this action.`);
     if(actor.action==="articulated") {
-      const anim=clip.rig.animations.find(a=>a.id===clip.animationId);
-      const moving=(anim?.tracks??[]).filter(t=>bones.includes(t.boneId) && clip.rig.bindings.some(b=>b.boneId===t.boneId) && t.keys.some(k=>k.x!==t.keys[0].x||k.y!==t.keys[0].y||k.rotation!==t.keys[0].rotation));
+      const first=sceneRigPoseAt(doc,clip,clip.start);
+      const samples=Array.from({length:25},(_,i)=>sceneRigPoseAt(doc,clip,clip.start+docDuration(doc)*i/24));
+      const moving=bones.filter((id):id is string=>!!id && clip.rig.bindings.some(b=>b.boneId===id) && samples.some(p=>{
+        const a=first[id]??{x:0,y:0,rotation:0},b=p[id]??{x:0,y:0,rotation:0};
+        return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.rotation-b.rotation)>1e-5;
+      }));
       if(new Set(bones.filter(Boolean)).size<2 || moving.length<2)fail("rigid-carrier",clip.id,"This action is still mostly rigid. Articulated acting needs at least two declared independent parts and coordinated motion on multiple bound controls.");
     }
   }

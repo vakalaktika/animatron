@@ -1,5 +1,7 @@
 import { validScenePlan } from "@/app/components/motion-studio/engine/sceneReview";
 import { validStageMask } from "@/app/components/motion-studio/engine/stageMask";
+import { validateMotionDocument } from "@/app/components/motion-studio/engine/motionValidation";
+import { timelineErrors } from "@/app/components/motion-studio/engine/motionTimeline";
 import { loopMemberIds } from "@/app/components/motion-studio/engine/hierarchy";
 import { AUTO_TAIL_LENGTH, AUTO_TAIL_POSITION } from "@/app/components/motion-studio/engine/text";
 import { DEFAULT_LINE_STYLE } from "@/app/components/motion-studio/engine/line";
@@ -9,6 +11,7 @@ import { DEFAULT_TRAIL } from "@/app/components/motion-studio/engine/trail";
 import {
   DOC_VERSION,
   SCENE_DOC_VERSION,
+  MOTION_DOC_VERSION,
   type Clip,
   type LineStyle,
   type RibbonClip,
@@ -199,6 +202,13 @@ function pictureIsInline(clip: Clip): boolean {
  * document can arrive, so both run this.
  */
 export function normalizeDoc(raw: RawDoc): Normalized {
+  if (raw.version > MOTION_DOC_VERSION) throw new Error(`Unsupported document version ${raw.version}.`);
+  // Motion is an executable relationship contract, never something to repair by
+  // dropping a target or silently changing the meaning of a saved performance.
+  const motionErrors = validateMotionDocument(raw);
+  if (motionErrors.length) throw new Error(motionErrors.join(" "));
+  const timingErrors = timelineErrors(raw as StudioDoc);
+  if (timingErrors.length) throw new Error(timingErrors.join(" "));
   const warnings: string[] = [];
   const clips = raw.clips
     .filter(c => {
@@ -229,8 +239,9 @@ export function normalizeDoc(raw: RawDoc): Normalized {
   const tail = raw.timeline?.tailSeconds;
   const validTimeline = typeof tail === "number" && Number.isFinite(tail) && tail >= 0 && tail <= 60;
   if (raw.timeline !== undefined && !validTimeline) warnings.push("Invalid timeline tail; restored the default one second hold.");
-  const version = raw.version === SCENE_DOC_VERSION || withParents.some(c => c.stageMask !== undefined) || validScenePlan(raw.scenePlan) ? SCENE_DOC_VERSION : DOC_VERSION;
-  const doc: StudioDoc = { ...raw, version, clips: withParents, ...(raw.timeline !== undefined ? { timeline: validTimeline ? { tailSeconds: tail! } : undefined } : {}) };
+  const version = raw.version === MOTION_DOC_VERSION || withParents.some(c => c.motion !== undefined || c.type === "rig" && c.rig.version === 4)
+    ? MOTION_DOC_VERSION : raw.version === SCENE_DOC_VERSION || withParents.some(c => c.stageMask !== undefined) || validScenePlan(raw.scenePlan) ? SCENE_DOC_VERSION : DOC_VERSION;
+  const doc: StudioDoc = { ...raw, version, clips: withParents, ...(raw.timeline !== undefined ? { timeline: validTimeline ? { ...raw.timeline, tailSeconds: tail! } : undefined } : {}) };
   const looped = loopMemberIds(doc);
   const repaired = doc.clips.map((c) => {
     if (!looped.has(c.id)) return c;

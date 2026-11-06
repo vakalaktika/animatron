@@ -23,7 +23,7 @@ function ClipArt({ clip, doc, time }: { clip: Clip; doc: StudioDoc; time: Motion
     case "lottie":
       return <LottieClipView clip={clip} time={time} />;
     case "rig":
-      return <RigClipView clip={clip} time={time} />;
+      return <RigClipView clip={clip} doc={doc} time={time} />;
     case "ribbon":
       // Drawn as a sibling in the parent frame (see below), not inside the transform.
       return null;

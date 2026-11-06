@@ -5,11 +5,14 @@ import { createElement, useMemo, useRef, type ReactNode } from "react";
 import { matrixString, rigPoseAt, transforms, type Matrix } from "../engine/rig";
 import { drawingVisibility } from "../engine/rigV2";
 import { parseRigSvg, type RigSvgNode } from "../engine/rigSvg";
-import type { RigClip } from "../types";
+import type { RigClip, StudioDoc } from "../types";
+import { sceneRigPoseAt } from "../engine/evaluatedRig";
+import { RigDeformView } from "./RigDeformView";
 
 interface Props {
   clip: RigClip;
   time: MotionValue<number>;
+  doc?: StudioDoc;
 }
 
 /**
@@ -49,17 +52,18 @@ function BoundGroup({ node, svgId, wraps, visibility }: { node: RigSvgNode; svgI
  * clip's animation sampled at the clock time, or from its manual pose, and
  * is always evaluated from time, never accumulated.
  */
-export function RigClipView({ clip, time }: Props) {
+export function RigClipView({ clip, time, doc }: Props) {
   const { rig } = clip;
   const { width, height } = rig.canvas;
   // Posing and joint edits make a new `rig` every gesture; the artwork only
   // needs parsing again when the markup, canvas or bound groups change.
   const targets = rig.bindings.map((b) => b.svgId).join("\n");
   const parsed = useMemo(
-    () => parseRigSvg({ version: rig.version, rasterAttachments: rig.rasterAttachments, svg: rig.svg, canvas: { width, height }, bindings: targets.split("\n").map((svgId) => ({ id: svgId, svgId, boneId: "", bindMatrix: [1, 0, 0, 1, 0, 0] as const })) }),
-    [rig.version, rig.rasterAttachments, rig.svg, width, height, targets],
+    () => parseRigSvg({ version: rig.version, rasterAttachments: rig.rasterAttachments, rasterSources: rig.rasterSources, meshes: rig.meshes, svg: rig.svg, canvas: { width, height }, bindings: targets.split("\n").map((svgId) => ({ id: svgId, svgId, boneId: "", bindMatrix: [1, 0, 0, 1, 0, 0] as const })) }),
+    [rig.version, rig.rasterAttachments, rig.rasterSources, rig.meshes, rig.svg, width, height, targets],
   );
-  const wraps = useTransform(time, (t) => transforms(rig, rigPoseAt(clip, t)));
+  const pose = useTransform(time, (t) => doc ? sceneRigPoseAt(doc, clip, t) : rigPoseAt(clip, t));
+  const wraps = useTransform(pose, (p) => transforms(rig, p));
   const visibility = useTransform(time, (t) => drawingVisibility(rig, clip.animationId, Math.max(0, t - clip.start)));
   if (!parsed.ok) return null;
   const bound = new Set(rig.bindings.map((b) => b.svgId));
@@ -69,6 +73,9 @@ export function RigClipView({ clip, time }: Props) {
       <svg {...rootAttrs} viewBox={`0 0 ${width} ${height}`} width={width} height={height} className="block overflow-visible" aria-hidden="true">
         {parsed.svg.root.children.map((child, i) => {
           const id = child.tag === "g" ? child.attrs.id : undefined;
+          const raster = rig.rasterAttachments?.find(a => a.svgId === id);
+          const mesh = raster && rig.meshes?.find(m => m.rasterId === raster.id);
+          if (mesh) return <RigDeformView key={id} asset={rig} mesh={mesh} pose={pose} visibility={visibility} />;
           return id && bound.has(id) ? <BoundGroup key={id} node={child} svgId={id} wraps={wraps} visibility={visibility} /> : renderNode(child, i);
         })}
       </svg>

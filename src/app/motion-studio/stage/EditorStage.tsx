@@ -16,6 +16,7 @@ import { RigEditor } from "./RigEditor";
 import { SelectionBox } from "./SelectionBox";
 import { TailHandle } from "./TailHandle";
 import { ZoomControls } from "./ZoomControls";
+import { MotionControllers } from "./MotionControllers";
 
 interface Props {
   doc: StudioDoc;
@@ -387,6 +388,7 @@ export function EditorStage({
         style={{ width: scaledW, height: scaledH, translate: `${shown.x}px ${shown.y}px`, cursor: clean ? "default" : drawing ? "crosshair" : "grab" }}
       >
         <StageCanvas doc={doc} time={time} zoom={zoom}>
+          {!clean && selected && <MotionControllers doc={doc} clip={selected} time={time} zoom={zoom} stageEl={() => (canvasBoxRef.current?.firstElementChild as HTMLElement | null) ?? null} onChange={onChangeClip} />}
           {!clean && (selected?.type === "sprite" || selected?.type === "ribbon") && (
             <PathEditor
               doc={doc}

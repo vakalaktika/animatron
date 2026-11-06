@@ -47,17 +47,45 @@ export function pngInfo(src: unknown): { bytes: number; pixels: number } | null 
   return ended && pos === bytes.length ? { bytes:bytes.length, pixels } : null;
 }
 
+/** Call only after pngInfo: read the already validated IHDR dimensions. */
+export function pngDimensions(src: string): { width: number; height: number } {
+  const header=atob(src.slice(22));
+  const read=(at:number)=>Array.from(header.slice(at,at+4)).reduce((n,c)=>n*256+c.charCodeAt(0),0);
+  return {width:read(16),height:read(20)};
+}
+
+export function rasterSource(asset: Partial<Pick<RigAsset,"rasterSources">>, part: {src:unknown}): string {
+  if(typeof part.src!=="string")return "";
+  const src=part.src;
+  return src.startsWith("@") ? (Array.isArray(asset.rasterSources)?asset.rasterSources.find(s=>s?.id===src.slice(1))?.src:undefined) ?? "" : src;
+}
+
 /** Extension-only structural checks, also usable at the SVG rendering boundary. */
 export function validateRigV2(raw: unknown): string[] {
   if (!object(raw)) return ["Invalid rig extension."];
   const errors: string[] = [], fail = (message: string) => errors.push(message);
   const animations = Array.isArray(raw.animations) ? raw.animations : [];
-  if (raw.version !== 2 && raw.version !== 3) {
+  if (raw.version !== 4 && (raw.rasterSources !== undefined || Array.isArray(raw.rasterAttachments) && raw.rasterAttachments.some(a=>object(a)&&(a.sourceRect!==undefined||typeof a.src==="string"&&a.src.startsWith("@"))))) fail("Shared PNG sources and source rectangles require Rig version 4.");
+  if (raw.version !== 2 && raw.version !== 3 && raw.version !== 4) {
     if (raw.rasterAttachments !== undefined || raw.drawingSets !== undefined || animations.some(a => object(a) && a.drawingTracks !== undefined)) fail("Raster attachments and drawing sets require Rig version 2.");
     return errors;
   }
   const targets = new Set((Array.isArray(raw.bindings) ? raw.bindings : []).filter(object).map(b => b.svgId));
   let bytes = 0, pixels = 0;
+  const sources=new Map<string,string>(),counted=new Set<string>();
+  const count=(src:string,info:{bytes:number;pixels:number})=>{
+    if(raw.version===4&&counted.has(src))return;
+    counted.add(src);bytes+=info.bytes;pixels+=info.pixels;
+  };
+  if(raw.rasterSources!==undefined) {
+    if(!Array.isArray(raw.rasterSources)||raw.rasterSources.length>128)fail("Invalid shared PNG source count.");
+    else for(const source of raw.rasterSources) {
+      if(!object(source)||!id(source.id)||sources.has(source.id)||typeof source.src!=="string") {fail("Shared PNG sources require unique IDs and PNG data.");continue;}
+      const info=pngInfo(source.src);
+      if(!info)fail("Shared PNG source must contain bounded, structurally valid PNG data.");
+      else {sources.set(source.id,source.src);count(source.src,info);}
+    }
+  }
   if (raw.rasterAttachments !== undefined) {
     const attachments = raw.rasterAttachments;
     if (!Array.isArray(attachments) || attachments.length > RASTER_LIMITS.attachments) fail("Invalid raster attachment count.");
@@ -66,9 +94,16 @@ export function validateRigV2(raw: unknown): string[] {
       for (const a of attachments) {
         if (!object(a) || !id(a.id) || ids.has(a.id) || !id(a.svgId) || groups.has(a.svgId) || !targets.has(a.svgId) || ![a.x,a.y,a.width,a.height].every(finite) || (a.width as number) <= 0 || (a.height as number) <= 0) { fail("Invalid raster attachment or target."); continue; }
         ids.add(a.id); groups.add(a.svgId);
-        const info = pngInfo(a.src);
+        const src=typeof a.src==="string"&&a.src.startsWith("@")?sources.get(a.src.slice(1)):a.src;
+        const info = pngInfo(src);
         if (!info) fail("Raster attachments must contain bounded, structurally valid PNG data.");
-        else { bytes += info.bytes; pixels += info.pixels; }
+        else {
+          count(src as string,info);
+          if(a.sourceRect!==undefined) {
+            const r=a.sourceRect,size=pngDimensions(src as string);
+            if(!object(r)||![r.x,r.y,r.width,r.height].every(v=>Number.isInteger(v)&&Number(v)>=0)||Number(r.width)<=0||Number(r.height)<=0||Number(r.x)+Number(r.width)>size.width||Number(r.y)+Number(r.height)>size.height)fail("PNG source rectangle must lie inside its image.");
+          }
+        }
       }
     }
   }

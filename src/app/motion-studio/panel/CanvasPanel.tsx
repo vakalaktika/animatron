@@ -8,6 +8,8 @@ import { BUTTON_ROW, ColorField, NumField, TextField, ToggleField } from "./fiel
 import { MusicIcon } from "./icons";
 import { SceneReviewFields } from "./SceneReviewFields";
 import { PanelGroup, type PanelSection } from "./PanelGroup";
+import { docDuration } from "@/app/components/motion-studio/engine/timing";
+import { authoredClipEnd } from "@/app/components/motion-studio/engine/motionTimeline";
 
 interface Props {
   doc: StudioDoc;
@@ -58,6 +60,11 @@ export function CanvasPanel({ doc, onChangeDoc, onImport }: Props) {
   const preset = FRAME_SIZES.some((f) => `${f.width}x${f.height}` === frameValue) ? frameValue : "custom";
 
   const sections: PanelSection[] = [
+    {id:"timing",title:"Timeline",content:<>
+      <NumField label="Animation duration" unit="s" value={doc.timeline?.duration??docDuration(doc,0)} min={Math.max(.01,...doc.clips.filter(c=>c.enabled).map(c=>c.start+authoredClipEnd(c)))} max={600} onChange={duration=>onChangeDoc({...doc,version:4,timeline:{...doc.timeline,tailSeconds:doc.timeline?.tailSeconds??1,duration}})} />
+      <NumField label="Final hold" unit="s" value={doc.timeline?.tailSeconds??1} min={0} max={60} onChange={tailSeconds=>onChangeDoc({...doc,timeline:{...doc.timeline,tailSeconds}})} />
+      <ToggleField label="Loop composition" value={doc.timeline?.loop??false} onChange={loop=>onChangeDoc({...doc,version:4,timeline:{...doc.timeline,tailSeconds:doc.timeline?.tailSeconds??1,loop}})} />
+    </>},
     { id: "motion-structure", title: "Motion structure", content: <SceneReviewFields doc={doc} onChange={onChangeDoc} /> },
     {
       id: "canvas",

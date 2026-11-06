@@ -1,6 +1,7 @@
 import { moveRestTo } from "@/app/components/motion-studio/engine/keys";
 import { restTransformAt } from "@/app/components/motion-studio/engine/transform";
 import type { Clip, StudioDoc } from "@/app/components/motion-studio/types";
+import { hasMotion, motionProgram } from "@/app/components/motion-studio/engine/motionScene";
 
 const RUNTIME = "@/app/components/motion-studio";
 
@@ -29,7 +30,25 @@ function detachForExport(doc: StudioDoc, clip: Clip): Clip {
  * its current settings baked in and runs its own clock, so a dev only needs
  * the shared runtime folder plus this file.
  */
+export function clipExportDocument(doc: StudioDoc, clip: Clip): StudioDoc {
+    const required = new Set<string>();
+    const visit = (id: string) => {
+      if (required.has(id)) return;
+      required.add(id);
+      const item = doc.clips.find(c => c.id === id);
+      if (!item) return;
+      const program = motionProgram(item);
+      if (item.parentId) visit(item.parentId);
+      for (const control of program.controllers) if (control.clipId) visit(control.clipId);
+      for (const constraint of program.constraints) if (constraint.type === "attach") visit(constraint.targetClipId);
+    };
+    visit(clip.id);
+    const plan=doc.scenePlan?{...doc.scenePlan,actors:doc.scenePlan.actors.filter(a=>required.has(a.clipId)),travels:doc.scenePlan.travels.filter(a=>required.has(a.clipId))}:undefined;
+    return { ...doc, name: clip.name, clips: doc.clips.filter(c => required.has(c.id)), ...(doc.scenePlan?{scenePlan:plan&&(plan.actors.length||plan.travels.length)?plan:undefined}:{}) };
+}
+
 export function clipComponentCode(doc: StudioDoc, clip: Clip): string {
+  if (hasMotion(doc) || clip.parentId) return docComponentCode(clipExportDocument(doc,clip));
   const name = toPascal(clip.name);
   const local = { ...stripLottieData(detachForExport(doc, clip)), start: 0 };
   return `"use client";
@@ -50,7 +69,7 @@ const CLIP: Clip = ${JSON.stringify(local, null, 2)};
 
 const STAGE: StudioDoc = {
   version: ${doc.version},
-  name: "${doc.name}",
+  name: ${JSON.stringify(doc.name)},
   stage: ${JSON.stringify(doc.stage)},
   clips: [CLIP],
 };
@@ -78,7 +97,7 @@ export function ${name}({
 /** Generates a component that plays the whole composition. */
 export function docComponentCode(doc: StudioDoc): string {
   const name = toPascal(doc.name);
-  const clean: StudioDoc = { ...doc, clips: doc.clips.filter((c) => c.enabled).map(stripLottieData) };
+  const clean: StudioDoc = { ...doc, clips: doc.clips.map(stripLottieData) };
   return `"use client";
 
 import {
@@ -92,7 +111,7 @@ import {
 // wrap it in a container with \`transform: scale()\` to fit a layout.
 const DOC: StudioDoc = ${JSON.stringify(clean, null, 2)};
 
-export function ${name}({ zoom = 1, loop = false }: { zoom?: number; loop?: boolean }) {
+export function ${name}({ zoom = 1, loop = ${doc.timeline?.loop ?? false} }: { zoom?: number; loop?: boolean }) {
   const { time } = useStudioClock(docDuration(DOC), { autoplay: true, loop });
   return <StageCanvas doc={DOC} time={time} zoom={zoom} />;
 }
@@ -106,5 +125,5 @@ export const HANDOFF_NOTES = `Handoff
 4. Every value in the generated CLIP / DOC object is editable by hand. Re-export from the studio to replace it.
 5. Lottie clips export without their JSON payload. Import the .json in your component and assign it to \`data\`.
 6. Video layers and the sound track point at files in the studio's browser media store (\`mediaId\`). Host those files yourself and load them with your own media hook; the runtime's VideoArt takes a URL from \`useMediaUrl\`, which you can replace.
-7. Rig layers carry their whole Mid-century Ink Rig 1, 2 or 3 asset in \`rig\` (docs/mci-rig/); the runtime's RigClipView validates the artwork, raster attachments and drawing states, and poses it from \`animationId\` or \`pose\`. "Save rig" writes the asset back out as .mci.json. Preserve each rig version; old runtimes reject unsupported extensions.
-8. Attached clips keep their \`parentId\`; the runtime composes each child's transform from its parent every frame. A child's x / y are its offset in the parent's frame, so change those to move it relative to the parent. A single-clip export is detached with its resting stage position baked in.\n9. Document 3 stage-space masks require the updated StageCanvas runtime; single-clip exports retain the aperture and use a transparent stage.`;
+7. Rig layers carry their whole Mid-century Ink Rig 1, 2, 3 or 4 asset in \`rig\` (docs/mci-rig/); the runtime's RigClipView validates the artwork, raster attachments and drawing states, and poses it from \`animationId\` or \`pose\`. "Save rig" writes the asset back out as .mci.json. Preserve each rig version; old runtimes reject unsupported extensions.
+8. Attached clips keep their \`parentId\`; the runtime composes each child's transform from its parent every frame. A child's x / y are its offset in the parent's frame, so change those to move it relative to the parent. An attached or controller-driven single-layer export retains its dependency closure and original timing.\n9. Document 3 stage-space masks require the updated StageCanvas runtime; single-clip exports retain the aperture. Document 4 also retains persistent targets, attachments and bounded raster meshes.`;

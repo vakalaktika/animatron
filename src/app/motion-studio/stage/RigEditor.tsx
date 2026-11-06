@@ -2,7 +2,8 @@
 
 import { motion, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
-import { applyMatrix, boneLabel, rigPoseAt, world, type Matrix } from "@/app/components/motion-studio/engine/rig";
+import { applyMatrix, boneLabel, world, type Matrix } from "@/app/components/motion-studio/engine/rig";
+import { sceneRigPoseAt } from "@/app/components/motion-studio/engine/evaluatedRig";
 import { restTransformAt, toLocalPoint, transformAt } from "@/app/components/motion-studio/engine/transform";
 import type { RigBone, RigClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import type { RigHandle, RigMode } from "../lib/rigEdit";
@@ -113,7 +114,7 @@ function SlotGlyph({ slot, worlds, k }: { slot: NonNullable<RigClip["rig"]["slot
 export function RigEditor({ doc, clip, time, zoom, stageEl, mode, selectedBone, onSelectBone, onDragHandle }: Props) {
   const { rig } = clip;
   const { width, height } = rig.canvas;
-  const worlds = useTransform(time, (t) => world(rig, rigPoseAt(clip, t)));
+  const worlds = useTransform(time, (t) => world(rig, sceneRigPoseAt(doc, clip, t)));
   const frame = useTransform(time, (t) => {
     const w = transformAt(doc, clip.id, t);
     return `translate(${w.x} ${w.y}) scale(${w.scaleX} ${w.scaleY}) rotate(${w.rotation}) translate(${-width / 2} ${-height / 2})`;
