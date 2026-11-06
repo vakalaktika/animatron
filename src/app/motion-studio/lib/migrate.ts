@@ -23,6 +23,7 @@ import {
 } from "@/app/components/motion-studio/types";
 import { normalizeOrder } from "./tree";
 import { sanitizePath } from "./waypoints";
+import { sanitizeGraphEditor } from "./graphLayout";
 
 export interface Normalized {
   doc: StudioDoc;
@@ -38,6 +39,7 @@ export interface RawDoc {
   clips: Clip[];
   timeline?: StudioDoc["timeline"];
   scenePlan?: StudioDoc["scenePlan"];
+  editor?: unknown;
 }
 
 /** Fields the first studio build stored on bubbles before attachment became universal. */
@@ -241,7 +243,7 @@ export function normalizeDoc(raw: RawDoc): Normalized {
   if (raw.timeline !== undefined && !validTimeline) warnings.push("Invalid timeline tail; restored the default one second hold.");
   const version = raw.version === MOTION_DOC_VERSION || withParents.some(c => c.motion !== undefined || c.type === "rig" && c.rig.version === 4)
     ? MOTION_DOC_VERSION : raw.version === SCENE_DOC_VERSION || withParents.some(c => c.stageMask !== undefined) || validScenePlan(raw.scenePlan) ? SCENE_DOC_VERSION : DOC_VERSION;
-  const doc: StudioDoc = { ...raw, version, clips: withParents, ...(raw.timeline !== undefined ? { timeline: validTimeline ? { ...raw.timeline, tailSeconds: tail! } : undefined } : {}) };
+  const doc: StudioDoc = { ...raw, editor: sanitizeGraphEditor(raw.editor), version, clips: withParents, ...(raw.timeline !== undefined ? { timeline: validTimeline ? { ...raw.timeline, tailSeconds: tail! } : undefined } : {}) };
   const looped = loopMemberIds(doc);
   const repaired = doc.clips.map((c) => {
     if (!looped.has(c.id)) return c;

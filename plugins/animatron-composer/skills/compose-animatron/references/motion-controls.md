@@ -52,3 +52,13 @@ The command imports the source, refuses silent repairs, validates operators/refe
 The output declares content duration, loop intent and zero automatic tail. Check visual and velocity loop continuity separately. The bounded sampling preflight is evidence at sampled times, not a proof for all continuous times or a visual review. Inspect full-size key poses and transitions through the application's renderer. Technical PASS, visual review and user approval are separate records.
 
 Deliver the editable composition and rig/art masters, rendered preview, reduced-motion still and limitations. Deliver JSON even if a share link is too large or unsupported. Preserve local/deployed compatibility labels. Explicitly baked playback copies are separate from masters; cross-object dependencies must not disappear from single-object exports.
+
+## Human node workspace
+
+A supporting Animatron checkout provides a **Nodes** workspace alongside the stage and timeline, with draggable cards, typed drag/tap/keyboard connections, a selected-object scope and a whole-scene scope. It derives cards from existing controllers, blocks, constraints, bones and sockets. Do not invent a separate executable nodes/edges payload. Give operators meaningful `name` values and stable IDs scoped to their owning character. Name sockets for their actual registration, such as `plane-grip`, rather than encoding timing into IDs.
+
+Motion blocks move an object or its controller additively; they are not serial effect chains. Controller outputs target IK/aim relationships. Object/socket frames drive attachments or coordinate spaces. The saved program and validators enforce these meanings, reject cycles and competing drivers, and preserve artwork. Paint order and stage masks remain separate scene controls.
+
+For a hand/prop action, expose a named hand target and direct limb chain; give the hand a registered grip socket; attach the prop in the composition; animate only sparse target poses and action timing. Human edits use the same data as agent commands. Existing rig controls are marked as inherited; scene edits override them. Removing an inherited operation suspends it rather than deleting the rig master or allowing the base control to reappear unexpectedly.
+
+Editor card positions/viewport may be saved under optional `editor.motionGraph` version 1. This metadata never changes playback. Let the app generate its safe scoped node IDs and layout; authoring does not require manually placing graph cards. A project remains valid without this metadata. Save the complete editable JSON and test reopen/export. Do not certify the deployed viewer from a local editor test.

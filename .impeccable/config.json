@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.34, 1.36, 0.64, 1)",
+        "createdAt": "2026-11-06T14:08:05.780Z",
+        "reason": "Existing Animatron design: studio-motion.css explicitly specifies weighted row-drop settling; retain this intentional organic motion during the node-editor change."
+      }
+    ]
+  }
+}

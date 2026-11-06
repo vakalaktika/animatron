@@ -1,9 +1,9 @@
 {
   "plugin_id": "plugins_6ac48990546c8191a6d586e78c552157",
-  "base_release_id": "pluginrel_6aece0ef7a488191bea81bf80175a58a",
-  "base_version": "1.8.1",
+  "base_release_id": "pluginrel_6aed7505531c8191a83c39e8d6348863",
+  "base_version": "1.9.0",
   "scope": "USER",
   "visibility": "PRIVATE",
-  "source": "Verified current private release before controller-motion changes. Retain all omitted private style/identity assets and approval records.",
+  "source": "Verified current private release before the drag-and-connect node-editor guidance update. Preserve all omitted assets and approval records.",
   "publication": "Candidate source only; preserve plugin identity, USER scope and PRIVATE audience. Guard update using observed current release after commit and PR."
 }

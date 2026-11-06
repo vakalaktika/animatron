@@ -5,6 +5,8 @@ description: "Create or restyle images in Ed's Mid-century Ink style (UPA-influe
 
 # Mid-century Ink
 
+The supporting application now has a drag-and-connect **Nodes** workspace. Read the human node workspace section of `references/motion-controls.md`; name controls clearly and keep graph, timeline, and canvas edits in the same Doc 4 / Rig 4 program. Node layout is optional editor metadata and does not animate artwork or establish live-site support.
+
 ## Illustration-led controllable animation
 
 For new editable animation, read `references/motion-controls.md`. Finish a convincing composed key pose in the selected treatment before preparing the rig. Declare action beats, gaze, support and grip contacts, independently moving parts, concealed paint and replacement views. Preserve authored contours and economical interior marks; construction volumes and joint circles guide proportion and registration rather than dictate the final silhouette. Review the illustration separately from rig validation and user approval.

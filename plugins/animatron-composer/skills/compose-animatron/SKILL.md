@@ -5,6 +5,8 @@ description: "Writes valid Animatron studio compositions (JSON) from a plain-lan
 
 # Compose for Animatron
 
+The supporting application now has a drag-and-connect **Nodes** workspace. Read the human node workspace section of `references/motion-controls.md`; name controls clearly and keep graph, timeline, and canvas edits in the same Doc 4 / Rig 4 program. Node layout is optional editor metadata and does not animate artwork or establish live-site support.
+
 ## Editable controls and motion blocks
 
 Read `references/motion-controls.md` for Document 4 / Rig 4 authoring. Use `scripts/motion-program.mjs` with an explicit supporting application checkout to add sparse controller tracks, reusable path/transform/oscillation blocks, persistent IK/aim constraints and directed socket attachments. Human canvas handles, timeline controls and optional relationship views edit the same saved program. The CLI validates actual evaluated intermediate times and writes an atomic complete file; stdout is a small report, never the composition payload. Preserve original artwork, identity records and all unaddressed tracks. This version does not establish that the deployed application supports the new contracts.

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStudioClock } from "@/app/components/motion-studio/engine/clock";
+const MotionGraphWorkspace = lazy(() => import("./graph/MotionGraphWorkspace").then(module => ({ default: module.MotionGraphWorkspace })));
 import { clipEnd, docDuration, loopsForever } from "@/app/components/motion-studio/engine/timing";
 import type { AudioTrack, Clip, RigClip, SpriteClip, StudioDoc, Vec2 } from "@/app/components/motion-studio/types";
 import { retimePropKeys, setPropAt, shiftPosition } from "@/app/components/motion-studio/engine/keys";
@@ -14,6 +15,7 @@ import { Button } from "@/app/components/shared-components";
 import { ExportDialog } from "./dialogs/ExportDialog";
 import { GalleryDialog } from "./dialogs/GalleryDialog";
 import { HelpDialog } from "./dialogs/HelpDialog";
+import { Dialog } from "./dialogs/Dialog";
 import { clipComponentCode, clipExportDocument, docComponentCode, HANDOFF_NOTES } from "./export/codegen";
 import { downloadBlob, downloadText, startTabRecording, type Recording } from "./export/recorder";
 import { canRenderAlpha, canRenderOffline } from "./export/renderer";
@@ -140,6 +142,7 @@ export function MotionStudio() {
   const loop = doc.timeline?.loop ?? false;
   const setLoop = (next: boolean) => setDoc(d => ({ ...d, timeline: { ...d.timeline, tailSeconds: d.timeline?.tailSeconds ?? 1, loop: next } }));
   const [clean, setClean] = useState(false);
+  const [nodesOpen, setNodesOpen] = useState(false);
   // The pen: strokes on the canvas become ribbons, or the selected picture's path.
   const [drawing, setDrawing] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -838,7 +841,7 @@ export function MotionStudio() {
       const target = e.target as HTMLElement | null;
       if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
       // Handles and dialogs (timeline bars, curve handles, the tour) take their own keys.
-      if (target?.closest?.('[role="slider"], [role="dialog"], dialog')) return;
+      if (target?.closest?.('[role="slider"], [role="dialog"], dialog, [data-motion-graph]')) return;
       if (dialog !== null || codePreview || tour) return;
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
@@ -1068,12 +1071,16 @@ export function MotionStudio() {
   );
 
   const saveLabel = saveStatus === "saving" ? "Saving…" : saveStatus === "failed" ? "Not saved" : "Saved";
+  const nodeWorkspace = <Suspense fallback={<p className="p-4 text-sm" role="status">Opening node editor…</p>}>
+    <MotionGraphWorkspace doc={doc} time={clock.time} selectedClipId={selectedId} onSelectClip={id => pickClip(id)} onChange={next => setDoc(next)} onClose={() => setNodesOpen(false)} onUndo={undo} onRedo={redo} />
+  </Suspense>;
 
   const slots: StudioSlots = {
     title: <TitleField value={doc.name} onChange={(name) => setDoc((d) => ({ ...d, name }), "name")} status={saveLabel} compact={mode !== "desktop"} />,
     actions: (
       <div className="flex items-center gap-1">
         {undoRedo}
+        <Button size="sm" variant="outline" aria-pressed={nodesOpen} onClick={() => setNodesOpen(open => !open)}>Nodes</Button>
         <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-border-strong" />
         <Button size="sm" variant="outline" icon={<GridIcon width={18} height={18} />} onClick={() => setDialog("gallery")}>
           Compositions
@@ -1098,6 +1105,7 @@ export function MotionStudio() {
     phoneActions: (
       <>
         {undoRedo}
+        <Button size="xs" variant="outline" aria-pressed={nodesOpen} onClick={() => setNodesOpen(open => !open)}>Nodes</Button>
         <IconButton label="Compositions" onClick={() => setDialog("gallery")}>
           <GridIcon />
         </IconButton>
@@ -1108,7 +1116,12 @@ export function MotionStudio() {
         </span>
       </>
     ),
-    stage,
+    stage: nodesOpen && mode === "desktop" ? <div className="flex h-full min-h-0 flex-col gap-2">
+      <div className="min-h-[140px] flex-1">{stage}</div>
+      <div className="h-[min(52dvh,540px)] min-h-[260px] shrink-0 overflow-auto rounded-lg border border-border-strong bg-surface-raised">
+        {nodeWorkspace}
+      </div>
+    </div> : stage,
     playback: <Transport {...transportProps} layout="bar" />,
     timeline: <Transport {...transportProps} layout="full" />,
     tracks: <Transport {...transportProps} layout="tracks" />,
@@ -1226,6 +1239,10 @@ export function MotionStudio() {
     <>
       <style>{"nextjs-portal { display: none; }"}</style>
       {clean ? <div className="h-dvh">{stage}</div> : shell}
+      <Dialog open={nodesOpen && mode !== "desktop" && !clean} onClose={() => setNodesOpen(false)} title="Motion nodes" size="full">
+        <div className="mb-3 h-[160px]">{stage}</div>
+        {nodeWorkspace}
+      </Dialog>
       {doc.audio && dialog !== "render" && <AudioPlayer audio={doc.audio} time={clock.time} playing={clock.playing} duration={duration} speed={speed} />}
       <Toast toast={toast} onDismiss={dismissToast} />
       {cardJob && (
