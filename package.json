@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
+    "@xyflow/react": "^12.12.1",
     "gifenc": "^1.0.3",
     "html-to-image": "^1.11.13",
     "i18next": "^25.7.3",

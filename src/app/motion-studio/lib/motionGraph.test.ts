@@ -86,6 +86,34 @@ describe("validated graph connections", () => {
     const doc = scene(a, prop), result = connectMotionGraph(doc, wire(id("plane", "object"), "frame", id("actor", "controller", "target"), "space"), 0);
     expect(result.error).toMatch(/cycle/i); expect(result.doc).toBe(doc);
   });
+  it("connects aim joints and validates three-joint limb ends", () => {
+    const a = actor(); a.motion!.constraints = [{ id: "look", type: "aim", boneId: "root", targetId: "target", enabled: false }];
+    const doc = scene(a);
+    const aimed = connectMotionGraph(doc, wire(id("actor", "bone", "hand"), "bone", id("actor", "constraint", "look"), "bone"), 0);
+    expect(aimed.error).toBeUndefined(); expect(aimed.doc.clips[0].motion!.constraints![0]).toMatchObject({ boneId: "hand" });
+    const ikDoc = scene(actor());
+    expect(connectMotionGraph(ikDoc, wire(id("actor", "bone", "root"), "bone", id("actor", "constraint", "reach"), "bone"), 0).error).toMatch(/three-joint/i);
+    expect(connectMotionGraph(ikDoc, wire(id("actor", "bone", "hand"), "bone", id("actor", "constraint", "reach"), "bone"), 0).doc.clips[0].motion!.constraints![0]).toMatchObject({ rootId: "root", midId: "fore", tipId: "hand" });
+  });
+  it("moves a controller back into its own rig space without a visible jump", () => {
+    const a = actor(); a.rotation = 30; a.scale = -1.2;
+    const doc = scene(a), before = evaluateScene(doc, .7).controllers.actor.target;
+    const result = connectMotionGraph(doc, wire(id("actor", "object"), "frame", id("actor", "controller", "target"), "space"), .7);
+    expect(result.error).toBeUndefined();
+    expect(result.doc.clips[0].motion!.controllers![0].space).toBe("rig");
+    const after = evaluateScene(result.doc, .7).controllers.actor.target;
+    expect(after.x).toBeCloseTo(before.x); expect(after.y).toBeCloseTo(before.y);
+  });
+  it("preserves controller rotation when changing coordinate space", () => {
+    const a = actor(), prop = makeText({ id: "plane", x: 260, y: 160, rotation: 30 });
+    const doc = scene(a, prop), before = evaluateScene(doc, 1).controllers.actor.target;
+    const result = connectMotionGraph(doc, wire(id("plane", "object"), "frame", id("actor", "controller", "target"), "space"), 1);
+    expect(evaluateScene(result.doc, 1).controllers.actor.target.rotation).toBeCloseTo(before.rotation, 6);
+  });
+  it("rejects nonfinite playhead times", () => {
+    const doc = scene(actor());
+    expect(connectMotionGraph(doc, wire(id("actor", "block", "lift"), "motion", id("actor", "object"), "motion"), NaN).doc).toBe(doc);
+  });
 });
 
 describe("safe graph operations", () => {
@@ -108,5 +136,33 @@ describe("safe graph operations", () => {
     const a = actor(); a.motion!.controllers!.push({ id: "unused", space: "stage", x: 5, y: 6 });
     const doc = scene(a), result = editMotionGraph(doc, { type: "remove", nodeId: id("actor", "controller", "unused") }, 0);
     expect(result.error).toBeUndefined(); expect(result.doc.clips[0].motion?.controllers).toHaveLength(1); expect(a.motion?.controllers).toHaveLength(2);
+  });
+  it("duplicates sparse controllers and blocks with fresh collision-free IDs", () => {
+    const doc = scene(actor());
+    const copied = editMotionGraph(doc, { type: "duplicate", nodeId: id("actor", "controller", "target") }, 0);
+    const again = editMotionGraph(copied.doc, { type: "duplicate", nodeId: id("actor", "controller", "target") }, 0);
+    expect(again.doc.clips[0].motion!.controllers!.map(c => c.id)).toEqual(["target", "target-copy-1", "target-copy-2"]);
+    const block = editMotionGraph(doc, { type: "duplicate", nodeId: id("actor", "block", "lift") }, 0);
+    expect(block.doc.clips[0].motion!.blocks![1]).toMatchObject({ start: 2, duration: 2, id: "lift-copy-1" });
+  });
+  it("suspends and resumes relationships, rejecting conflicts without replacing the scene", () => {
+    const doc = scene(actor()), suspended = editMotionGraph(doc, { type: "toggle", nodeId: id("actor", "constraint", "reach") }, 0);
+    expect(suspended.doc.clips[0].motion!.constraints![0].enabled).toBe(false);
+    expect(editMotionGraph(suspended.doc, { type: "toggle", nodeId: id("actor", "constraint", "reach") }, 0).doc.clips[0].motion!.constraints![0].enabled).toBe(true);
+    const copied = editMotionGraph(doc, { type: "duplicate", nodeId: id("actor", "constraint", "reach") }, 0);
+    const conflict = editMotionGraph(copied.doc, { type: "toggle", nodeId: id("actor", "constraint", "reach-copy-1") }, 0);
+    expect(conflict.error).toMatch(/conflicting/i); expect(conflict.doc).toBe(copied.doc);
+  });
+  it("removes scene operators, protects source controls, and rejects stale or artwork-node edits", () => {
+    const a = actor(); a.rig.motion = { controllers: [{ id: "source", space: "rig", x: 5, y: 10 }] };
+    const doc = scene(a);
+    expect(editMotionGraph(doc, { type: "remove", nodeId: id("actor", "block", "lift") }, 0).doc.clips[0].motion!.blocks).toEqual([]);
+    expect(editMotionGraph(doc, { type: "remove", nodeId: id("actor", "constraint", "reach") }, 0).doc.clips[0].motion!.constraints).toEqual([]);
+    for (const edit of [
+      { type: "remove" as const, nodeId: id("actor", "controller", "source") },
+      { type: "toggle" as const, nodeId: id("actor", "controller", "target") },
+      { type: "remove" as const, nodeId: id("actor", "object") },
+      { type: "remove" as const, nodeId: "gone" },
+    ]) { const result = editMotionGraph(doc, edit, 0); expect(result.error).toBeTruthy(); expect(result.doc).toBe(doc); }
   });
 });

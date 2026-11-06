@@ -4,6 +4,7 @@ import { fontString } from "./layout-helpers";
 import { ServiceWorker } from "./ServiceWorker";
 import "./styles/globals.css";
 import "./motion-studio/studio-motion.css";
+import "@xyflow/react/dist/style.css";
 
 export const viewport: Viewport = {
   // Lets the phone layout reach the screen edges and pad with safe-area insets.

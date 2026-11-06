@@ -11,7 +11,7 @@ vi.mock("@xyflow/react", () => ({
   ReactFlow: ({ nodes, nodeTypes, children, onNodeClick, onNodeDragStop }: any) => <div aria-label="Node canvas">{nodes.map((node: any) => <div key={node.id}>
     <button onClick={() => onNodeClick({}, node)}>Select {node.data.node.label}</button>
     <button onClick={() => onNodeDragStop({}, { ...node, position: { x: 123, y: 234 } }, [{ ...node, position: { x: 123, y: 234 } }])}>Move {node.data.node.label}</button>
-    {nodeTypes.motion({ ...node, selected: false })}
+    {(() => { const Card = nodeTypes.motion; return <Card {...node} selected={false} />; })()}
   </div>)}{children}</div>,
   Background: () => null, Controls: () => null, MiniMap: () => null,
   Handle: ({ children }: any) => <span>{children}</span>, Position: { Left: "left", Right: "right" },

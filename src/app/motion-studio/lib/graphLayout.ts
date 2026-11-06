@@ -19,6 +19,7 @@ export function sanitizeGraphEditor(value: unknown): GraphEditor | undefined {
     id.length <= 1024 && !["__proto__", "prototype", "constructor"].includes(id) && point(p)
   ).map(([id, p]) => [id, { x: (p as { x: number }).x, y: (p as { y: number }).y }]));
   const viewport = graph.viewport;
-  return { motionGraph: { version: 1, positions, ...(point(viewport) && object(viewport) && typeof viewport.zoom === "number" && Number.isFinite(viewport.zoom) && viewport.zoom >= 0.1 && viewport.zoom <= 4
-    ? { viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom } } : {}) } };
+  const zoom = object(viewport) ? viewport.zoom : undefined;
+  return { motionGraph: { version: 1, positions, ...(point(viewport) && typeof zoom === "number" && Number.isFinite(zoom) && zoom >= 0.1 && zoom <= 4
+    ? { viewport: { x: viewport.x, y: viewport.y, zoom } } : {}) } };
 }

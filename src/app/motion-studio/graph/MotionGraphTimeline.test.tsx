@@ -16,12 +16,12 @@ const scene = (): StudioDoc => ({ version: 4, name: "Timing", timeline: { durati
 const view = (doc = scene()) => { const onChange = vi.fn(), time = motionValue(0), onSelectNode = vi.fn(); render(<MotionGraphTimeline doc={doc} clipId="actor" time={time} onChange={onChange} onSelectNode={onSelectNode} />); return { onChange, time, onSelectNode }; };
 
 test("numeric timing extends duration for repeated motion without changing artwork", () => {
- const { onChange } = view();
+ const source = scene(), { onChange } = view(source);
  fireEvent.change(screen.getByRole("spinbutton", { name: "Lift cycle duration" }), { target: { value: "3" } });
  const next = onChange.mock.calls[0][0];
  expect(next.clips[0].motion.blocks[0].duration).toBe(3);
  expect(next.timeline.duration).toBe(7);
- expect(next.clips[0].text).toBe(scene().clips[0].type === "text" ? scene().clips[0].text : "");
+ expect(next.clips[0].text).toBe((source.clips[0] as { text?: string }).text);
  expect(screen.getByText(/2 cycles/)).toBeVisible();
 });
 test("all target axes move together and collisions preserve previous keys", () => {
