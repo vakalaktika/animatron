@@ -21,6 +21,9 @@ const id = graphNodeId;
 const wire = (source: string, sourceHandle: string, target: string, targetHandle: string) => ({ source, sourceHandle, target, targetHandle });
 
 describe("motion graph adapter", () => {
+  it("uses selector-safe IDs for real drag handles",()=>{
+    expect(graphNodeId('character/"A"',"controller","hand")).not.toMatch(/["\[\]\s]/);
+  });
   it("scopes IDs, derives meaningful edges, and leaves artwork untouched", () => {
     const a = actor(), b = { ...actor(), id: "other" }, doc = scene(a, b), before = structuredClone(doc);
     const graph = buildMotionGraph(doc);
