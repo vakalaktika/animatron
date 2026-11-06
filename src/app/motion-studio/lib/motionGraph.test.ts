@@ -1,7 +1,7 @@
 import type { Clip, RigClip, StudioDoc } from "@/app/components/motion-studio/types";
 import { evaluateScene } from "@/app/components/motion-studio/engine/motionScene";
 import { makeText } from "../presets";
-import { buildMotionGraph, connectMotionGraph, editMotionGraph, graphNodeId } from "./motionGraph";
+import { buildMotionGraph, connectMotionGraph, editMotionGraph, graphNodeId, reconnectMotionGraph } from "./motionGraph";
 
 const actor = (): RigClip => ({
   id: "actor", name: "Actor", type: "rig", enabled: true, start: 0, x: 100, y: 100, scale: 1,
@@ -39,6 +39,13 @@ describe("motion graph adapter", () => {
 });
 
 describe("validated graph connections", () => {
+  it("reconnects the same owner atomically and rejects moving a wire to another operation",()=>{
+    const doc=scene(actor()),edge=buildMotionGraph(doc).edges.find(e=>e.ownerNodeId===id("actor","block","lift"))!;
+    const valid=wire(edge.source,"motion",id("actor","controller","target"),"motion");
+    expect(reconnectMotionGraph(doc,edge.id,valid,0).doc.clips[0].motion?.blocks?.[0].controllerId).toBe("target");
+    expect(reconnectMotionGraph(doc,edge.id,wire(id("actor","controller","target"),"target",id("actor","constraint","reach"),"target"),0).doc).toBe(doc);
+    expect(reconnectMotionGraph(doc,"missing",valid,0).error).toBeTruthy();
+  });
   it("routes a block to a same-character target without changing its sparse motion", () => {
     const doc = scene(actor());
     const next = connectMotionGraph(doc, wire(id("actor", "block", "lift"), "motion", id("actor", "controller", "target"), "motion"), 1);
