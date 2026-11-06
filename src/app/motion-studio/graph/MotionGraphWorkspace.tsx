@@ -30,6 +30,7 @@ type Layout = { version: 1; positions: Record<string, Position>; viewport?: { x:
 export function MotionGraphWorkspace({ doc, time, selectedClipId, onSelectClip, onChange, onClose, onUndo, onRedo }: MotionGraphWorkspaceProps) {
   const [now, setNow] = useState(time.get()), [query, setQuery] = useState(""), [scope, setScope] = useState("selected");
   const [showJoints,setShowJoints]=useState(false);
+  const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]), [pending, setPending] = useState<PortSelection | null>(null);
   const [message, setMessage] = useState(""), [expanded, setExpanded] = useState(false), [draft, setDraft] = useState<Record<string, Position>>({});
   const flow = useRef<ReactFlowInstance<MotionCardNode, Edge> | null>(null);
@@ -72,7 +73,7 @@ export function MotionGraphWorkspace({ doc, time, selectedClipId, onSelectClip, 
   useEffect(()=>{if(query) void flow.current?.fitView({padding:.25,minZoom:.3,maxZoom:1});},[query]);
   const nodes: MotionCardNode[] = useMemo(() => filtered.map((node) => ({ id: node.id, type: "motion", selected: selected.includes(node.id), position: draft[node.id] ?? layout?.positions[node.id] ?? { x: (visible.indexOf(node) % 4) * 260, y: Math.floor(visible.indexOf(node) / 4) * 240 }, data: { node, active: nodeActive(doc, node, now), pending, onPort, compatible } })), [filtered, visible, selected, draft, layout, doc, now, pending, onPort, compatible]);
   const visibleIds = new Set(nodes.map(n => n.id));
-  const edges: Edge[] = graph.edges.filter(e => visibleIds.has(e.source) && visibleIds.has(e.target)).map(edge => ({ ...edge, reconnectable: true, animated: false, style: { stroke: edge.enabled === false ? "var(--border-control)" : "var(--info)", strokeWidth: 2, strokeDasharray: edge.enabled === false ? "5 4" : undefined }, labelStyle: { fill: "var(--ink-secondary)", fontSize: 10 }, labelBgStyle: { fill: "var(--surface-raised)" } }));
+  const edges: Edge[] = graph.edges.filter(e => visibleIds.has(e.source) && visibleIds.has(e.target)).map(edge => ({ ...edge, label: hoveredEdge === edge.id || selected.includes(edge.source) || selected.includes(edge.target) ? edge.label : undefined, reconnectable: true, animated: false, style: { stroke: edge.enabled === false ? "var(--border-control)" : "var(--info)", strokeWidth: 2, strokeDasharray: edge.enabled === false ? "5 4" : undefined }, labelStyle: { fill: "var(--ink-secondary)", fontSize: 10 }, labelBgStyle: { fill: "var(--surface-raised)" } }));
   const persist = (positions: Record<string, Position>, viewport = layout?.viewport) => {
     const next: Layout = { version: 1, positions: { ...layout?.positions, ...positions }, ...(viewport ? { viewport } : {}) };
     onChange({ ...doc, editor: sanitizeGraphEditor({ motionGraph: next }) });
@@ -119,13 +120,15 @@ export function MotionGraphWorkspace({ doc, time, selectedClipId, onSelectClip, 
     <MotionRecipePalette doc={doc} clipId={selectedClipId} time={now} onChange={onChange} onError={setMessage} onSelectNode={choose} />
     <div className="flex flex-wrap items-center gap-2 border-b border-hairline px-3 py-1.5">
       <span className="mr-auto text-[11px] text-ink-muted">{nodes.length} nodes · {selected.length} selected · Shift selects more</span>
-      <Button size="xs" variant="outline" disabled={!selected.length} onClick={() => act("duplicate")}>Duplicate nodes</Button>
+      {selected.length > 0 && <><Button size="xs" variant="outline" onClick={() => act("duplicate")}>Duplicate nodes</Button>
       <Button size="xs" variant="outline" disabled={!selected.length} onClick={() => act("toggle")}>Enable / disable</Button>
-      <Button size="xs" variant="outline" disabled={!selected.length} onClick={() => act("remove")}>Remove nodes</Button>
+      <Button size="xs" variant="outline" disabled={!selected.length} onClick={() => act("remove")}>Remove nodes</Button></>}
     </div>
     <div className="flex min-h-0 flex-col sm:flex-row" style={{ height: expanded ? "min(65dvh, 720px)" : 400 }}>
       <div className="relative min-h-[220px] min-w-0 flex-1" data-motion-graph-canvas>
         <ReactFlow<MotionCardNode, Edge> nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onConnect={wireFromFlow} onReconnect={(edge,wire) => { if(!wire.sourceHandle||!wire.targetHandle)return; const result=reconnectMotionGraph(doc,edge.id,wire as MotionGraphConnection,time.get());if(result.error)setMessage(result.error);else {onChange(result.doc);setMessage("Reconnected. Previous relationship replaced.");} }}
+          onEdgeMouseEnter={(_, edge) => setHoveredEdge(edge.id)} onEdgeMouseLeave={() => setHoveredEdge(null)}
+          onPaneClick={() => { setSelected([]); setPending(null); }}
           onEdgeClick={(_,edge)=>choose(graph.edges.find(e=>e.id===edge.id)!.ownerNodeId)}
           isValidConnection={wire => !!wire.sourceHandle && !!wire.targetHandle && !connectMotionGraph(doc, wire as MotionGraphConnection, time.get()).error}
           onNodeClick={(_, node) => { setSelected(previous => previous.includes(node.id) ? previous : [node.id]); onSelectClip(node.data.node.clipId); }}
@@ -137,9 +140,9 @@ export function MotionGraphWorkspace({ doc, time, selectedClipId, onSelectClip, 
         </ReactFlow>
         {!nodes.length && <p className="pointer-events-none absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-ink-muted">{query ? "No matching nodes. Try another name." : "Select an object, then add a target or motion."}</p>}
       </div>
-      <div className="max-h-[190px] w-full shrink-0 border-t border-hairline bg-surface-sunken sm:max-h-none sm:w-[228px] sm:border-t-0 sm:border-l"><MotionNodeInspector doc={doc} node={graph.nodes.find(n => n.id === selected.at(-1))} time={now} onChange={onChange} onError={setMessage} /></div>
+      {selected.length > 0 && <div className="max-h-[190px] w-full shrink-0 border-t border-hairline bg-surface-sunken sm:max-h-none sm:w-[228px] sm:border-t-0 sm:border-l"><MotionNodeInspector doc={doc} node={graph.nodes.find(n => n.id === selected.at(-1))} time={now} onChange={onChange} onError={setMessage} /></div>}
     </div>
     {selectedClipId && <MotionGraphTimeline doc={doc} clipId={selectedClipId} nodeId={selected.at(-1)} time={time} onChange={onChange} onSelectNode={choose} />}
-    <p role="status" aria-live="polite" className="min-h-8 border-t border-hairline px-3 py-2 text-[11px] text-ink-secondary">{message || "Drag between matching ports, or select two port labels to connect. Connections control motion; layers control paint order."}</p>
+    <p role="status" aria-live="polite" className="min-h-8 border-t border-hairline px-3 py-2 text-[11px] text-ink-secondary">{message || "Connect matching ports. Select a node to edit; hover or tap its info button for details."}</p>
   </section>;
 }

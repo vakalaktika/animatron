@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import type { MotionGraphNode, MotionGraphPort } from "../lib/motionGraph";
+import { MotionNodeInfo } from "./MotionNodeInfo";
 
 export type PortSelection = { nodeId: string; portId: string };
 export type MotionCardNode = Node<{
@@ -33,12 +34,15 @@ export const MotionNodeCard = memo(function MotionNodeCard({ data, selected }: N
       </button>
     </div>;
   };
-  return <article data-motion-node={node.id} className={`w-[196px] rounded-md border bg-surface-raised shadow-sm ${selected ? "border-primary ring-2 ring-primary/20" : "border-border-control"}`}>
+  return <article data-motion-node={node.id} className={`w-[196px] rounded-md border bg-surface-raised ${selected ? "border-primary ring-2 ring-primary/20" : "border-border-control"}`}>
     <header className="border-b border-hairline px-3 py-2">
-      <div className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-wide text-ink-muted"><span>{role[node.kind]}</span><span>{node.provenance === "rig" ? "From rig" : node.provenance === "override" ? "Scene override" : "Scene"}</span></div>
-      <div className="mt-1 truncate text-xs font-semibold text-ink" title={node.label}>{node.label}</div>
-      {node.kind!=="object" && <div className="mt-1 truncate text-[10px] text-ink-muted" title={node.ownerName}>{node.ownerName}</div>}
-      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-ink-muted"><span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${!node.enabled ? "bg-border-control" : data.active ? "bg-primary" : "bg-info"}`} />{!node.enabled ? "Disabled" : data.active ? "Active at playhead" : "Outside active interval"}</div>
+      <div className="flex items-start gap-1">
+        <div className="min-w-0 flex-1">
+          <div className="line-clamp-2 break-words text-xs font-semibold leading-4 text-ink">{node.label}</div>
+          <div className="mt-1 text-[10px] text-ink-secondary">{role[node.kind]}{!node.enabled ? " · Disabled" : ""}</div>
+        </div>
+        <MotionNodeInfo node={node} active={data.active} />
+      </div>
     </header>
     <div className="flex flex-col gap-1 py-2">{node.ports.map(port)}</div>
   </article>;

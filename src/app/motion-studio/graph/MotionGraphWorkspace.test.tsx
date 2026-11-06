@@ -104,3 +104,32 @@ test("whole-scene scope exposes other layers and an empty search has guidance",(
  fireEvent.change(screen.getByRole("combobox",{name:"Graph scope"}),{target:{value:"all"}});fireEvent.click(screen.getByRole("button",{name:"Select Second"}));expect(onSelectClip).toHaveBeenCalledWith("second");
  fireEvent.change(screen.getByRole("searchbox",{name:"Find nodes"}),{target:{value:"nonexistent"}});expect(screen.getByText(/No matching nodes/)).toBeVisible();fireEvent.click(screen.getByRole("button",{name:"Expand"}));fireEvent.click(screen.getByRole("button",{name:"Compact"}));fireEvent.click(screen.getByRole("button",{name:"Close nodes"}));expect(onClose).toHaveBeenCalled();
 });
+
+
+test("node details are on demand and can be dismissed without changing the graph", () => {
+  const { onChange } = mount();
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  expect(screen.queryByText("Active at playhead")).toBeNull();
+  const details = screen.getByRole("button", { name: "About Hand" });
+  fireEvent.mouseEnter(details);
+  expect(screen.getByRole("tooltip")).toHaveTextContent("Title");
+  expect(screen.getByRole("tooltip")).toHaveTextContent("Active at playhead");
+  expect(fireEvent.keyDown(document, { key: "Escape", cancelable: true })).toBe(false);
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  fireEvent.focus(details);
+  expect(screen.getByRole("tooltip")).toBeVisible();
+  fireEvent.blur(details);
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  fireEvent.click(details);
+  expect(screen.getByRole("tooltip")).toBeVisible();
+  fireEvent.pointerDown(document.body);
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  expect(onChange).not.toHaveBeenCalled();
+});
+
+test("the inspector uses canvas space only after selecting a node", () => {
+  mount();
+  expect(screen.queryByText(/Select a node to edit it/)).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Select Hand" }));
+  expect(screen.getByRole("complementary", { name: "Node inspector" })).toBeVisible();
+});

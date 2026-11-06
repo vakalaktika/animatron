@@ -32,6 +32,12 @@ try {
  const daughter=original.clips.find(c=>c.id==='daughter');await click(daughter.name);await click('Nodes');
  await page.waitForSelector('[data-motion-graph] .react-flow__node');
  await page.screenshot({path:path.join(output,'workspace-desktop.png')});
+ const info=await page.$('button[aria-label="About Lift the paper airplane"]');
+ await info.hover();await page.waitForSelector('[role="tooltip"]');
+ assert.match(await page.$eval('[role="tooltip"]',el=>el.textContent),/From reusable rig/);
+ await page.screenshot({path:path.join(output,'node-details-desktop.png')});
+ await page.keyboard.press('Escape');assert.equal(await page.$('[role="tooltip"]'),null);
+
  await click('Add path','[data-motion-graph]');
  await waitSaved(()=>{const s=JSON.parse(localStorage.getItem('animatron.projects.v1'));return s.projects.find(p=>p.id===s.currentId).doc.clips.find(c=>c.id==='daughter').motion?.blocks?.some(b=>b.id==='path-1');});
  await click('Move along path: Moves','[data-motion-graph]');await click('Lift the paper airplane: Motion','[data-motion-graph]');
@@ -68,8 +74,14 @@ try {
  await page.setViewport({width:390,height:844});await page.waitForSelector('dialog[open][aria-label="Motion nodes"]');
  const search=await page.$('[data-motion-graph] input[type="search"]');await search.type('Lift the paper airplane');await page.$eval('[data-motion-graph-canvas]',el=>el.scrollIntoView({block:'center'}));
  await page.screenshot({path:path.join(output,'workspace-mobile.png')});
+ await click('About Lift the paper airplane','[data-motion-graph]');
+ await page.waitForSelector('dialog[open] [role="tooltip"]');
+ const overlay=await page.$eval('[role="tooltip"]',el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,bottom:r.bottom};});
+ assert.ok(overlay.left>=0&&overlay.right<=390&&overlay.bottom<=844);
+ await page.screenshot({path:path.join(output,'node-details-mobile.png')});
+ await page.keyboard.press('Escape');
  assert.deepEqual(errors,[]);
- const report={browser:await browser.version(),realCardDrag:'PASS',realWireDrag:'PASS',realTimingDrag:'PASS',accessibleConnect:'PASS',undoRedo:'PASS',saveReopenExport:'PASS',artworkPreserved:'PASS',reducedMotion:'PASS',viewports:[1600,390],consoleErrors:0};
+ const report={browser:await browser.version(),hoverAndTouchDetails:'PASS',realCardDrag:'PASS',realWireDrag:'PASS',realTimingDrag:'PASS',accessibleConnect:'PASS',undoRedo:'PASS',saveReopenExport:'PASS',artworkPreserved:'PASS',reducedMotion:'PASS',viewports:[1600,390],consoleErrors:0};
  fs.writeFileSync(path.join(output,'browser-results.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
 } catch(error) { if(page) { console.log(JSON.stringify(await page.evaluate(()=>({currentId:JSON.parse(localStorage.getItem('animatron.projects.v1')).currentId,status:Array.from(document.querySelectorAll('[role="status"]')).map(e=>e.textContent),docs:JSON.parse(localStorage.getItem('animatron.projects.v1')).projects.map(p=>({id:p.id,name:p.doc.name,motion:p.doc.clips.find(c=>c.id==='daughter')?.motion}))}))));await page.screenshot({path:path.join(output,'failure.png')}); } throw error;
 } finally {

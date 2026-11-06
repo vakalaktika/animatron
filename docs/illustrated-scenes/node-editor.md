@@ -45,3 +45,23 @@ Focused verification: 68 tests across six files, including three layout tests al
 Custom collapsible action macros, arbitrary expressions, simulation, general blending/compositing nodes, mesh topology/UV creation and continuous perspective generation require additional design/runtime work. The existing head drawings and prepared deformation remain available through their existing editors. This release improves authoring and control; it does not claim a new natural-acting benchmark or automatically improve the static family members. Review stills, contacts and transitions separately from structural validation.
 
 App changes are prepared for review. A private plugin release does not merge or deploy the application.
+
+
+### Compact cards and supporting detail
+
+Cards keep the node name, type, disabled state and labeled ports visible. Long
+names wrap to two lines; full names, owning objects, source and current activity
+are available through the info button. Hover or keyboard focus previews that
+information; click/tap keeps it open until an outside click, Escape or navigation.
+The overlay stays at readable screen size when the graph is zoomed and remains
+inside the phone dialog. No animation fields or saved layouts change.
+
+The inspector and selection actions appear after selecting a node. Click blank
+canvas to clear selection. Wire labels appear on hover or when an endpoint is
+selected, avoiding redundant text over labeled ports.
+
+Research before this refinement: [Houdini Node Info](https://www.sidefx.com/docs/houdini/network/info.html)
+separates temporary inspection from persistent editing; [n8n node controls](https://docs.n8n.io/workflows/components/nodes/)
+reveals secondary actions on hover and separates configuration. Animatron adapts
+that progressive disclosure with explicit keyboard and touch access rather than
+requiring hover. This was a documentation comparison, not hands-on competitor testing.
