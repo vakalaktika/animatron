@@ -623,6 +623,8 @@ export const SCENE_DOC_VERSION = 3;
 export const MOTION_DOC_VERSION = 4;
 
 export interface StudioDoc {
+  /** Optional graph card positions; does not change playback or paint order. */
+  editor?: import("@/app/motion-studio/lib/graphLayout").GraphEditor;
   /** Authored intent and review obligations; never proof of visual approval. */
   scenePlan?: import("./engine/sceneReview").ScenePlan;
   version: typeof DOC_VERSION | typeof SCENE_DOC_VERSION | typeof MOTION_DOC_VERSION;
