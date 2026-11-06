@@ -1,9 +1,9 @@
 {
   "repo": "https://github.com/vakalaktika/animatron",
-  "commit": "3ce0b07e2a9046993bcb07dc1bba548aa59035ad",
-  "commitDate": "2026-11-05T22:32:46-08:00",
-  "subject": "feat: add editable motion controls and persistent scene contacts",
-  "refreshedAt": "2026-11-06T06:33:14.187Z",
+  "commit": "91efa910f34b36cf0c826710be7b6c8985a6a75e",
+  "commitDate": "2026-11-06T06:05:14-08:00",
+  "subject": "feat: complete node wiring, timing gestures, mobile editing and graph examples (GREEN)",
+  "refreshedAt": "2026-11-06T14:05:31.654387+00:00",
   "constants": {
     "docVersion": 2,
     "motionDocVersion": 4,
@@ -122,8 +122,8 @@
     }
   },
   "fingerprints": {
-    "src/app/components/motion-studio/types.ts": "19a515678f911fbb",
-    "src/app/motion-studio/lib/migrate.ts": "476d8e7cffbd1990",
+    "src/app/components/motion-studio/types.ts": "89ffc99496673f9a",
+    "src/app/motion-studio/lib/migrate.ts": "6a2547517700e9d9",
     "src/app/motion-studio/lib/importDoc.ts": "8ea2bddf4b1e87dc",
     "src/app/motion-studio/lib/share.ts": "e1d8ab41b6ddf17e",
     "src/app/motion-studio/presets.ts": "860f685e87110685",
