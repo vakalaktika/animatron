@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "mid-century-ink",
-  "version": "1.9.0",
+  "version": "1.9.3",
   "description": "Create and restyle images in Mid-century Ink (Original or Detailed treatment) with bundled visual references; native SVGs and animation-ready rigs.",
   "author": {
     "name": "Ed"
